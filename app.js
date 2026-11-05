@@ -138,7 +138,7 @@ function decisions() {
 function settings() {
   return heading("データ管理") +
     panel('<h3>初期データ・バックアップ</h3><p>初回は同梱の「初期データ.json」を読み込んでください。読み込みは現在の内容を全件置き換えます。</p>' +
-      action("日次リンクを貼り付け","reportPaste") + action("JSONを書き出す","export") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
+      '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
     '<div class="head"><h3>運用条件</h3></div>' + panel('<p>初期予算上限 ¥3,000 ／ 新規固定費 ¥0。配布構成でのアプリ費用は初期・月額ともに ¥0。</p><p>保存先はこの端末のブラウザーです。外部データ、会計、毎朝7:30のレポートは未連携です。別端末へは書き出したJSONを移してください。</p><p id="offline">オフラインの状態を確認中…</p>');
 }
 
@@ -259,8 +259,13 @@ document.addEventListener("click", event => {
     if (kind === "decision") editDecision(value);
     if (kind === "export") exportData();
     if (kind === "reportPaste") {
-      const link = prompt("日次レポートのリンクを貼り付けてください。");
-      if (link) importDailyLink(link.trim().slice(link.trim().indexOf("#")));
+      const link = $("report-link").value.trim();
+      const marker = link.indexOf("#report=");
+      if (marker < 0) {
+        $("notice").textContent = "取り込み用リンクを丸ごと貼り付けてください。通常のダッシュボードURLでは追加できません。";
+      } else {
+        importDailyLink(link.slice(marker));
+      }
     }
     if (kind === "removeLedger" && confirm(month + "の収支入力を削除しますか？")) {
       save({...data,ledger:data.ledger.filter(r => r.project !== value || r.month !== month)});
@@ -349,12 +354,15 @@ async function importDailyLink(hash = location.hash) {
     date = incoming.projects[0]?.date || date;
     tab = "daily";
     render();
-    $("notice").textContent = "日次候補 " + added + "案・判断 " + proposals + "件を追加しました。登録済みの記録はそのままです。";
+    $("notice").textContent = added || proposals
+      ? "日次候補 " + added + "案・判断 " + proposals + "件を追加しました。"
+      : "追加できる新しい記録はありません。日次一覧で対象日の内容を確認してください。";
     history.replaceState(null,"",location.pathname + location.search);
   } catch {
-    $("notice").textContent = "リンクを取り込めませんでした。Safariを更新して、リンクを開き直してください。";
+    $("notice").textContent = "リンクを取り込めませんでした。取り込みリンクをコピーし直してください。";
   }
 }
 window.addEventListener("hashchange",() => importDailyLink());
 importDailyLink();
+
 
