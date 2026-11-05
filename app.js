@@ -381,6 +381,8 @@ const sync = (() => {
     session = JSON.parse(localStorage.getItem(sessionKey));
     baseline = JSON.parse(localStorage.getItem(markerKey));
   } catch {}
+  const recovery = new URLSearchParams(location.hash.slice(1));
+  let recoveryToken = recovery.get("type") === "recovery" ? recovery.get("access_token") : null;
   let busy = false;
   let message = "";
   const ordered = value => Array.isArray(value) ? value.map(ordered) :
@@ -422,6 +424,7 @@ const sync = (() => {
     if (!$("editor").open) render();
   }
   async function run(credentials) {
+    if (recoveryToken) return;
     if (busy || !window.ORXELIA_PUBLISHABLE_KEY || (!session && !credentials) || !readable || $("editor").open) return;
     busy = true;
     try {
@@ -476,17 +479,52 @@ const sync = (() => {
     if (!window.ORXELIA_PUBLISHABLE_KEY) return "";
     return '<div class="panel"><h3>iPhone・PCの自動同期</h3><p id="sync-status" role="status">' +
       esc(message || (session ? "接続を確認中…" : "同じアカウントで各端末からログインしてください。")) + '</p>' +
-      (session ? '<button id="sync-now" type="button">今すぐ同期</button>' :
-        '<form id="sync-login"><label>メール<input type="email" name="email" autocomplete="username" required></label><label>パスワード<input type="password" name="password" autocomplete="current-password" required></label><button class="primary">ログインして同期</button></form>') + '</div>';
+      (recoveryToken ? '<form id="sync-recovery"><label>新しいパスワード<input type="password" name="password" autocomplete="new-password" minlength="12" required></label><button class="primary">新しいパスワードを保存</button></form>' : session ? '<button id="sync-now" type="button">今すぐ同期</button>' :
+        '<form id="sync-login"><label>メール<input type="email" name="email" autocomplete="username" required></label><label>パスワード<input type="password" name="password" autocomplete="current-password" required></label><button class="primary">ログインして同期</button> <button id="sync-reset" type="button">再設定メールを送る</button></form>') + '</div>';
   }
-  document.addEventListener("submit", event => {
+  if (recoveryToken) {
+    tab = "settings";
+    history.replaceState(null,"",location.pathname + location.search);
+  }
+  document.addEventListener("submit", async event => {
+    if (event.target.id === "sync-recovery") {
+      event.preventDefault();
+      const password = event.target.elements.password.value;
+      if (busy) return;
+      busy = true;
+      try {
+        await request("/auth/v1/user",{method:"PUT",headers:{Authorization:"Bearer " + recoveryToken},
+          body:JSON.stringify({password})},false);
+        recoveryToken = null;
+        session = null;
+        localStorage.removeItem(sessionKey);
+        status("パスワードを更新しました。新しいパスワードでログインしてください。");
+        render();
+      } catch {
+        status("再設定できませんでした。新しい再設定メールを使うか、別のパスワードを指定してください。");
+      } finally { busy = false; }
+      return;
+    }
     if (event.target.id !== "sync-login") return;
     event.preventDefault();
     const values = Object.fromEntries(new FormData(event.target));
     event.target.elements.password.value = "";
     run(values);
   });
-  document.addEventListener("click", event => {
+  document.addEventListener("click", async event => {
+    if (event.target.id === "sync-reset") {
+      const email = $("sync-login").elements.email;
+      if (!email.reportValidity() || busy) return;
+      busy = true;
+      try {
+        const redirect = new URL("./",location.href).href;
+        await request("/auth/v1/recover?redirect_to=" + encodeURIComponent(redirect),
+          {method:"POST",body:JSON.stringify({email:email.value.trim()})},false);
+        status("再設定メールをリクエストしました。受信箱と迷惑メールを確認してください。");
+      } catch {
+        status("メールを送れませんでした。時間をおいて再試行してください。");
+      } finally { busy = false; }
+    }
     if (event.target.id === "sync-now") run();
   });
   document.addEventListener("visibilitychange", () => { if (!document.hidden) run(); });
@@ -497,6 +535,7 @@ const sync = (() => {
 window.orxeliaSync = sync;
 render();
 sync.run();
+
 
 
 
