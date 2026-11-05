@@ -47,6 +47,8 @@ function validate(value) {
         !types.includes(p.type) || !stages.includes(p.stage) || !priorities.includes(p.priority) ||
         ![p.customer,p.note,p.next,p.source].every(str) || !(p.price === null || amount(p.price)) ||
         !Array.isArray(p.history) || !p.history.every(h => h && day(h.date) && str(h.note))) throw Error("事業レコードの形式を確認してください。");
+    if (p.reviewBy !== undefined && p.reviewBy !== "" && !day(p.reviewBy)) throw Error("判断期限の日付を確認してください。");
+    if (p.passCriteria !== undefined && !str(p.passCriteria)) throw Error("判断基準の形式を確認してください。");
     ids.add(p.id);
     if (p.type === types[0]) {
       if (!day(p.date) || ![0,1,2,3].includes(p.rank)) throw Error("日次候補の日付と重点順位を確認してください。");
@@ -84,6 +86,8 @@ function card(p) {
     '</div>' + (p.customer ? '<p>対象　' + esc(p.customer) + '</p>' : '') +
     (p.price === null ? '' : '<p>価格仮説　' + yen(p.price) + ' / 月</p>') +
     (p.note ? '<p>' + esc(p.note) + '</p>' : '') +
+    (p.reviewBy ? '<p>判断期限　' + esc(p.reviewBy) + '</p>' : '') +
+    (p.passCriteria ? '<p>判断基準　' + esc(p.passCriteria) + '</p>' : '') +
     '<p>次の行動　' + esc(p.next || "未設定") + '</p><details><summary>進捗履歴・出典</summary><p>' +
     esc(p.source) + '</p>' + (history ? '<ol>' + history + '</ol>' : '<p>履歴は未登録です。</p>') + '</details>' +
     action("編集・進捗を記録","project",p.id) + '</article>';
@@ -97,11 +101,46 @@ function portfolio() {
     (selected.length ? grid(selected.map(card)) : panel('<p>この区分の登録は0件です。既存プロジェクトの名称や状況は確認できたものから登録してください。参照チャットの候補は「管理」で初期データを取り込むと表示されます。</p>'));
 }
 
+function activeQueue() {
+  const priority = ["高", "中", "低", "未設定"];
+  return data.projects.filter(p => ["検証中", "開発中"].includes(p.stage))
+    .sort((a,b) => (a.reviewBy || "9999").localeCompare(b.reviewBy || "9999") ||
+      priority.indexOf(a.priority) - priority.indexOf(b.priority));
+}
+
+function exportBrief() {
+  const clip = (value, limit) => (value || "").slice(0, limit);
+  const queue = activeQueue();
+  const brief = {
+    date: today(), activeCount: queue.length,
+    selected: queue.slice(0, 6).map(p => ({
+      name: clip(p.name, 140), stage: p.stage, priority: p.priority,
+      reviewBy: p.reviewBy || "", next: clip(p.next, 300),
+      passCriteria: clip(p.passCriteria, 300), evidence: clip(p.note, 500)
+    }))
+  };
+  const blob = new Blob([JSON.stringify(brief,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "orxelia-brief-" + brief.date + ".json";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function daily() {
   const ideas = data.projects.filter(p => p.type === types[0] && p.date === date);
   const top = ideas.filter(p => p.rank).sort((a,b) => a.rank - b.rank);
   const days = [...new Set(data.projects.map(p => p.date).filter(Boolean))].sort().reverse();
+  const queue = activeQueue();
   return heading("日次レポート", action("＋ 日次候補","dailyProject","",true)) +
+    '<div class="head"><h3>進行中の案件</h3></div>' +
+    panel('<p>検証中 ' + queue.filter(p => p.stage === "検証中").length +
+      '件 ／ 開発中 ' + queue.filter(p => p.stage === "開発中").length +
+      '件。判断期限、優先度の順に表示します。</p>' +
+      '<p>GPT用の要約は上位6件です。事業メモが含まれるため共有前に確認してください。</p>' +
+      action("GPT用の要約を書き出す","brief")) +
+    (queue.length ? grid(queue.map(card)) : "") +
     '<label>対象日（日本時間）<input id="day" type="date" value="' + esc(date) + '"></label>' +
     (days.length ? '<label>登録済みの日付<select id="registered"><option value="">選択</option>' +
       days.map(d => '<option>' + d + '</option>').join("") + '</select></label>' : '') +
@@ -187,6 +226,8 @@ function editProject(id, isDaily) {
     select("rank","重点順位（0 = 対象外）",[0,1,2,3],p.rank) + '</div>' +
     input("customer","想定顧客","text",p.customer,'maxlength="200"') +
     input("price","想定月額（円・価格仮説）","number",p.price,'min="0" max="1000000000000" step="1"') +
+    input("reviewBy","次の判断期限","date",p.reviewBy || "") +
+    area("passCriteria","判断基準（観測する結果と合格条件）",p.passCriteria) +
     area("note","事業メモ・検証結果",p.note) + area("next","次の行動",p.next) +
     area("history","進捗履歴に追記（日本時間の本日付）",""), values => {
       const isIdea = values.type === types[0];
@@ -258,6 +299,7 @@ document.addEventListener("click", event => {
     if (kind === "ledger") editLedger(value);
     if (kind === "decision") editDecision(value);
     if (kind === "export") exportData();
+    if (kind === "brief") exportBrief();
     if (kind === "reportPaste") {
       const link = $("report-link").value.trim();
       const marker = link.indexOf("#report=");
