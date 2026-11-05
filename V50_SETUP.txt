@@ -1,0 +1,7 @@
+ORXELIA v50 自動反映設定
+1. ZIP解凍後、.github/workflows/ai-research.yml、scripts/generate_ai_feed.py、ai-reports/latest.jsonを含む全ファイルをGitHub mainへアップロード。iPhoneのファイルアプリで隠しフォルダ .github が表示されない場合はMac/PCからアップロード。
+2. GitHub Settings > Secrets and variables > Actions > New repository secretで GEMINI_API_KEY を登録（キーは公開しない）。無料枠は変更・制限されるため費用・請求設定を必ず確認。
+3. GitHub Settings > Actions > General > Workflow permissions で Read and write permissions が必要。組織・リポジトリ設定によっては変更不可。
+4. Actions > ORXELIA AI research feed > Run workflow を一度手動実行し、ai-reports/latest.jsonに調査結果が入ることを確認。
+5. ダッシュボードの「公開情報検証」で自動反映状況を確認。レポートは端末内の既存事業に一致する場合のみ取り込む。
+重要：GitHub Actionsの定期実行は遅延・停止する場合がある。無料枠・AI APIの料金ゼロを保証しない。APIを設定しなければ自動調査は動かない。生成AIは検索根拠を保証せず、すべて仮説扱い。ChatGPTの定期タスクがGitHubに直接書き込む仕組みではない。

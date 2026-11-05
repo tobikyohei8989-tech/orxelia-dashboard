@@ -465,7 +465,7 @@ function downloadJson(name,value) {
 }
 function exportBundle() {
   if (!readable || loadSales()===null || loadTasks()===null || loadEvidence()===null) throw Error("読み込めないデータがあります。書き出しを停止しました。");
-  downloadJson("ORXELIA-all-local-"+today()+".json",{format:"orxelia-bundle-v45",exportedAt:new Date().toISOString(),portfolio:data,sales:loadSales(),tasks:loadTasks(),evidence:loadEvidence()});
+  downloadJson("ORXELIA-all-local-"+today()+".json",{format:"orxelia-bundle-v50",exportedAt:new Date().toISOString(),portfolio:data,sales:loadSales(),tasks:loadTasks(),evidence:loadEvidence()});
 }
 function tasks() {
   const rows=loadTasks();
@@ -544,6 +544,47 @@ function normalizeResearchReport(raw) {
   return {project,findings,date,downgraded:raw.findings.filter(f=>f.status==="資料確認済み").length};
 }
 
+// v50: read-only public feed; no API credentials in the browser.
+const aiFeedPath = "ai-reports/latest.json";
+const aiFeedStateKey = "orxelia-ai-feed-state-v50";
+let aiFeedStatus = "未確認（公開レポートを確認中）";
+let aiFeedCheckedAt = "";
+async function autoImportAiFeed() {
+  if (!readable || loadEvidence()===null) {aiFeedStatus="保存データに問題があるため自動反映を停止";return;}
+  try {
+    const response=await fetch(new URL(aiFeedPath,location.href).href+"?t="+Date.now(),{cache:"no-store"});
+    if(!response.ok) throw Error("公開レポートなし（HTTP "+response.status+"）");
+    if(Number(response.headers.get("content-length")||0)>200000) throw Error("レポートのサイズ超過");
+    const body=await response.text();if(body.length>200000)throw Error("レポートのサイズ超過");
+    const feed=JSON.parse(body);
+    if(!feed || feed.format!=="orxelia-auto-feed-v1" || !Array.isArray(feed.reports) || feed.reports.length>30) throw Error("公開レポート形式が不正");
+    const rows=loadEvidence();if(rows===null)throw Error("既存記録を読み込めません");
+    const signatures=new Set(rows.map(r=>[r.project,r.type,r.summary,r.source,r.date].join("\u001f")));
+    const incoming=[];let skipped=0;
+    for(const item of feed.reports){
+      try {
+        const report=normalizeResearchReport(item);
+        for(const row of report.findings){
+          const key=[row.project,row.type,row.summary,row.source,row.date].join("\u001f");
+          if(signatures.has(key)){skipped++;continue;}
+          signatures.add(key);incoming.push(row);
+        }
+      }catch{skipped++;}
+    }
+    if(rows.length+incoming.length>3000)throw Error("保存上限のため自動反映停止");
+    if(incoming.length)saveEvidence([...rows,...incoming]);
+    aiFeedCheckedAt=new Date().toLocaleString("ja-JP");
+    aiFeedStatus="公開レポートを確認：新規"+incoming.length+"件、既存・対象外"+skipped+"件。AI生成の記録は仮説として保存";
+    try{localStorage.setItem(aiFeedStateKey,JSON.stringify({status:aiFeedStatus,checkedAt:aiFeedCheckedAt}));}catch{}
+    if(tab==="verification" || tab==="command")render();
+  } catch(error){
+    aiFeedStatus="自動反映待機："+String(error.message||"通信エラー");
+    if(tab==="verification" || tab==="command")render();
+  }
+}
+function aiFeedPanel(){
+  return panel('<h3>AI調査の自動反映（v50）</h3><p>'+esc(aiFeedStatus)+'</p><p>公開リポジトリの ai-reports/latest.json を読み込み、既存の事業に一致する調査結果を端末へ自動追加します。出典は人が確認するまで「仮説」です。個人情報・機密情報を公開レポートに含めないでください。</p>'+action("公開レポートを再確認","aiFeedRefresh")+'<p>GitHub ActionsのAI生成設定がない場合、レポートは自動生成されません。データの自動反映とAIによる調査の自動実行は別の機能です。</p>');
+}
 // v45: zero-fee, no-OAuth interoperability. No third-party account connection is claimed.
 function downloadText(name,content,mime) {
   const url=URL.createObjectURL(new Blob(["\ufeff",content],{type:mime+";charset=utf-8"}));
@@ -629,7 +670,7 @@ function verification() {
       verificationWeights.map(w=>'<p>'+esc(w.label)+'：'+w.points+'点分の根拠</p>').join("")+
       '<p>市場の検索量は購買需要を保証しません。競合の非公開売上・契約数は推定値として扱ってください。</p>')+
     panel('<h3>事業別の根拠充足状況</h3>'+(scorecard.length?scorecard.map(x=>'<article><h3>'+esc(x.name)+'</h3><p>根拠充足率 '+x.coverage+'/100（成功確率ではありません）</p><p>不足：'+esc(x.missing.join("、")||"5軸の資料記録あり。内容の妥当性は未監査")+'</p>'+(x.stale?'<p>再調査推奨：'+x.stale+'件</p>':'')+'</article>').join(""):'<p>対象事業がありません。</p>'))+
-    freeConnectionsPanel()+researchImportPanel()+
+    aiFeedPanel()+freeConnectionsPanel()+researchImportPanel()+
     panel('<h3>検証結果を登録</h3><form id="evidence-form"><label>対象事業<select name="project" required><option value="">選択してください</option>'+opts+'</select></label><label>検証の種類<select name="type">'+evidenceTypes.map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認状況<select name="status">'+evidenceStatuses.map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認内容・未解決事項<textarea name="summary" maxlength="1000" required></textarea></label><label>出典URL・資料名・調査対象（個人情報は入力しない）<input name="source" maxlength="500"></label><button class="primary">検証記録を保存</button></form>')+
     panel('<h3>検証履歴（出典と鮮度）</h3>'+(recent.length?recent.slice(0,100).map(r=>'<article><h3>'+esc(projectName(r.project))+'</h3><p>'+esc(r.type)+' ／ '+esc(r.status)+' ／ '+esc(r.date)+' ／ '+esc(evidenceFreshness(r))+'</p><p>'+esc(r.summary)+'</p><p>根拠：'+esc(r.source||"未記録")+'</p>'+action("削除","evidenceDelete",r.id)+'</article>').join(""):'<p>まだ根拠がありません。公開情報の出典と調査日を登録してください。</p>'));
 }
@@ -770,6 +811,7 @@ document.addEventListener("click", event => {
     if (kind === "openDecisions") { tab = "decisions"; render(); }
     if (kind === "openTasks") { tab = "tasks"; render(); }
     if (kind === "openEvidence") { tab = "verification"; render(); }
+    if (kind === "aiFeedRefresh") autoImportAiFeed();
     if (kind === "researchPrompt") researchPrompt();
     if (kind === "portfolioCsv") exportPortfolioCsv();
     if (kind === "evidenceCsv") exportEvidenceCsv();
@@ -1124,6 +1166,9 @@ const sync = (() => {
 window.orxeliaSync = sync;
 render();
 sync.run();
+autoImportAiFeed();
+window.addEventListener("online",autoImportAiFeed);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)autoImportAiFeed();});
 
 
 
