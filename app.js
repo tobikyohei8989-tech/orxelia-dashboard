@@ -138,7 +138,7 @@ function decisions() {
 function settings() {
   return heading("データ管理") +
     panel('<h3>初期データ・バックアップ</h3><p>初回は同梱の「初期データ.json」を読み込んでください。読み込みは現在の内容を全件置き換えます。</p>' +
-      action("JSONを書き出す","export") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
+      action("日次リンクを貼り付け","reportPaste") + action("JSONを書き出す","export") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
     '<div class="head"><h3>運用条件</h3></div>' + panel('<p>初期予算上限 ¥3,000 ／ 新規固定費 ¥0。配布構成でのアプリ費用は初期・月額ともに ¥0。</p><p>保存先はこの端末のブラウザーです。外部データ、会計、毎朝7:30のレポートは未連携です。別端末へは書き出したJSONを移してください。</p><p id="offline">オフラインの状態を確認中…</p>');
 }
 
@@ -258,6 +258,10 @@ document.addEventListener("click", event => {
     if (kind === "ledger") editLedger(value);
     if (kind === "decision") editDecision(value);
     if (kind === "export") exportData();
+    if (kind === "reportPaste") {
+      const link = prompt("日次レポートのリンクを貼り付けてください。");
+      if (link) importDailyLink(link.trim().slice(link.trim().indexOf("#")));
+    }
     if (kind === "removeLedger" && confirm(month + "の収支入力を削除しますか？")) {
       save({...data,ledger:data.ledger.filter(r => r.project !== value || r.month !== month)});
       render();
@@ -315,4 +319,42 @@ if ("serviceWorker" in navigator && window.isSecureContext) {
   });
 }
 render();
+
+
+async function importDailyLink(hash = location.hash) {
+  const prefix = "#report=";
+  if (!hash.startsWith(prefix)) return;
+  try {
+    const encoded = hash.slice(prefix.length);
+    if (encoded.length > 100000) throw Error("リンクが長すぎます。");
+    const bytes = Uint8Array.from(atob(encoded.replace(/-/g,"+").replace(/_/g,"/")), c => c.charCodeAt(0));
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+    const incoming = JSON.parse(await new Response(stream).text());
+    validate(incoming);
+    if (incoming.ledger.length || incoming.projects.some(p => p.type !== types[0])) throw Error("日次レポート専用のリンクです。");
+    const projects = [...data.projects];
+    const decisions = [...data.decisions];
+    for (const p of incoming.projects) {
+      if (projects.some(item => item.id === p.id || (item.date === p.date && item.name === p.name))) continue;
+      if (projects.filter(item => item.date === p.date).length >= 10) continue;
+      const rank = projects.some(item => item.date === p.date && item.rank === p.rank) ? 0 : p.rank;
+      projects.push({...p,rank});
+    }
+    for (const d of incoming.decisions) {
+      if (!decisions.some(item => item.date === d.date && item.title === d.title)) decisions.push(d);
+    }
+    const added = projects.length - data.projects.length;
+    const proposals = decisions.length - data.decisions.length;
+    save({...data,projects,decisions});
+    date = incoming.projects[0]?.date || date;
+    tab = "daily";
+    render();
+    $("notice").textContent = "日次候補 " + added + "案・判断 " + proposals + "件を追加しました。登録済みの記録はそのままです。";
+    history.replaceState(null,"",location.pathname + location.search);
+  } catch {
+    $("notice").textContent = "リンクを取り込めませんでした。Safariを更新して、リンクを開き直してください。";
+  }
+}
+window.addEventListener("hashchange",() => importDailyLink());
+importDailyLink();
 
