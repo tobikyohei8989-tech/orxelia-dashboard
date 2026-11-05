@@ -9,6 +9,7 @@ const key = "orxelia-dashboard-v1";
 const types = ["日次候補", "過去の候補", "既存プロジェクト"];
 const stages = ["未確認", "未検証", "検証中", "開発中", "販売中", "収益化済み", "保留", "終了"];
 const priorities = ["未設定", "高", "中", "低"];
+const activityStates = ["準備中", "調査中", "試作中", "検証中", "判断待ち", "完了", "停止"];
 const empty = () => ({version:1, projects:[], ledger:[], decisions:[]});
 let data = empty();
 let readable = true;
@@ -69,6 +70,19 @@ function validate(value) {
   for (const d of value.decisions) {
     if (!d || !day(d.date) || !str(d.title) || !d.title.trim() || !str(d.note) ||
         !["提案","決定済み"].includes(d.status) || !str(d.source)) throw Error("経営判断の形式を確認してください。");
+    if (d.activity !== undefined) {
+      const a = d.activity;
+      if (!a || !str(a.runId) || !a.runId.trim() || !str(a.task) || !a.task.trim() ||
+          !activityStates.includes(a.state) || !str(a.updatedAt) ||
+          !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})$/.test(a.updatedAt) ||
+          !Number.isFinite(Date.parse(a.updatedAt)) ||
+          !Array.isArray(a.steps) || !a.steps.length || a.steps.length > 12 ||
+          !a.steps.every(step => str(step) && step.trim()) ||
+          !Number.isInteger(a.completed) || a.completed < 0 || a.completed > a.steps.length ||
+          !str(a.current) || !str(a.next) || !str(a.blocker) ||
+          (a.state === "完了" && a.completed !== a.steps.length) ||
+          (a.state === "停止" && !a.blocker.trim())) throw Error("作業進捗の形式を確認してください。");
+    }
   }
 }
 
@@ -167,9 +181,45 @@ function finance() {
     '</div><p>利益は入力した売上 − 費用。確認済みの月次実績だけを登録してください。</p>' +
     (records.length ? grid(records) : panel('<p>収支を入力する事業を先に登録してください。</p>'));
 }
+
+function progress() {
+  const groups = new Map();
+  for (const d of data.decisions) {
+    if (!d.activity) continue;
+    const events = groups.get(d.activity.runId) || [];
+    events.push(d);
+    groups.set(d.activity.runId, events);
+  }
+  const runs = [...groups.values()].map(events =>
+    events.sort((a,b) => Date.parse(b.activity.updatedAt) - Date.parse(a.activity.updatedAt))
+  ).sort((a,b) => Date.parse(b[0].activity.updatedAt) - Date.parse(a[0].activity.updatedAt));
+  const running = runs.filter(events => ["準備中","調査中","試作中","検証中"].includes(events[0].activity.state)).length;
+  return heading("自動作業の進捗", '<button id="sync-now" type="button">最新の報告を取得</button>') +
+    panel('<p>作業中 ' + running + '件 ／ 報告された作業 ' + runs.length +
+      '件。各工程を報告した時点の状態を表示します。</p><p>工程の完了数は作業の進み具合です。需要や収益の検証結果は記録本文で確認できます。</p>') +
+    (runs.length ? grid(runs.map(events => {
+      const d = events[0], a = d.activity;
+      const stale = ["準備中","調査中","試作中","検証中"].includes(a.state) &&
+        Date.now() - Date.parse(a.updatedAt) > 30 * 60 * 1000;
+      const time = new Date(a.updatedAt).toLocaleString("ja-JP", {timeZone:"Asia/Tokyo",hour12:false});
+      return '<article><h3>' + esc(a.task) + '</h3><div class="chips">' + badge(a.state) +
+        badge(a.completed + " / " + a.steps.length + "工程完了") + '</div>' +
+        '<progress max="' + a.steps.length + '" value="' + a.completed +
+        '" aria-label="' + esc(a.task + "の工程進捗") + '"></progress>' +
+        '<ol>' + a.steps.map((step,i) => '<li>' + esc((i < a.completed ? "完了　" : "未完了　") + step) + '</li>').join("") + '</ol>' +
+        '<p>現在　' + esc(a.current || "未報告") + '</p><p>次の工程　' + esc(a.next || "なし") +
+        '</p>' + (a.blocker ? '<p class="warn">待機・停止理由　' + esc(a.blocker) + '</p>' : '') +
+        (stale ? '<p class="warn">30分以上、新しい報告がありません。実行状況の確認が必要です。</p>' : '') +
+        '<p>最終報告　' + esc(time) + ' 日本時間</p><details><summary>報告履歴・根拠（' + events.length +
+        '件）</summary>' + events.map(event => '<p>' + esc(new Date(event.activity.updatedAt).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo",hour12:false})) +
+        ' ／ ' + esc(event.activity.state) + '</p><p>' + esc(event.note) + '</p><p>出典　' + esc(event.source) + '</p>').join("") +
+        '</details></article>';
+    })) : panel('<p>作業の報告はまだありません。定期作業が進捗を送ると、ここに表示されます。</p>'));
+}
+
 function decisions() {
   return heading("経営判断", action("＋ 判断を記録","decision","",true)) +
-    (data.decisions.length ? grid(data.decisions.map((d,i) => ({d,i})).sort((a,b) => b.d.date.localeCompare(a.d.date)).map(({d,i}) =>
+    (data.decisions.some(d => !d.activity) ? grid(data.decisions.map((d,i) => ({d,i})).filter(({d}) => !d.activity).sort((a,b) => b.d.date.localeCompare(a.d.date)).map(({d,i}) =>
       '<article><h3>' + esc(d.title) + '</h3><div class="chips">' + badge(d.date) + badge(d.status) +
       '</div><p>' + esc(d.note) + '</p><p>出典　' + esc(d.source) + '</p>' + action("編集","decision",i) + '</article>')) :
     panel('<p>判断の記録は未登録です。</p>'));
@@ -178,7 +228,7 @@ function settings() {
   return heading("データ管理") + (window.orxeliaSync?.view() || "") +
     panel('<h3>初期データ・バックアップ</h3><p>初回は同梱の「初期データ.json」を読み込んでください。読み込みは現在の内容を全件置き換えます。</p>' +
       '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
-    '<div class="head"><h3>運用条件</h3></div>' + panel('<p>初期予算上限 ¥3,000 ／ 新規固定費 ¥0。配布構成でのアプリ費用は初期・月額ともに ¥0。</p><p>ログインすると同じアカウントの端末間で同期します。会計サービスと毎朝7:30のレポートは未連携です。</p><p id="offline">オフラインの状態を確認中…</p>');
+    '<div class="head"><h3>運用条件</h3></div>' + panel('<p>初期予算上限 ¥3,000 ／ 新規固定費 ¥0。配布構成でのアプリ費用は初期・月額ともに ¥0。</p><p>ログインすると同じアカウントの端末間で同期します。毎朝7:30の定期作業は、このPCとCodexアプリの起動、ログイン済みブラウザーが必要です。工程ごとの報告は「進捗」で確認できます。会計サービスは未連携です。</p><p id="offline">オフラインの状態を確認中…</p>');
 }
 
 function render() {
@@ -194,7 +244,7 @@ function render() {
     if (button.dataset.tab === tab) button.setAttribute("aria-current","page");
     else button.removeAttribute("aria-current");
   });
-  $("view").innerHTML = {portfolio,daily,finance,decisions,settings}[tab]();
+  $("view").innerHTML = {portfolio,daily,progress,finance,decisions,settings}[tab]();
   if ($("offline")) $("offline").textContent = offlineStatus;
 }
 
@@ -394,7 +444,7 @@ async function importDailyLink(hash = location.hash) {
     const proposals = decisions.length - data.decisions.length;
     save({...data,projects,decisions});
     date = incoming.projects[0]?.date || date;
-    tab = "daily";
+    tab = incoming.decisions.some(d => d.activity) ? "progress" : "daily";
     render();
     $("notice").textContent = added || proposals
       ? "日次候補 " + added + "案・判断 " + proposals + "件を追加しました。"
@@ -576,6 +626,7 @@ const sync = (() => {
   document.addEventListener("visibilitychange", () => { if (!document.hidden) run(); });
   window.addEventListener("online",() => run());
   setInterval(() => { if (!document.hidden) run(); },15000);
+  setInterval(() => { if (!document.hidden && tab === "progress" && !$("editor").open) render(); },60000);
   return {run,view};
 })();
 window.orxeliaSync = sync;
