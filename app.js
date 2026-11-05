@@ -196,14 +196,14 @@ function executiveOverview() {
     metric("差引収支",finances,"税引前・入力済みのみ") +
     metric("税引後利益の目標達成率","算定不可","税引後実績の管理は未実装") +
     '</div>' + panel('<h3>最優先の経営課題</h3><p>' +
-    (top ? esc(top.name + "：" + (top.next || "次の行動を登録してください")) : "検証する事業を選び、顧客の需要を確認してください。") +
+    (top ? esc(top.name + "：" + (top.next || "次の行動を登録してください")) : "優先案件の試作と動作確認を進めます。") +
     '</p><p>2027年末目標：10事業が各月10万円以上の税引後純利益。現在の収支入力は売上と費用のみのため、達成率は算定していません。未入力の事業は0円とみなしません。</p></div>') + pendingDecisionSummary();
 }
 
 function portfolio() {
   const selected = data.projects.filter(p => filter === "すべて" || p.type === filter).sort((a,b) => ({"高":0,"中":1,"低":2,"未設定":3}[a.priority] - {"高":0,"中":1,"低":2,"未設定":3}[b.priority]));
   const filters = ["すべて",...types].map(t => '<option' + (t === filter ? ' selected' : '') + '>' + t + '</option>').join("");
-  return executiveOverview() + heading("事業一覧", action("＋ 事業を登録","project","",true)) +
+  return ownerOverview() + executiveOverview() + heading("事業一覧", action("＋ 事業を登録","project","",true)) +
     '<label>区分<select id="filter">' + filters + '</select></label>' +
     (selected.length ? grid(selected.map(card)) : panel('<p>この区分の登録は0件です。既存プロジェクトの名称や状況は確認できたものから登録してください。参照チャットの候補は「管理」で初期データを取り込むと表示されます。</p>'));
 }
@@ -338,59 +338,57 @@ function finance() {
     (records.length ? grid(records) : panel('<p>収支を入力する事業を先に登録してください。</p>')) + financeModel() + strategyAnalysis();
 }
 
-function nextActionForProgress(activity) {
-  const demoReady = activity.task === "見積もり催促・追客管理" && activity.completed >= 2;
-  if (!demoReady) {
-    return '<section class="owner-next"><h4>あなたがやること</h4>' +
-      '<p>試作ができるまでお待ちください。準備ができたら、操作する場所と確認項目をここに表示します。</p></section>';
-  }
-  const reviewIndex = data.decisions.findIndex(d => d.title === "2026-11-05 手順試験｜追客管理の試作・操作検証");
-  const review = data.decisions[reviewIndex];
-  const reviewAction = review?.status === "提案"
-    ? action("本格開発を承認","reviewApprove",reviewIndex)
-    : (review ? badge(review.status) : '<button type="button" data-tab="decisions">判断を開く</button>');
-  return '<section class="owner-next"><h4>あなたがやること</h4>' +
-    '<ol><li>試作を開き、追客対象の一覧を確認する。</li>' +
-    '<li>1件を対応済みにして、一覧から外れることを確認する。</li>' +
-    '<li>使いやすければ、本格開発を承認する。</li></ol>' +
-    '<div class="actions"><a class="demo-link" href="./quote-followup-demo.html" target="_blank" rel="noopener">試作を開く</a>' +
-    reviewAction + '</div><p>架空データで試せます。承認は判断として記録します。</p></section>';
-}
+const quoteDemo = '<a class="demo-link" href="./quote-followup-demo.html" target="_blank" rel="noopener">試作を開く</a>';
+const hasTrial = a => a.task === "見積もり催促・追客管理" && a.completed >= 2;
 
-function progress() {
+function progressGroups() {
   const groups = new Map();
   for (const d of data.decisions) {
     if (!d.activity) continue;
-    const events = groups.get(d.activity.runId) || [];
+    const events = groups.get(d.activity.task) || [];
     events.push(d);
-    groups.set(d.activity.runId, events);
+    groups.set(d.activity.task, events);
   }
-  const runs = [...groups.values()].map(events =>
+  return [...groups.values()].map(events =>
     events.sort((a,b) => Date.parse(b.activity.updatedAt) - Date.parse(a.activity.updatedAt))
   ).sort((a,b) => Date.parse(b[0].activity.updatedAt) - Date.parse(a[0].activity.updatedAt));
-  const running = runs.filter(events => ["準備中","調査中","試作中","検証中"].includes(events[0].activity.state)).length;
-  return heading("自動作業の進捗", '<button id="sync-now" type="button">最新の報告を取得</button>') +
-    panel('<p>作業中 ' + running + '件 ／ 報告された作業 ' + runs.length +
-      '件。各工程を報告した時点の状態を表示します。</p><p>工程の完了数は作業の進み具合です。需要や収益の検証結果は記録本文で確認できます。</p>') +
-    (runs.length ? grid(runs.map(events => {
-      const d = events[0], a = d.activity;
-      const stale = ["準備中","調査中","試作中","検証中"].includes(a.state) &&
-        Date.now() - Date.parse(a.updatedAt) > 30 * 60 * 1000;
-      const time = new Date(a.updatedAt).toLocaleString("ja-JP", {timeZone:"Asia/Tokyo",hour12:false});
-      return '<article><h3>' + esc(a.task) + '</h3><div class="chips">' + badge(a.state) +
-        badge(a.completed + " / " + a.steps.length + "工程完了") + '</div>' +
-        nextActionForProgress(a) +
-        '<progress max="' + a.steps.length + '" value="' + a.completed +
-        '" aria-label="' + esc(a.task + "の工程進捗") + '"></progress>' +
-        '<ol>' + a.steps.map((step,i) => '<li>' + esc((i < a.completed ? "完了　" : "未完了　") + step) + '</li>').join("") + '</ol>' +
-        '<p>現在　' + esc(a.current || "未報告") + '</p><p>次の工程　' + esc(a.next || "なし") +
-        '</p>' + (a.blocker ? '<p class="warn">待機・停止理由　' + esc(a.blocker) + '</p>' : '') +
-        (stale ? '<p class="warn">30分以上、新しい報告がありません。実行状況の確認が必要です。</p>' : '') +
-        '<p>最終報告　' + esc(time) + ' 日本時間</p><details><summary>報告履歴・根拠（' + events.length +
-        '件）</summary>' + events.map(event => '<p>' + esc(new Date(event.activity.updatedAt).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo",hour12:false})) +
-        ' ／ ' + esc(event.activity.state) + '</p><p>' + esc(event.note) + '</p><p>出典　' + esc(event.source) + '</p>').join("") +
-        '</details></article>';
-    })) : panel('<p>作業の報告はまだありません。定期作業が進捗を送ると、ここに表示されます。</p>'));
+}
+
+function progressCard(events, showHistory) {
+  const latest = events.find(d => !d.activity.current.startsWith("過去の調査記録。")) || events[0];
+  const a = latest.activity;
+  const ready = hasTrial(a);
+  const oldReview = a.blocker === "ご自身の試用・承認待ち。承認後に本格開発へ進む。";
+  const status = oldReview ? "試作できました" : a.state === "準備中" ? "準備中" : a.state;
+  const current = ready ? "見積もりの一覧と、対応済みへの切り替えをテストしました。" : (a.current || "まだ報告がありません。");
+  const next = oldReview ? "AIが費用のかからない改善を続けます。" : (a.next || "次の作業はまだ決まっていません。");
+  const reason = a.blocker && !oldReview ? '<p><strong>止まっている理由</strong>　' + esc(a.blocker) + '</p>' : '';
+  const owner = reason ? "止まっている理由を確認してください。" :
+    ready ? "気になったら試せます。必須の作業はありません。" : "今はすることはありません。";
+  const history = showHistory ? '<details><summary>これまでの報告（' + events.length + '件）</summary>' +
+    events.map(event => '<p>' + esc(new Date(event.activity.updatedAt).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo",hour12:false})) +
+      ' ／ ' + esc(event.activity.state) + '</p><p>' + esc(event.note) + '</p><p>出典　' + esc(event.source) + '</p>').join("") + '</details>' : '';
+  return '<article class="owner-next"><h3>' + esc(a.task) + '</h3><div class="chips">' + badge(status) + '</div>' +
+    '<p><strong>いま</strong>　' + esc(current) + '</p>' +
+    '<p><strong>次</strong>　' + esc(next) + '</p>' + reason +
+    '<p><strong>あなた</strong>　' + esc(owner) + '</p>' +
+    (ready ? quoteDemo : '') + history + '</article>';
+}
+
+function ownerOverview() {
+  const groups = progressGroups();
+  const proposals = data.decisions.filter(d => !d.activity && d.status === "提案").length;
+  return heading("いまの進み具合") +
+    (proposals ? panel('<p>確認できる判断が ' + proposals + ' 件あります。</p><button type="button" data-tab="decisions">判断を見る</button>') :
+      panel('<p>確認待ちの判断はありません。費用のかからない作業はAIが進めます。</p>')) +
+    (groups.length ? grid(groups.map(events => progressCard(events,false))) : panel('<p>まだ報告がありません。</p>')) +
+    '<div class="head"><button type="button" data-tab="progress">これまでの報告を見る</button></div>';
+}
+
+function progress() {
+  const groups = progressGroups();
+  return heading("案件の進み具合", '<button id="sync-now" type="button">最新の報告を取得</button>') +
+    (groups.length ? grid(groups.map(events => progressCard(events,true))) : panel('<p>まだ報告がありません。</p>'));
 }
 
 function decisionReview(index, status) {
