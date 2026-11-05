@@ -338,6 +338,25 @@ function finance() {
     (records.length ? grid(records) : panel('<p>収支を入力する事業を先に登録してください。</p>')) + financeModel() + strategyAnalysis();
 }
 
+function nextActionForProgress(activity) {
+  const demoReady = activity.task === "見積もり催促・追客管理" && activity.completed >= 2;
+  if (!demoReady) {
+    return '<section class="owner-next"><h4>あなたがやること</h4>' +
+      '<p>試作ができるまでお待ちください。準備ができたら、操作する場所と確認項目をここに表示します。</p></section>';
+  }
+  const reviewIndex = data.decisions.findIndex(d => d.title === "2026-11-05 手順試験｜追客管理の試作・操作検証");
+  const review = data.decisions[reviewIndex];
+  const reviewAction = review?.status === "提案"
+    ? action("本格開発を承認","reviewApprove",reviewIndex)
+    : (review ? badge(review.status) : '<button type="button" data-tab="decisions">判断を開く</button>');
+  return '<section class="owner-next"><h4>あなたがやること</h4>' +
+    '<ol><li>試作を開き、追客対象の一覧を確認する。</li>' +
+    '<li>1件を対応済みにして、一覧から外れることを確認する。</li>' +
+    '<li>使いやすければ、本格開発を承認する。</li></ol>' +
+    '<div class="actions"><a class="demo-link" href="./quote-followup-demo.html" target="_blank" rel="noopener">試作を開く</a>' +
+    reviewAction + '</div><p>架空データで試せます。承認は判断として記録します。</p></section>';
+}
+
 function progress() {
   const groups = new Map();
   for (const d of data.decisions) {
@@ -360,6 +379,7 @@ function progress() {
       const time = new Date(a.updatedAt).toLocaleString("ja-JP", {timeZone:"Asia/Tokyo",hour12:false});
       return '<article><h3>' + esc(a.task) + '</h3><div class="chips">' + badge(a.state) +
         badge(a.completed + " / " + a.steps.length + "工程完了") + '</div>' +
+        nextActionForProgress(a) +
         '<progress max="' + a.steps.length + '" value="' + a.completed +
         '" aria-label="' + esc(a.task + "の工程進捗") + '"></progress>' +
         '<ol>' + a.steps.map((step,i) => '<li>' + esc((i < a.completed ? "完了　" : "未完了　") + step) + '</li>').join("") + '</ol>' +

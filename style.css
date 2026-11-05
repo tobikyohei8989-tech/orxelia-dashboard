@@ -6,3 +6,5 @@ progress{width:100%;height:12px;accent-color:var(--gold)}
 .overview-metrics{margin:12px 0 16px}.overview-metrics .metric b{font-size:clamp(17px,3vw,25px);overflow-wrap:anywhere}
 
 @media(max-width:680px){nav{grid-template-columns:repeat(4,minmax(0,1fr))}nav button{font-size:12px}}
+
+.owner-next{background:#172437;border:1px solid var(--edge);border-radius:10px;padding:12px;margin:12px 0}.owner-next h4{margin:0;color:var(--gold)}.owner-next ol{margin:8px 0}.owner-next .demo-link{display:inline-flex;align-items:center;min-height:44px;padding:8px 12px;border-radius:8px;background:var(--gold);color:#15131a;text-decoration:none;font-weight:700}.owner-next p:last-child{margin-bottom:0}

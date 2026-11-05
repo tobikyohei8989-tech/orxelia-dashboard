@@ -1,0 +1,45 @@
+<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>追客管理の試作</title><style>
+body{font-family:system-ui,sans-serif;max-width:1000px;margin:auto;padding:24px;background:#0b0e16;color:#f4eee3}
+h1{font-size:26px}p{line-height:1.7;color:#bbc5d7}
+label{display:inline-block;margin:10px 18px 10px 0}input,select{padding:10px;background:#1b2335;color:inherit;border:1px solid #67728a;border-radius:6px;font:inherit}
+#metrics{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}#metrics span{padding:16px;background:#151d2d;border-radius:8px}
+.table{overflow:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{text-align:left;padding:12px;border-bottom:1px solid #303649}
+.due{color:#e5c995}.review{color:#ffbc9e}
+</style><h1>見積もり催促・追客管理</h1>
+<p>架空の見積20件を使う操作検証用の試作です。基準日までに対応が必要な見積を抽出します。入力した変更はこの画面内で扱います。</p>
+<label>基準日 <input id="day" type="date" value="2026-11-05"></label>
+<label>表示 <select id="filter"><option value="due">追客対象</option><option value="all">全件</option><option value="review">期限の確認が必要</option></select></label>
+<div id="metrics" role="status"></div><div class="table"><table><thead><tr><th>見積</th><th>顧客</th><th>対応状況</th><th>次の対応日</th><th>判定</th></tr></thead><tbody id="rows"></tbody></table></div>
+<script>
+"use strict";
+
+function validDay(value) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value;
+}
+function needsFollowUp(row, day) {
+  return row.status === "未対応" && validDay(row.nextDate) && row.nextDate <= day;
+}
+
+const rows=[{"id":"Q01","customer":"架空顧客01","status":"未対応","nextDate":"2026-11-01"},{"id":"Q02","customer":"架空顧客02","status":"未対応","nextDate":"2026-11-02"},{"id":"Q03","customer":"架空顧客03","status":"未対応","nextDate":"2026-11-03"},{"id":"Q04","customer":"架空顧客04","status":"未対応","nextDate":"2026-11-04"},{"id":"Q05","customer":"架空顧客05","status":"未対応","nextDate":"2026-11-05"},{"id":"Q06","customer":"架空顧客06","status":"対応済み","nextDate":"2026-11-01"},{"id":"Q07","customer":"架空顧客07","status":"対応済み","nextDate":"2026-11-02"},{"id":"Q08","customer":"架空顧客08","status":"対応済み","nextDate":"2026-11-03"},{"id":"Q09","customer":"架空顧客09","status":"対応済み","nextDate":"2026-11-04"},{"id":"Q10","customer":"架空顧客10","status":"対応済み","nextDate":"2026-11-05"},{"id":"Q11","customer":"架空顧客11","status":"未対応","nextDate":"2026-11-06"},{"id":"Q12","customer":"架空顧客12","status":"未対応","nextDate":"2026-11-07"},{"id":"Q13","customer":"架空顧客13","status":"未対応","nextDate":"2026-11-08"},{"id":"Q14","customer":"架空顧客14","status":"未対応","nextDate":"2026-11-09"},{"id":"Q15","customer":"架空顧客15","status":"未対応","nextDate":"2026-11-10"},{"id":"Q16","customer":"架空顧客16","status":"未対応","nextDate":"2026-11-11"},{"id":"Q17","customer":"架空顧客17","status":"未対応","nextDate":"2026-11-12"},{"id":"Q18","customer":"架空顧客18","status":"未対応","nextDate":"2026-11-13"},{"id":"Q19","customer":"架空顧客19","status":"未対応","nextDate":"2026-11-14"},{"id":"Q20","customer":"架空顧客20","status":"未対応","nextDate":""}];
+const el=id=>document.getElementById(id);
+function render(){
+ const day=el("day").value,filter=el("filter").value;
+ if(!validDay(day)){el("metrics").textContent="基準日を入力してください。";el("rows").innerHTML="";return;}
+ const due=rows.filter(row=>needsFollowUp(row,day));
+ const review=rows.filter(row=>row.status==="未対応"&&!validDay(row.nextDate));
+ el("metrics").innerHTML="<span>全件 "+rows.length+"件</span><span>追客対象 "+due.length+"件</span><span>期限要確認 "+review.length+"件</span>";
+ const visible=filter==="due"?due:filter==="review"?review:rows;
+ el("rows").innerHTML=visible.map(row=>{
+ const verdict=row.status==="対応済み"?"対応済み":!validDay(row.nextDate)?"期限要確認":needsFollowUp(row,day)?"追客対象":"予定";
+ return '<tr><td>'+row.id+'</td><td>'+row.customer+'</td><td><select aria-label="'+row.id+' 対応状況" data-id="'+row.id+'" data-field="status">'+["未対応","対応済み"].map(s=>'<option'+(s===row.status?' selected':'')+'>'+s+'</option>').join("")+'</select></td><td><input aria-label="'+row.id+' 次の対応日" data-id="'+row.id+'" data-field="nextDate" type="date" value="'+row.nextDate+'"></td><td class="'+(verdict==="追客対象"?"due":verdict==="期限要確認"?"review":"")+'">'+verdict+'</td></tr>';
+ }).join("");
+}
+document.addEventListener("change",event=>{
+ const row=rows.find(row=>row.id===event.target.dataset.id);
+ if(row)row[event.target.dataset.field]=event.target.value;
+ render();
+});
+render();
+</script></html>
