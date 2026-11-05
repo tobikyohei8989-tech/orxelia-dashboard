@@ -1,3 +1,4 @@
+
 import os
 import json
 import pathlib
@@ -10,78 +11,97 @@ BASE = "https://generativelanguage.googleapis.com/v1beta"
 KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 
 if not KEY:
-    raise SystemExit("ERROR: GEMINI_API_KEY is missing")
+    raise SystemExit("GEMINI_API_KEY is not configured")
 
 HEADERS = {
-    "x-goog-api-key": KEY,
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
+    "x-goog-api-key": KEY
 }
 
-def request_json(url, payload=None):
-    data = None if payload is None else json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url, data=data, headers=HEADERS,
-        method="GET" if data is None else "POST"
+def api_request(url, payload=None):
+    data = None
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+
+    request = urllib.request.Request(
+        url,
+        data=data,
+        headers=HEADERS,
+        method="POST" if data is not None else "GET"
     )
+
     try:
-        with urllib.request.urlopen(req, timeout=90) as response:
+        with urllib.request.urlopen(request, timeout=90) as response:
             return json.load(response)
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8", errors="replace")
-        print("API HTTP", error.code, detail[:1000])
+        try:
+            message = json.loads(detail).get("error", {}).get("message", "")
+        except ValueError:
+            message = "Unknown API error"
+        print("API error:", error.code, message[:500])
         raise
 
-def available_models():
-    found = []
-    token = ""
+def get_models():
+    models = []
+    page_token = ""
+
     for _ in range(10):
         query = "?pageSize=100"
-        if token:
-            query += "&pageToken=" + urllib.parse.quote(token)
-        result = request_json(BASE + "/models" + query)
-        for model in result.get("models", []):
-            name = model.get("name", "")
-            methods = model.get("supportedGenerationMethods", [])
+        if page_token:
+            query += "&pageToken=" + urllib.parse.quote(page_token)
+
+        response = api_request(BASE + "/models" + query)
+
+        for item in response.get("models", []):
+            name = item.get("name", "")
+            methods = item.get("supportedGenerationMethods", [])
+
             if (
                 name.startswith("models/gemini-")
                 and "generateContent" in methods
-                and "image" not in name
-                and "audio" not in name
-                and "tts" not in name
-                and "live" not in name
+                and not any(
+                    word in name.lower()
+                    for word in ["image", "audio", "tts", "live", "robotics"]
+                )
             ):
-                found.append(name)
-        token = result.get("nextPageToken", "")
-        if not token:
-            break
-    return sorted(set(found))
+                models.append(name)
 
-models = available_models()
-print("Available text models:", ", ".join(models))
+        page_token = response.get("nextPageToken", "")
+        if not page_token:
+            break
+
+    return sorted(set(models))
+
+def model_priority(name):
+    lower = name.lower()
+
+    if lower == "models/gemini-3.5-flash-lite":
+        return (0, name)
+    if "flash-lite" in lower and "2.5" not in lower:
+        return (1, name)
+    if "flash" in lower and "2.5" not in lower:
+        return (2, name)
+    if "pro" in lower and "2.5" not in lower:
+        return (3, name)
+    return (4, name)
+
+models = get_models()
+models.sort(key=model_priority)
+
+print("Available models:", ", ".join(models))
 
 if not models:
-    raise SystemExit("No generateContent models available")
+    raise SystemExit("No compatible models found")
 
-def priority(name):
-    lower = name.lower()
-    return (
-        0 if "flash-lite" in lower else
-        1 if "flash" in lower else
-        2 if "pro" in lower else 3,
-        1 if "preview" in lower else 0,
-        name
-    )
+JST = datetime.timezone(datetime.timedelta(hours=9))
+today = datetime.datetime.now(JST).date()
 
-models.sort(key=priority)
-model = models[0]
-print("Selected model:", model)
-
-jst = datetime.timezone(datetime.timedelta(hours=9))
-today = datetime.datetime.now(jst).date()
 projects = ["LIFE EDIT", "FIT NOTE", "MOMENT"]
-project = projects[(today - datetime.date(2026, 11, 5)).days % 3]
+index = (today - datetime.date(2026, 11, 5)).days % len(projects)
+project = projects[index]
 
-types = [
+categories = [
     "公開市場データ",
     "競合実績・価格",
     "収益試算",
@@ -89,68 +109,123 @@ types = [
     "法務・技術リスク"
 ]
 
-prompt = (
-    "あなたはORXELIAの事業調査担当です。\n"
-    f"対象事業: {project}\n"
-    f"調査日: {today.isoformat()}\n"
-    "以下の5項目について日本語で事業性を評価してください。\n"
-    + "\n".join(types)
-    + "\nWeb検索は利用できないため、最新の事実を確認したと主張しないこと。"
-    "数字やURLを捏造しないこと。全件を未検証の仮説として扱うこと。"
-    "支出・契約・外部連絡は行わないこと。\n"
-    "JSONのみ返してください。形式:\n"
-    '{"findings":[{"type":"公開市場データ",'
-    '"summary":"説明","source":""}]}\n'
-    "findingsは指定した5種類を各1件、合計5件。"
-)
+prompt = f"""
+あなたはORXELIAのAI事業分析担当です。
+
+対象事業：{project}
+分析日：{today.isoformat()}
+
+以下の5項目について、日本語で具体的に分析してください。
+
+1. 公開市場データ
+2. 競合実績・価格
+3. 収益試算
+4. 低コスト・一人運営
+5. 法務・技術リスク
+
+重要なルール：
+- このAPI呼び出しではWeb検索を利用していません。
+- 最新情報を実際に調査したと主張しないこと。
+- 確認できない統計・売上・URLを創作しないこと。
+- 試算は必ず仮定を明示すること。
+- 支出・契約・公開・外部連絡は禁止。
+- 全項目を未検証の仮説として扱うこと。
+
+次のJSON形式だけを返してください。
+
+{{
+  "findings": [
+    {{
+      "type": "公開市場データ",
+      "summary": "具体的な分析",
+      "source": ""
+    }}
+  ]
+}}
+
+findingsには指定された5種類を1件ずつ、
+合計5件含めてください。
+"""
 
 payload = {
-    "contents": [{"parts": [{"text": prompt}]}],
+    "contents": [
+        {
+            "role": "user",
+            "parts": [{"text": prompt}]
+        }
+    ],
     "generationConfig": {
         "responseMimeType": "application/json",
         "temperature": 0.2,
-        "maxOutputTokens": 3000
+        "maxOutputTokens": 3500
     }
 }
 
-try:
-    result = request_json(
-        BASE + "/" + model + ":generateContent",
-        payload
+def validate_response(result):
+    candidates = result.get("candidates", [])
+    if not candidates:
+        raise ValueError("No candidates returned")
+
+    parts = candidates[0].get("content", {}).get("parts", [])
+    content = "".join(
+        part.get("text", "")
+        for part in parts
+        if isinstance(part.get("text"), str)
     )
-except urllib.error.HTTPError as error:
+
+    if not content.strip():
+        raise ValueError("Empty response")
+
+    parsed = json.loads(content)
+    findings = parsed.get("findings")
+
+    if not isinstance(findings, list) or len(findings) != 5:
+        raise ValueError("Expected exactly five findings")
+
+    if {item.get("type") for item in findings} != set(categories):
+        raise ValueError("Unexpected finding categories")
+
+    for item in findings:
+        summary = item.get("summary")
+        if not isinstance(summary, str) or not summary.strip():
+            raise ValueError("Invalid summary")
+
+        item["status"] = "仮説"
+        item["source"] = ""
+
+    return findings
+
+findings = None
+selected_model = None
+
+for model in models:
+    print("Trying model:", model)
+
+    try:
+        response = api_request(
+            BASE + "/" + model + ":generateContent",
+            payload
+        )
+        findings = validate_response(response)
+        selected_model = model
+        break
+
+    except urllib.error.HTTPError as error:
+        if error.code in (400, 404):
+            print("Skipping incompatible model:", model)
+            continue
+        raise SystemExit(
+            "Generation stopped: HTTP " + str(error.code)
+        )
+
+    except (ValueError, KeyError, TypeError) as error:
+        print("Invalid response:", str(error)[:200])
+        continue
+
+if findings is None:
     raise SystemExit(
-        f"Generation failed: HTTP {error.code}, model={model}"
+        "No compatible model produced a valid report"
     )
-
-parts = []
-for candidate in result.get("candidates", []):
-    parts.extend(candidate.get("content", {}).get("parts", []))
-
-content = "".join(
-    part.get("text", "") for part in parts
-    if isinstance(part.get("text"), str)
-)
-
-if not content.strip():
-    raise SystemExit("Model returned no text")
-
-parsed = json.loads(content)
-findings = parsed.get("findings", [])
-
-if not isinstance(findings, list) or len(findings) != 5:
-    raise SystemExit("Invalid findings count")
-
-if {item.get("type") for item in findings} != set(types):
-    raise SystemExit("Invalid finding types")
-
-for item in findings:
-    if not isinstance(item.get("summary"), str):
-        raise SystemExit("Missing summary")
-    if not item["summary"].strip():
-        raise SystemExit("Empty summary")
-    item["status"] = "仮説"
-    item["source"] = str(item.get("source") or "")
 
 report = {
     "format": "orxelia-research-v1",
@@ -167,11 +242,15 @@ feed = {
     "reports": [report]
 }
 
-path = pathlib.Path("ai-reports/latest.json")
-path.parent.mkdir(parents=True, exist_ok=True)
-path.write_text(
+output = pathlib.Path("ai-reports/latest.json")
+output.parent.mkdir(parents=True, exist_ok=True)
+
+output.write_text(
     json.dumps(feed, ensure_ascii=False, indent=2) + "\n",
     encoding="utf-8"
 )
 
-print("SUCCESS:", project, "using", model)
+print("SUCCESS")
+print("Project:", project)
+print("Model:", selected_model)
+print("Output:", output)
