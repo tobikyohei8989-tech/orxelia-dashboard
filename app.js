@@ -493,13 +493,16 @@ const sync = (() => {
       if (busy) return;
       busy = true;
       try {
-        await request("/auth/v1/user",{method:"PUT",headers:{Authorization:"Bearer " + recoveryToken},
+        const user = await request("/auth/v1/user",{method:"PUT",headers:{Authorization:"Bearer " + recoveryToken},
           body:JSON.stringify({password})},false);
+        const email = user.email;
         recoveryToken = null;
         session = null;
         localStorage.removeItem(sessionKey);
-        status("パスワードを更新しました。新しいパスワードでログインしてください。");
+        status("パスワードを更新しました。同期に接続中…");
         render();
+        busy = false;
+        await run({email,password});
       } catch {
         status("再設定できませんでした。新しい再設定メールを使うか、別のパスワードを指定してください。");
       } finally { busy = false; }
@@ -508,6 +511,7 @@ const sync = (() => {
     if (event.target.id !== "sync-login") return;
     event.preventDefault();
     const values = Object.fromEntries(new FormData(event.target));
+    values.email = values.email.trim();
     event.target.elements.password.value = "";
     run(values);
   });
@@ -535,6 +539,7 @@ const sync = (() => {
 window.orxeliaSync = sync;
 render();
 sync.run();
+
 
 
 
