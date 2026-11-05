@@ -10,6 +10,7 @@ const recoveryKey = "orxelia-local-recovery-v16";
 const salesKey = "orxelia-sales-v17-local";
 const backupKey = "orxelia-safety-history-v18";
 const tasksKey = "orxelia-action-tasks-v25-local";
+const evidenceKey = "orxelia-evidence-v30-local";
 const types = ["日次候補", "過去の候補", "既存プロジェクト"];
 const stages = ["未確認", "未検証", "検証中", "開発中", "販売中", "収益化済み", "保留", "終了"];
 const priorities = ["未設定", "高", "中", "低"];
@@ -463,8 +464,8 @@ function downloadJson(name,value) {
   document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 function exportBundle() {
-  if (!readable || loadSales()===null || loadTasks()===null) throw Error("読み込めないデータがあります。書き出しを停止しました。");
-  downloadJson("ORXELIA-all-local-"+today()+".json",{format:"orxelia-bundle-v25",exportedAt:new Date().toISOString(),portfolio:data,sales:loadSales(),tasks:loadTasks()});
+  if (!readable || loadSales()===null || loadTasks()===null || loadEvidence()===null) throw Error("読み込めないデータがあります。書き出しを停止しました。");
+  downloadJson("ORXELIA-all-local-"+today()+".json",{format:"orxelia-bundle-v35",exportedAt:new Date().toISOString(),portfolio:data,sales:loadSales(),tasks:loadTasks(),evidence:loadEvidence()});
 }
 function tasks() {
   const rows=loadTasks();
@@ -476,6 +477,75 @@ function tasks() {
     panel('<h3>行動の見える化</h3><p>経営判断から実行へ。タスクは手動で登録・更新します。AIによる自動実行や外部への連絡はありません。</p>'+grid([metric("登録タスク",rows.length+"件","端末内の記録"),metric("進行中",rows.filter(t=>t.state==="進行中").length+"件","手動更新"),metric("期限超過",overdue.length+"件","未完了のみ"),metric("完了",rows.filter(t=>t.state==="完了").length+"件","手動更新")]))+
     panel('<h3>タスクを追加</h3><form id="task-form"><label>やること<input name="title" maxlength="160" required></label><label>対象事業<select name="project"><option value="">共通・未指定</option>'+choices+'</select></label><label>期限<input name="due" type="date"></label><button class="primary">タスク登録</button></form>')+
     panel('<h3>タスク一覧</h3><p>保存先はこの端末のみです。機密情報は登録しないでください。</p>'+(sorted.length?sorted.map(t=>'<article><h3>'+esc(t.title)+'</h3><p>'+esc(data.projects.find(p=>p.id===t.project)?.name||"共通")+' ／ 期限 '+esc(t.due||"未設定")+'</p><label>進捗<select data-task-id="'+esc(t.id)+'">'+taskStates.map(state=>'<option'+(state===t.state?' selected':'')+'>'+state+'</option>').join('')+'</select></label>'+action("削除","taskDelete",t.id)+'</article>').join(''):'<p>まだタスクがありません。</p>'));
+}
+
+
+// v30: evidence is manually entered, not autonomous AI research.
+const evidenceTypes = ["公開市場データ","競合実績・価格","収益試算","低コスト・一人運営","法務・技術リスク","小規模販売検証","顧客ヒアリング"];
+const evidenceStatuses = ["未検証","仮説","資料確認済み","販売実績確認済み","顧客確認済み"];
+function loadEvidence() {
+  try {
+    const raw=localStorage.getItem(evidenceKey);
+    if (!raw) return [];
+    const rows=JSON.parse(raw);
+    if (!Array.isArray(rows) || rows.length>3000 || !rows.every(r=>r && typeof r.id==="string" && typeof r.project==="string" && evidenceTypes.includes(r.type) && evidenceStatuses.includes(r.status) && typeof r.summary==="string" && r.summary.length<=1000 && typeof r.source==="string" && r.source.length<=500 && typeof r.date==="string")) throw Error();
+    return rows;
+  } catch {return null;}
+}
+function saveEvidence(rows) {
+  if(loadEvidence()===null) throw Error("検証データが読み込めないため保存を停止しました。");
+  keepSafetyCopy("検証記録の変更前");
+  localStorage.setItem(evidenceKey,JSON.stringify(rows));
+}
+function commandCenter() {
+  const tasks=loadTasks(),sales=loadSales(),evidence=loadEvidence();
+  if(tasks===null||sales===null||evidence===null) return heading("経営司令室")+panel('<p class="warn">一部の保存データが読み込めません。復旧前に上書きしないでください。</p>');
+  const pending=data.decisions.filter(d=>d.status==="提案"&&!d.activity);
+  const due=tasks.filter(t=>t.state!=="完了"&&t.due&&t.due<=today()).sort((a,b)=>a.due.localeCompare(b.due));
+  const latest=[...new Set(data.ledger.map(r=>r.month))].sort().at(-1);
+  const entries=latest?data.ledger.filter(r=>r.month===latest):[];
+  const net=entries.reduce((n,r)=>n+r.revenue-r.cost,0);
+  return heading("経営司令室")+
+    panel('<h3>今日の経営状況</h3><p>登録データの集計です。AIによる自動調査や外部実行は行っていません。</p>'+
+      grid([metric("承認待ち",pending.length+"件","判断の記録"),metric("期限到来・超過",due.length+"件","未完了タスク"),metric("検証記録",evidence.length+"件","手動登録"),metric("直近月の差引収支",latest?yen(net):"未登録",latest||"実績不明")]))+
+    panel('<h3>先に確認すること</h3>'+
+      (pending.length?'<p>承認待ち：'+pending.slice(0,5).map(d=>esc(d.title)).join(" ／ ")+'</p>':'<p>承認待ちの記録はありません。</p>')+
+      (due.length?'<p>期限到来：'+due.slice(0,5).map(t=>esc(t.title)+"（"+esc(t.due)+"）").join(" ／ ")+'</p>':'<p>期限到来の未完了タスクはありません。</p>')+
+      '<p>承認はアプリ内の記録のみです。外部公開・支払い・顧客連絡は実行されません。</p>'+
+      action("経営判断を確認","openDecisions")+action("タスクを確認","openTasks")+action("検証履歴を確認","openEvidence"))+
+    panel('<h3>営業状況</h3><p>手動登録の営業案件：'+sales.length+'件 ／ 契約ステータス：'+sales.filter(r=>r.stage==="契約").length+'件。契約・入金の実在を自動確認するものではありません。</p>');
+}
+const verificationWeights = [
+  {type:"公開市場データ",label:"市場需要・課題の強さ",points:25},
+  {type:"競合実績・価格",label:"差別化・継続利用価値",points:20},
+  {type:"収益試算",label:"税引後の収益性",points:25},
+  {type:"低コスト・一人運営",label:"低コスト・1人運営",points:20},
+  {type:"法務・技術リスク",label:"法務・技術リスク",points:10}
+];
+function evidenceFreshness(row) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date)) return "日付不明";
+  const days=Math.floor((Date.parse(today()+"T00:00:00+09:00")-Date.parse(row.date+"T00:00:00+09:00"))/86400000);
+  return days>180?"再調査推奨（180日超）":days>=0?"記録から"+days+"日":"日付要確認";
+}
+function verification() {
+  const rows=loadEvidence();
+  if(rows===null)return heading("事業検証")+panel('<p class="warn">検証記録が読み込めません。上書きを停止しました。</p>');
+  const opts=data.projects.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join("");
+  const projectName=id=>data.projects.find(p=>p.id===id)?.name||"未指定";
+  const recent=[...rows].reverse();
+  const scorecard=data.projects.filter(p=>p.stage!=="終了"&&p.stage!=="保留").map(p=>{
+    const own=rows.filter(r=>r.project===p.id);
+    const done=verificationWeights.filter(w=>own.some(r=>r.type===w.type&&r.status==="資料確認済み"&&r.source.trim()));
+    const coverage=done.reduce((sum,w)=>sum+w.points,0);
+    return {name:p.name,coverage,missing:verificationWeights.filter(w=>!done.includes(w)).map(w=>w.label),stale:own.filter(r=>evidenceFreshness(r).startsWith("再調査")).length};
+  }).sort((a,b)=>b.coverage-a.coverage);
+  return heading("公開情報による事業検証",action("検証データJSON出力","evidenceExport"))+
+    panel('<h3>検証方針（2026年11月版）</h3><p>顧客ヒアリングは任意。公開市場データ・競合・収益試算・運営適性・法務リスクの5軸で確認します。</p><p><strong>根拠充足率は成功確率や事業評価点ではありません。</strong>出典を登録した資料確認済み項目の配点合計です。AIが資料を自動取得・検証したものではありません。</p>'+
+      verificationWeights.map(w=>'<p>'+esc(w.label)+'：'+w.points+'点分の根拠</p>').join("")+
+      '<p>市場の検索量は購買需要を保証しません。競合の非公開売上・契約数は推定値として扱ってください。</p>')+
+    panel('<h3>事業別の根拠充足状況</h3>'+(scorecard.length?scorecard.map(x=>'<article><h3>'+esc(x.name)+'</h3><p>根拠充足率 '+x.coverage+'/100（成功確率ではありません）</p><p>不足：'+esc(x.missing.join("、")||"5軸の資料記録あり。内容の妥当性は未監査")+'</p>'+(x.stale?'<p>再調査推奨：'+x.stale+'件</p>':'')+'</article>').join(""):'<p>対象事業がありません。</p>'))+
+    panel('<h3>検証結果を登録</h3><form id="evidence-form"><label>対象事業<select name="project" required><option value="">選択してください</option>'+opts+'</select></label><label>検証の種類<select name="type">'+evidenceTypes.map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認状況<select name="status">'+evidenceStatuses.map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認内容・未解決事項<textarea name="summary" maxlength="1000" required></textarea></label><label>出典URL・資料名・調査対象（個人情報は入力しない）<input name="source" maxlength="500"></label><button class="primary">検証記録を保存</button></form>')+
+    panel('<h3>検証履歴（出典と鮮度）</h3>'+(recent.length?recent.slice(0,100).map(r=>'<article><h3>'+esc(projectName(r.project))+'</h3><p>'+esc(r.type)+' ／ '+esc(r.status)+' ／ '+esc(r.date)+' ／ '+esc(evidenceFreshness(r))+'</p><p>'+esc(r.summary)+'</p><p>根拠：'+esc(r.source||"未記録")+'</p>'+action("削除","evidenceDelete",r.id)+'</article>').join(""):'<p>まだ根拠がありません。公開情報の出典と調査日を登録してください。</p>'));
 }
 
 function render() {
@@ -491,7 +561,7 @@ function render() {
     if (button.dataset.tab === tab) button.setAttribute("aria-current","page");
     else button.removeAttribute("aria-current");
   });
-  $("view").innerHTML = {portfolio,daily,progress,sales,finance,insights:executiveInsights,tasks,decisions,settings}[tab]();
+  $("view").innerHTML = {portfolio,daily,progress,sales,finance,insights:executiveInsights,tasks,command:commandCenter,verification,tasks,decisions,settings}[tab]();
   if ($("offline")) $("offline").textContent = offlineStatus;
 }
 
@@ -612,6 +682,10 @@ document.addEventListener("click", event => {
     if (kind === "export") exportData();
     if (kind === "mergeCatalog") mergeCatalog();
     if (kind === "openDecisions") { tab = "decisions"; render(); }
+    if (kind === "openTasks") { tab = "tasks"; render(); }
+    if (kind === "openEvidence") { tab = "verification"; render(); }
+    if (kind === "evidenceExport") { const rows=loadEvidence(); if(rows===null) throw Error("検証記録が読み込めません。"); downloadJson("ORXELIA-evidence-"+today()+".json",rows); }
+    if (kind === "evidenceDelete") { if(confirm("この検証記録を削除しますか？")) {saveEvidence(loadEvidence().filter(r=>r.id!==value));render();} }
     if (kind === "brief") exportBrief();
     if (kind === "reportPaste") {
       const link = $("report-link").value.trim();
@@ -630,6 +704,19 @@ document.addEventListener("click", event => {
   } catch (error) {
     $("notice").textContent = error.message;
   }
+});
+
+document.addEventListener("submit", event => {
+  if(event.target.id!=="evidence-form") return;
+  event.preventDefault();
+  try {
+    const f=Object.fromEntries(new FormData(event.target));
+    if(!data.projects.some(p=>p.id===f.project)||!evidenceTypes.includes(f.type)||!evidenceStatuses.includes(f.status)||!String(f.summary||"").trim()) throw Error("入力を確認してください。");
+    const rows=loadEvidence();
+    if(rows===null) throw Error("検証記録を読み込めません。");
+    rows.push({id:crypto.randomUUID(),project:f.project,type:f.type,status:f.status,summary:String(f.summary).trim().slice(0,1000),source:String(f.source||"").trim().slice(0,500),date:today()});
+    saveEvidence(rows);render();$("notice").textContent="検証記録を端末内に保存しました。";
+  }catch(error){$("notice").textContent=error.message;}
 });
 document.addEventListener("change", async event => {
   const target = event.target;
