@@ -6,6 +6,8 @@ const esc = value => String(value ?? "").replace(/[&<>"']/g, char =>
 const yen = value => new Intl.NumberFormat("ja-JP", {style:"currency", currency:"JPY"}).format(value);
 const today = () => new Intl.DateTimeFormat("sv-SE", {timeZone:"Asia/Tokyo"}).format(new Date());
 const key = "orxelia-dashboard-v1";
+const recoveryKey = "orxelia-local-recovery-v16";
+const salesKey = "orxelia-sales-v17-local";
 const types = ["日次候補", "過去の候補", "既存プロジェクト"];
 const stages = ["未確認", "未検証", "検証中", "開発中", "販売中", "収益化済み", "保留", "終了"];
 const priorities = ["未設定", "高", "中", "低"];
@@ -31,6 +33,24 @@ let date = data.projects.map(p => p.date).filter(Boolean).sort().at(-1) || today
 let month = today().slice(0,7);
 let submit;
 
+function preserveRecoverySnapshot(reason) {
+  if (!readable) throw Error("保存データを読み込めないためバックアップできません。");
+  const snapshot = {at:new Date().toISOString(),reason,data};
+  // The separate recovery key is never synchronized or included in ordinary imports.
+  try { localStorage.setItem(recoveryKey, JSON.stringify(snapshot)); }
+  catch { throw Error("安全用の端末内バックアップを作成できません。空き容量を確認してください。"); }
+}
+function downloadRecoverySnapshot() {
+  const raw = localStorage.getItem(recoveryKey);
+  if (!raw) throw Error("復旧用スナップショットがありません。");
+  const snapshot = JSON.parse(raw);
+  validate(snapshot.data);
+  const url = URL.createObjectURL(new Blob([JSON.stringify(snapshot.data,null,2)],{type:"application/json"}));
+  const a = document.createElement("a"); a.href=url;
+  a.download="ORXELIA-recovery-"+snapshot.at.slice(0,10)+".json";
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
 function save(next) {
   if (!readable) throw Error("保存領域を読み込めないため編集できません。");
   validate(next);
@@ -67,9 +87,10 @@ function validate(value) {
     if (ledgerKeys.has(slot)) throw Error("同じ事業・月の収支が重複しています。");
     ledgerKeys.add(slot);
   }
+  if (value.importLog !== undefined && (!Array.isArray(value.importLog) || value.importLog.length > 200 || !value.importLog.every(r => r && typeof r.at === "string" && !Number.isNaN(Date.parse(r.at)) && typeof r.date === "string" && typeof r.projects === "number" && Number.isInteger(r.projects) && r.projects >= 0 && typeof r.decisions === "number" && Number.isInteger(r.decisions) && r.decisions >= 0))) throw Error("取り込み履歴の形式を確認してください。");
   for (const d of value.decisions) {
     if (!d || !day(d.date) || !str(d.title) || !d.title.trim() || !str(d.note) ||
-        !["提案","決定済み"].includes(d.status) || !str(d.source)) throw Error("経営判断の形式を確認してください。");
+        !["提案","決定済み","保留","却下"].includes(d.status) || !str(d.source)) throw Error("経営判断の形式を確認してください。");
     if (d.activity !== undefined) {
       const a = d.activity;
       if (!a || !str(a.runId) || !a.runId.trim() || !str(a.task) || !a.task.trim() ||
@@ -107,10 +128,57 @@ function card(p) {
     action("編集・進捗を記録","project",p.id) + '</article>';
 }
 
+
+// v12: opt-in catalog merge; never overwrites existing records.
+const initialCatalog = [{"id":"orxelia-catalog-01","name":"見積もり催促・追客管理","type":"過去の候補","stage":"未確認","priority":"高","date":"","rank":0,"price":1480,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"見積提出後の追客漏れを検証","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-02","name":"契約更新・解約期限アラート","type":"過去の候補","stage":"未確認","priority":"高","date":"","rank":0,"price":980,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"更新忘れの頻度と支払意思を調査","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-03","name":"定期点検・保守期限管理","type":"過去の候補","stage":"未確認","priority":"高","date":"","rank":0,"price":2480,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"点検期限管理の需要を検証","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-04","name":"顧客提出書類の回収管理","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1980,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"提出書類の回収負担を調査","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-05","name":"店舗の日次引継ぎノート","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1480,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"店舗担当者へ課題を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-06","name":"求人応募者への返信漏れ防止","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1980,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"採用担当者へ課題を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-07","name":"車両・工具の点検期限管理","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1480,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"対象事業者へ需要を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-08","name":"定期購入・サブスク支出監査","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":980,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"解約忘れの実態を調査","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-09","name":"講師向け月謝未納管理","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1480,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"講師へ課題を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-10","name":"納品後フォロー自動化","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1980,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"納品後対応の課題を調査","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-11","name":"入金漏れ・未回収チェッカー","type":"過去の候補","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"過去案の状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-12","name":"現場写真・工事記録整理ツール","type":"過去の候補","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"過去案の状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-13","name":"キャンセル待ち自動案内ツール","type":"過去の候補","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"過去案の状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-14","name":"LIFE EDIT","type":"既存プロジェクト","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"開発・公開状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-15","name":"FIT NOTE","type":"既存プロジェクト","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"開発・公開状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-16","name":"MOMENT","type":"既存プロジェクト","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"開発・公開状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-17","name":"SOBARIO","type":"既存プロジェクト","stage":"保留","priority":"低","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"中止中：再開には明示承認が必要","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-18","name":"START FIND","type":"既存プロジェクト","stage":"保留","priority":"低","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"保留中：再開には明示承認が必要","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-19","name":"SaaS向け紹介報酬管理サービス","type":"既存プロジェクト","stage":"保留","priority":"低","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"保留中：再開には明示承認が必要","source":"2026-11-05 引き継ぎプロンプト","history":[]}];
+const normalizedName = name => String(name).normalize("NFKC").toLowerCase().replace(/[\s\u3000・･_－ー-]/g, "");
+function catalogPreview() {
+  const existingNames = new Set(data.projects.map(p => normalizedName(p.name)));
+  const existingIds = new Set(data.projects.map(p => p.id));
+  const additions = initialCatalog.filter(p => !existingNames.has(normalizedName(p.name)) && !existingIds.has(p.id));
+  return {additions,skipped:initialCatalog.length-additions.length};
+}
+function mergeCatalog() {
+  const {additions,skipped} = catalogPreview();
+  if (!additions.length) { $("notice").textContent = "台帳19件は登録済み、または名称が一致しています。既存データは変更していません。"; return; }
+  if (!confirm("引き継ぎ台帳19件のうち、新規 " + additions.length + "件を追加し、" + skipped + "件を重複候補として除外します。\n既存の事業・収支・判断は変更しません。追加しますか？")) return;
+  save({...data,projects:[...data.projects,...additions]});
+  render();
+  $("notice").textContent = additions.length + "件を追加しました。ステータスや売上は未確認のままです。";
+}
+function pendingDecisionSummary() {
+  const pending = data.decisions.filter(d => !d.activity && d.status === "提案");
+  return panel('<h3>承認待ちの経営判断　' + pending.length + '件</h3>' +
+    (pending.length ? '<p>' + pending.slice(0,3).map(d => esc(d.title)).join(' ／ ') + '</p>' : '<p>現在、承認待ちはありません。</p>') +
+    '<p>承認は記録のみです。外部への実行は行いません。</p>' + action("判断一覧を確認","openDecisions"));
+}
+
+function executiveOverview() {
+  const projects = data.projects;
+  const rows = data.ledger.filter(r => r.month === month);
+  const sum = field => rows.reduce((total,r) => total + r[field], 0);
+  const revenue = sum("revenue"), cost = sum("cost");
+  const active = projects.filter(p => ["検証中", "開発中"].includes(p.stage));
+  const top = [...active].sort((a,b) => ({"高":0,"中":1,"低":2,"未設定":3}[a.priority] - {"高":0,"中":1,"低":2,"未設定":3}[b.priority]))[0];
+  const finances = rows.length ? yen(revenue-cost) : "未確認";
+  return '<div class="head"><h2>経営サマリー</h2></div><div class="metrics overview-metrics">' +
+    metric("管理事業",projects.length,"登録済みの全区分") +
+    metric("検証中",projects.filter(p=>p.stage === "検証中").length,"登録済み") +
+    metric("開発中",projects.filter(p=>p.stage === "開発中").length,"登録済み") +
+    metric("販売・収益化",projects.filter(p=>["販売中","収益化済み"].includes(p.stage)).length,"登録ステータス") +
+    metric("月間売上",rows.length ? yen(revenue) : "未確認",month + "・入力済みのみ") +
+    metric("月間費用",rows.length ? yen(cost) : "未確認",month + "・入力済みのみ") +
+    metric("差引収支",finances,"税引前・入力済みのみ") +
+    metric("税引後利益の目標達成率","算定不可","税引後実績の管理は未実装") +
+    '</div>' + panel('<h3>最優先の経営課題</h3><p>' +
+    (top ? esc(top.name + "：" + (top.next || "次の行動を登録してください")) : "検証する事業を選び、顧客の需要を確認してください。") +
+    '</p><p>2027年末目標：10事業が各月10万円以上の税引後純利益。現在の収支入力は売上と費用のみのため、達成率は算定していません。未入力の事業は0円とみなしません。</p></div>') + pendingDecisionSummary();
+}
+
 function portfolio() {
-  const selected = data.projects.filter(p => filter === "すべて" || p.type === filter);
+  const selected = data.projects.filter(p => filter === "すべて" || p.type === filter).sort((a,b) => ({"高":0,"中":1,"低":2,"未設定":3}[a.priority] - {"高":0,"中":1,"低":2,"未設定":3}[b.priority]));
   const filters = ["すべて",...types].map(t => '<option' + (t === filter ? ' selected' : '') + '>' + t + '</option>').join("");
-  return heading("事業一覧", action("＋ 事業を登録","project","",true)) +
+  return executiveOverview() + heading("事業一覧", action("＋ 事業を登録","project","",true)) +
     '<label>区分<select id="filter">' + filters + '</select></label>' +
     (selected.length ? grid(selected.map(card)) : panel('<p>この区分の登録は0件です。既存プロジェクトの名称や状況は確認できたものから登録してください。参照チャットの候補は「管理」で初期データを取り込むと表示されます。</p>'));
 }
@@ -162,6 +230,37 @@ function daily() {
     (top.length ? '<div class="head"><h3>重点検証</h3></div>' + grid(top.map(card)) : panel('<p>この日の重点候補は未登録です。</p>')) +
     '<div class="head"><h3>日次候補一覧</h3></div>' + (ideas.length ? grid(ideas.map(card)) : panel('<p>この日の候補は未登録です。</p>'));
 }
+function financeModel() {
+  const rows = data.projects.filter(p => p.price !== null && p.price > 0).slice(0,50);
+  const contribution = 0.7, tax = 0.3, target = 100000;
+  return panel('<h3>月10万円の税引後利益：仮説試算</h3>' +
+    '<p>仮定：顧客1件当たり限界利益率70%、利益への税負担30%、その他固定費0円。実績・税額の確定計算ではありません。決済手数料・集客費・解約率・実際の税務条件は別途検証が必要です。</p>' +
+    (rows.length ? '<div class="model-list">' + rows.map(p => {
+      const n = Math.ceil(target / (p.price * contribution * (1-tax)));
+      return '<p><strong>' + esc(p.name) + '</strong>：月額 ' + yen(p.price) + ' → 必要顧客数 <strong>' + n + '件</strong>（仮説）</p>';
+    }).join('') + '</div>' : '<p>月額料金が登録された事業がありません。</p>'));
+}
+function strategyAnalysis() {
+  const stageScore = {"未確認":0,"未検証":0,"検証中":2,"開発中":2,"販売中":3,"収益化済み":4,"保留":-2,"終了":-3};
+  const priorityScore = {"高":2,"中":1,"低":0,"未設定":0};
+  const active = data.projects.filter(p => !["保留","終了"].includes(p.stage));
+  const scored = active.map(p => {
+    const evidence = data.ledger.filter(r => r.project === p.id);
+    const hasSales = evidence.some(r => r.revenue > 0);
+    const positive = evidence.some(r => r.revenue > r.cost);
+    const score = (stageScore[p.stage] || 0) + (priorityScore[p.priority] || 0) + (hasSales ? 3 : 0) + (positive ? 2 : 0) + (p.next?.trim() ? 1 : 0);
+    const missing = [!evidence.length && "収支実績", !p.customer?.trim() && "対象顧客", !p.next?.trim() && "次の行動", p.price === null && "価格仮説"].filter(Boolean);
+    return {p, score, missing, hasSales};
+  }).sort((a,b) => b.score-a.score || a.p.name.localeCompare(b.p.name,"ja"));
+  return panel('<h3>経営判断の補助スコア（暫定）</h3>' +
+    '<p>進捗段階・手動優先度・入力済み売上・差引収支・次の行動を加点する簡易ルールです。市場需要、成功確率、税引後利益を推定するものではありません。未入力は実績ゼロとみなしません。</p>' +
+    (scored.length ? '<div class="model-list">' + scored.slice(0,10).map(({p,score,missing,hasSales}) =>
+      '<p><strong>' + esc(p.name) + '</strong>：' + score + '点（' + esc(p.stage) + '）' +
+      (hasSales ? '／売上記録あり' : '／売上未確認') +
+      '<br>不足情報：' + esc(missing.join('・') || 'この基準ではなし') + '</p>').join('') + '</div>' : '<p>分析対象の事業がありません。</p>') +
+    '<p>この順位は開発投資の承認ではありません。顧客ヒアリング・競合調査・獲得費用の検証後に判断してください。</p>');
+}
+
 function finance() {
   const rows = data.ledger.filter(r => r.month === month);
   const revenue = rows.reduce((total,r) => total + r.revenue,0);
@@ -169,7 +268,7 @@ function finance() {
   const records = data.projects.map(p => {
     const r = rows.find(row => row.project === p.id);
     return '<article><h3>' + esc(p.name) + '</h3>' +
-      (r ? '<p>売上 ' + yen(r.revenue) + ' ／ 費用 ' + yen(r.cost) + ' ／ 利益 ' + yen(r.revenue-r.cost) +
+      (r ? '<p>売上 ' + yen(r.revenue) + ' ／ 費用 ' + yen(r.cost) + ' ／ 差引収支（税引前・暫定） ' + yen(r.revenue-r.cost) +
       '</p><p>確認元　' + esc(r.evidence) + '</p>' + (r.revenue === 0 && r.cost === 0 ? badge("入力済み実績ゼロ") : '') : '<p>未登録 ／ 実績不明</p>') +
       '<div class="actions">' + action(r ? "収支を編集" : "収支を登録","ledger",p.id) +
       (r ? action("入力を削除","removeLedger",p.id) : '') + '</div></article>';
@@ -178,8 +277,8 @@ function finance() {
     '<div class="metrics">' +
     [ ["売上",revenue], ["費用",cost], ["利益",revenue-cost] ].map(([title,value]) =>
       metric(title, rows.length ? yen(value) : "—", rows.length ? "入力済み " + rows.length + " / " + data.projects.length + "件の合計" : "実績未登録")).join("") +
-    '</div><p>利益は入力した売上 − 費用。確認済みの月次実績だけを登録してください。</p>' +
-    (records.length ? grid(records) : panel('<p>収支を入力する事業を先に登録してください。</p>'));
+    '</div><p>差引収支は入力した売上 − 費用であり、営業利益・税引後純利益とは異なります。確認済みの月次実績だけを登録してください。</p>' +
+    (records.length ? grid(records) : panel('<p>収支を入力する事業を先に登録してください。</p>')) + financeModel() + strategyAnalysis();
 }
 
 function progress() {
@@ -217,26 +316,81 @@ function progress() {
     })) : panel('<p>作業の報告はまだありません。定期作業が進捗を送ると、ここに表示されます。</p>'));
 }
 
+function decisionReview(index, status) {
+  const old = data.decisions[index];
+  if (!old || old.activity || !["決定済み","保留","却下"].includes(status)) throw Error("対象の提案が見つかりません。");
+  if (old.status !== "提案") throw Error("提案状態の記録だけを審査できます。編集画面から変更してください。");
+  const reason = prompt("判断理由を記録してください（必須）。外部への実行は行われません。");
+  if (reason === null) return;
+  if (!reason.trim()) throw Error("判断理由を入力してください。");
+  if (!confirm("「" + old.title + "」を「" + status + "」にしますか？\nこの操作で外部サービスは実行されません。")) return;
+  const stamp = new Date().toLocaleString("ja-JP", {timeZone:"Asia/Tokyo",hour12:false});
+  const updated = {...old,status,note:old.note + "\n【審査 " + stamp + " JST／" + status + "】" + reason.trim()};
+  save({...data,decisions:data.decisions.map((d,i)=>i===index?updated:d)});
+  render();
+  $("notice").textContent = "経営判断を記録しました。外部への操作は実行していません。";
+}
 function decisions() {
   return heading("経営判断", action("＋ 判断を記録","decision","",true)) +
     (data.decisions.some(d => !d.activity) ? grid(data.decisions.map((d,i) => ({d,i})).filter(({d}) => !d.activity).sort((a,b) => b.d.date.localeCompare(a.d.date)).map(({d,i}) =>
       '<article><h3>' + esc(d.title) + '</h3><div class="chips">' + badge(d.date) + badge(d.status) +
-      '</div><p>' + esc(d.note) + '</p><p>出典　' + esc(d.source) + '</p>' + action("編集","decision",i) + '</article>')) :
+      '</div><p>' + esc(d.note) + '</p><p>出典　' + esc(d.source) + '</p>' + (d.status === '提案' ? '<div class="actions">' + action('承認','reviewApprove',i) + action('保留','reviewHold',i) + action('却下','reviewReject',i) + '</div>' : '') + action("編集","decision",i) + '</article>')) :
     panel('<p>判断の記録は未登録です。</p>'));
+}
+function importLogPanel() {
+  const logs = (data.importLog || []).slice(-12).reverse();
+  return panel('<h3>日次取り込み履歴</h3><p>追加実績のみ記録します。過去の取り込み分は自動復元されません。</p>' + (logs.length ? '<ol>' + logs.map(r => '<li>' + esc(r.at.slice(0,16).replace("T"," ")) + ' ／ 対象日 ' + esc(r.date) + ' ／ 候補 ' + r.projects + '件・判断 ' + r.decisions + '件</li>').join("") + '</ol>' : '<p>記録はありません。</p>'));
 }
 function settings() {
   return heading("データ管理") + (window.orxeliaSync?.view() || "") +
+    panel('<h3>引き継ぎ事業台帳（19件）</h3><p>既存の事業を保持し、未登録の候補だけ追加します。類似名称は別名として残る場合があります。実績・開発状況は自動確定しません。</p>' + action("追加候補を確認して取り込む","mergeCatalog")) +
+    importLogPanel() +
     panel('<h3>初期データ・バックアップ</h3><p>初回は同梱の「初期データ.json」を読み込んでください。読み込みは現在の内容を全件置き換えます。</p>' +
-      '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
+      '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + action("端末内の復旧用データを書き出す","recoveryExport") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
     '<div class="head"><h3>運用条件</h3></div>' + panel('<p>初期予算上限 ¥3,000 ／ 新規固定費 ¥0。配布構成でのアプリ費用は初期・月額ともに ¥0。</p><p>ログインすると同じアカウントの端末間で同期します。毎朝7:30の定期作業は、このPCとCodexアプリの起動、ログイン済みブラウザーが必要です。工程ごとの報告は「進捗」で確認できます。会計サービスは未連携です。</p><p id="offline">オフラインの状態を確認中…</p>');
+}
+
+
+// v17: Sales pilot is intentionally device-local. It does not enter v16 cloud sync.
+const salesStages = ["見込み", "接触済み", "商談中", "契約", "失注"];
+function loadSales() {
+  try {
+    const raw = localStorage.getItem(salesKey);
+    if (!raw) return [];
+    const rows = JSON.parse(raw);
+    if (!Array.isArray(rows) || rows.length > 2000 || !rows.every(r => r && typeof r.name === "string" && typeof r.note === "string" && salesStages.includes(r.stage) && typeof r.id === "string")) throw Error();
+    return rows;
+  } catch { return null; }
+}
+function sales() {
+  const rows = loadSales();
+  if (rows === null) return heading("営業・収益化") + panel('<p class="warn">営業データの形式が不正です。上書きを防ぐため編集を停止しました。</p>');
+  const counts = Object.fromEntries(salesStages.map(stage => [stage, rows.filter(r => r.stage === stage).length]));
+  const price = 1480, fee = .036, fixed = 0, tax = .30;
+  const netPerCustomer = price * (1-fee) * (1-tax);
+  const needed = Math.ceil((100000 + fixed*(1-tax)) / netPerCustomer);
+  return heading("営業・収益化",action("営業CSVを書き出す","salesExport")) +
+    panel('<h3>見積もり追客管理（事業仮説）</h3><p>月額1,480円は仮価格。決済手数料3.6%、税負担30%、固定費0円の単純試算で、その他の費用・税制・解約率は未反映です。</p>' +
+    grid([metric("月額想定単価",yen(price),"仮説"),metric("目標契約数",needed+"社","税引後月10万円の概算"),metric("登録契約数",counts["契約"]+"社","手動登録のみ"),metric("想定月額売上",yen(counts["契約"]*price),"入金実績ではありません")])) +
+    panel('<h3>見込み客を登録</h3><p>この画面の情報は現在の端末内にのみ保存されます。端末間同期・通常のJSONバックアップには含まれません。個人情報や機密情報は入力しないでください。</p>' +
+    '<form id="sales-form"><label>企業・案件名（識別用の略称）<input name="name" maxlength="100" required></label><label>段階<select name="stage">'+salesStages.map(x=>'<option>'+x+'</option>').join('')+'</select></label><label>次の行動・メモ<textarea name="note" maxlength="500"></textarea></label><button class="primary">登録する</button></form>') +
+    panel('<h3>営業パイプライン</h3>'+grid(salesStages.map(x=>metric(x,counts[x]+"件","手動記録")))+
+    (rows.length ? rows.map(r=>'<article><h3>'+esc(r.name)+'</h3><p>'+esc(r.note)+'</p><label>段階<select data-sales-id="'+esc(r.id)+'">'+salesStages.map(x=>'<option'+(x===r.stage?' selected':'')+'>'+x+'</option>').join('')+'</select></label>'+action('削除','salesDelete',r.id)+'</article>').join('') : '<p>登録はありません。</p>'));
+}
+function saveSales(rows) { if (loadSales() === null) throw Error("営業データが読み込めません。"); localStorage.setItem(salesKey,JSON.stringify(rows)); }
+function salesExport() {
+  const rows=loadSales(); if (rows === null) throw Error("営業データを読み込めません。");
+  const csv=[['案件名','段階','メモ'],...rows.map(r=>[r.name,r.stage,r.note])].map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const url=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
+  const a=document.createElement('a');a.href=url;a.download='ORXELIA-sales-'+today()+'.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 
 function render() {
   const projects = data.projects;
   const ideas = projects.filter(p => p.type === types[0] && p.date === date);
   $("metrics").innerHTML = [
-    metric("日次候補", ideas.length, date + " ／ 最大10案"),
-    metric("重点検証", ideas.filter(p => p.rank).length, "日次候補の内数"),
+    metric("事業総数", projects.length, "登録済み"),
+    metric("重点候補", ideas.filter(p => p.rank).length, date + " の重点候補"),
     metric("開発中", projects.filter(p => p.stage === "開発中").length, "登録ステータスの集計"),
     metric("収益化済み", projects.filter(p => p.stage === "収益化済み").length, "登録ステータスの集計")
   ].join("");
@@ -244,7 +398,7 @@ function render() {
     if (button.dataset.tab === tab) button.setAttribute("aria-current","page");
     else button.removeAttribute("aria-current");
   });
-  $("view").innerHTML = {portfolio,daily,progress,finance,decisions,settings}[tab]();
+  $("view").innerHTML = {portfolio,daily,progress,sales,finance,decisions,settings}[tab]();
   if ($("offline")) $("offline").textContent = offlineStatus;
 }
 
@@ -285,6 +439,7 @@ function editProject(id, isDaily) {
         date:isIdea ? values.date : "", rank:isIdea ? Number(values.rank) : 0,
         price:values.price === "" ? null : Number(values.price),
         source:old?.source || "利用者による手動登録", history:[...p.history]};
+      if (!old && data.projects.some(item => normalizedName(item.name) === normalizedName(updated.name))) throw Error("同名または表記が近い事業が登録済みです。既存事業を編集してください。");
       const change = old ? [
         ...(old.stage !== updated.stage ? [old.stage + " → " + updated.stage] : []),
         ...(old.priority !== updated.priority ? ["優先度 " + old.priority + " → " + updated.priority] : []),
@@ -318,7 +473,7 @@ function editDecision(index) {
   editor("経営判断を記録",
     input("title","判断項目","text",old?.title,'required maxlength="150"') +
     input("date","日付","date",old?.date || today(),'required') +
-    select("status","区分",["提案","決定済み"],old?.status || "提案") +
+    select("status","区分",["提案","決定済み","保留","却下"],old?.status || "提案") +
     area("note","判断・根拠・次の行動",old?.note), values => {
       const row = {...values,source:"利用者による手動記録"};
       save({...data,decisions:old ? data.decisions.map(d => d === old ? row : d) : [...data.decisions,row]});
@@ -345,10 +500,21 @@ document.addEventListener("click", event => {
     render();
   }
   try {
-    if (kind === "project" || kind === "dailyProject") editProject(value,kind === "dailyProject");
+    if (kind === "salesExport") salesExport();
+    if (kind === "salesDelete") {
+      const rows=loadSales(); if (rows === null) throw Error("営業データを読み込めません。");
+      if (confirm("この営業記録を削除しますか？")) { saveSales(rows.filter(r=>r.id!==value)); render(); }
+    }
+    if (kind === "recoveryExport") downloadRecoverySnapshot();
+    else if (kind === "project" || kind === "dailyProject") editProject(value,kind === "dailyProject");
     if (kind === "ledger") editLedger(value);
     if (kind === "decision") editDecision(value);
+    if (kind === "reviewApprove") decisionReview(Number(value),"決定済み");
+    if (kind === "reviewHold") decisionReview(Number(value),"保留");
+    if (kind === "reviewReject") decisionReview(Number(value),"却下");
     if (kind === "export") exportData();
+    if (kind === "mergeCatalog") mergeCatalog();
+    if (kind === "openDecisions") { tab = "decisions"; render(); }
     if (kind === "brief") exportBrief();
     if (kind === "reportPaste") {
       const link = $("report-link").value.trim();
@@ -380,7 +546,10 @@ document.addEventListener("change", async event => {
     try {
       const next = JSON.parse((await file.text()).replace(/^\uFEFF/,""));
       validate(next);
-      if (!confirm("現在のデータを置き換えます。事業 " + next.projects.length + "件を読み込みますか？")) return;
+      if (!confirm("現在のデータを置き換えます。事業 " + next.projects.length + "件を読み込みますか？\n続行前に現在のデータをバックアップとして書き出します。")) return;
+      exportData();
+      if (!confirm("バックアップJSONのダウンロードを確認しましたか？確認できない場合はキャンセルしてください。")) return;
+      preserveRecoverySnapshot("JSON全件置換前");
       save(next);
       date = data.projects.map(p => p.date).filter(Boolean).sort().at(-1) || today();
       tab = "portfolio";
@@ -431,18 +600,40 @@ async function importDailyLink(hash = location.hash) {
     if (incoming.ledger.length || incoming.projects.some(p => p.type !== types[0])) throw Error("日次レポート専用のリンクです。");
     const projects = [...data.projects];
     const decisions = [...data.decisions];
+    const existingIds = new Set(projects.map(p => p.id));
+    const existingDaily = new Set(projects.filter(p => p.type === types[0]).map(p => p.date + "/" + normalizedName(p.name)));
+    const incomingKeys = new Set();
+    const allNames = new Set(projects.map(p => normalizedName(p.name)));
+    let crossDateDuplicates = 0;
     for (const p of incoming.projects) {
-      if (projects.some(item => item.id === p.id || (item.date === p.date && item.name === p.name))) continue;
+      const dailyKey = p.date + "/" + normalizedName(p.name);
+      if (existingIds.has(p.id) || existingDaily.has(dailyKey) || incomingKeys.has(dailyKey)) continue;
+      if (allNames.has(normalizedName(p.name))) { crossDateDuplicates++; continue; }
       if (projects.filter(item => item.date === p.date).length >= 10) continue;
       const rank = projects.some(item => item.date === p.date && item.rank === p.rank) ? 0 : p.rank;
       projects.push({...p,rank});
+      existingIds.add(p.id);
+      incomingKeys.add(dailyKey);
+      allNames.add(normalizedName(p.name));
     }
     for (const d of incoming.decisions) {
       if (!decisions.some(item => item.date === d.date && item.title === d.title)) decisions.push(d);
     }
     const added = projects.length - data.projects.length;
     const proposals = decisions.length - data.decisions.length;
-    save({...data,projects,decisions});
+    if (!(added || proposals)) {
+      $("notice").textContent = "追加対象なし：既存の記録と重複しています。";
+      history.replaceState(null,"",location.pathname+location.search);
+      return;
+    }
+    const dates = [...new Set(incoming.projects.map(p => p.date))];
+    if (!confirm("日次レポート取り込みプレビュー\n対象日：" + (dates.join("、") || "候補なし") + "\n新規事業：" + added + "件\n経営判断：" + proposals + "件\n重複・上限超過は除外済み。既存データは削除しません。追加しますか？")) {
+      $("notice").textContent = "取り込みをキャンセルしました。";
+      return;
+    }
+    const log = {at:new Date().toISOString(),date:dates.join(",") || today(),projects:added,decisions:proposals};
+    preserveRecoverySnapshot("日次レポート追加前");
+    save({...data,projects,decisions,importLog:[...(data.importLog || []),log].slice(-200)});
     date = incoming.projects[0]?.date || date;
     tab = incoming.decisions.some(d => d.activity) ? "progress" : "daily";
     render();
@@ -637,3 +828,25 @@ sync.run();
 
 
 
+
+// Sales events are delegated because the tab is re-rendered.
+document.addEventListener("submit", event => {
+  if (event.target.id !== "sales-form") return;
+  event.preventDefault();
+  try {
+    const rows=loadSales(); if (rows===null) throw Error("営業データを読み込めません。");
+    const values=Object.fromEntries(new FormData(event.target));
+    const name=String(values.name||"").trim(), note=String(values.note||"").trim();
+    if (!name || name.length>100 || note.length>500 || !salesStages.includes(values.stage)) throw Error("入力内容を確認してください。");
+    saveSales([...rows,{id:crypto.randomUUID(),name,stage:values.stage,note}]);
+    render();
+  } catch(e) { $("notice").textContent=e.message || "登録できませんでした。"; }
+});
+document.addEventListener("change",event => {
+  const id=event.target.dataset.salesId;
+  if (!id) return;
+  try {
+    const rows=loadSales(); if (rows===null || !salesStages.includes(event.target.value)) throw Error("営業データを読み込めません。");
+    saveSales(rows.map(r=>r.id===id?{...r,stage:event.target.value}:r));render();
+  } catch(e) { $("notice").textContent=e.message || "変更できませんでした。"; }
+});
