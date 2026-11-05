@@ -1,87 +1,177 @@
-import datetime, json, os, pathlib, urllib.request, urllib.error
+import os
+import json
+import pathlib
+import datetime
+import urllib.request
+import urllib.error
+import urllib.parse
 
-key = os.environ.get("GEMINI_API_KEY", "").strip()
-if not key:
-    raise SystemExit("GEMINI_API_KEY is not configured")
+BASE = "https://generativelanguage.googleapis.com/v1beta"
+KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 
+if not KEY:
+    raise SystemExit("ERROR: GEMINI_API_KEY is missing")
+
+HEADERS = {
+    "x-goog-api-key": KEY,
+    "Content-Type": "application/json"
+}
+
+def request_json(url, payload=None):
+    data = None if payload is None else json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url, data=data, headers=HEADERS,
+        method="GET" if data is None else "POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=90) as response:
+            return json.load(response)
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        print("API HTTP", error.code, detail[:1000])
+        raise
+
+def available_models():
+    found = []
+    token = ""
+    for _ in range(10):
+        query = "?pageSize=100"
+        if token:
+            query += "&pageToken=" + urllib.parse.quote(token)
+        result = request_json(BASE + "/models" + query)
+        for model in result.get("models", []):
+            name = model.get("name", "")
+            methods = model.get("supportedGenerationMethods", [])
+            if (
+                name.startswith("models/gemini-")
+                and "generateContent" in methods
+                and "image" not in name
+                and "audio" not in name
+                and "tts" not in name
+                and "live" not in name
+            ):
+                found.append(name)
+        token = result.get("nextPageToken", "")
+        if not token:
+            break
+    return sorted(set(found))
+
+models = available_models()
+print("Available text models:", ", ".join(models))
+
+if not models:
+    raise SystemExit("No generateContent models available")
+
+def priority(name):
+    lower = name.lower()
+    return (
+        0 if "flash-lite" in lower else
+        1 if "flash" in lower else
+        2 if "pro" in lower else 3,
+        1 if "preview" in lower else 0,
+        name
+    )
+
+models.sort(key=priority)
+model = models[0]
+print("Selected model:", model)
+
+jst = datetime.timezone(datetime.timedelta(hours=9))
+today = datetime.datetime.now(jst).date()
 projects = ["LIFE EDIT", "FIT NOTE", "MOMENT"]
-today = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).date().isoformat()
-project = projects[(datetime.date.fromisoformat(today) - datetime.date(2026, 11, 5)).days % len(projects)]
+project = projects[(today - datetime.date(2026, 11, 5)).days % 3]
 
-prompt = f"""ORXELIAの事業「{project}」について日本語で事業性を分析してください。
-市場需要、競合、収益性、1人運営、法務リスクの5項目。
-Web検索機能がない場合は最新情報を調査したと主張しないこと。
-確認できない価格、売上、統計、URLは創作しないこと。
-顧客ヒアリング、外部連絡、支出は禁止。
-JSONオブジェクトのみ返答。
-format: orxelia-research-v1
-project: {project}
-researchedAt: {today}
-findings: type, status, summary, source を持つ5件の配列。
-typeは「公開市場データ」「競合実績・価格」「収益試算」「低コスト・一人運営」「法務・技術リスク」。
-statusは「仮説」。不明なsourceは空文字。"""
+types = [
+    "公開市場データ",
+    "競合実績・価格",
+    "収益試算",
+    "低コスト・一人運営",
+    "法務・技術リスク"
+]
 
-body = json.dumps({
+prompt = (
+    "あなたはORXELIAの事業調査担当です。\n"
+    f"対象事業: {project}\n"
+    f"調査日: {today.isoformat()}\n"
+    "以下の5項目について日本語で事業性を評価してください。\n"
+    + "\n".join(types)
+    + "\nWeb検索は利用できないため、最新の事実を確認したと主張しないこと。"
+    "数字やURLを捏造しないこと。全件を未検証の仮説として扱うこと。"
+    "支出・契約・外部連絡は行わないこと。\n"
+    "JSONのみ返してください。形式:\n"
+    '{"findings":[{"type":"公開市場データ",'
+    '"summary":"説明","source":""}]}\n'
+    "findingsは指定した5種類を各1件、合計5件。"
+)
+
+payload = {
     "contents": [{"parts": [{"text": prompt}]}],
     "generationConfig": {
         "responseMimeType": "application/json",
         "temperature": 0.2,
-        "maxOutputTokens": 2600
+        "maxOutputTokens": 3000
     }
-}).encode("utf-8")
-
-req = urllib.request.Request(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
-    data=body,
-    headers={"Content-Type": "application/json", "x-goog-api-key": key},
-    method="POST"
-)
-
-try:
-    with urllib.request.urlopen(req, timeout=55) as response:
-        result = json.load(response)
-except urllib.error.HTTPError as exc:
-    raise SystemExit(f"Gemini API HTTP {exc.code}; no report saved")
-
-content = "".join(
-    part.get("text", "")
-    for candidate in result.get("candidates", [])
-    for part in candidate.get("content", {}).get("parts", [])
-)
-report = json.loads(content)
-
-types = {
-    "公開市場データ", "競合実績・価格", "収益試算",
-    "低コスト・一人運営", "法務・技術リスク"
 }
 
-if (
-    report.get("format") != "orxelia-research-v1"
-    or report.get("project") != project
-    or report.get("researchedAt") != today
-    or not isinstance(report.get("findings"), list)
-    or len(report["findings"]) != 5
-):
-    raise SystemExit("Invalid report; no report saved")
+try:
+    result = request_json(
+        BASE + "/" + model + ":generateContent",
+        payload
+    )
+except urllib.error.HTTPError as error:
+    raise SystemExit(
+        f"Generation failed: HTTP {error.code}, model={model}"
+    )
 
-for item in report["findings"]:
-    if (
-        item.get("type") not in types
-        or not isinstance(item.get("summary"), str)
-        or not item["summary"].strip()
-        or len(item["summary"]) > 1000
-        or not isinstance(item.get("source"), str)
-        or len(item["source"]) > 500
-    ):
-        raise SystemExit("Invalid finding")
+parts = []
+for candidate in result.get("candidates", []):
+    parts.extend(candidate.get("content", {}).get("parts", []))
+
+content = "".join(
+    part.get("text", "") for part in parts
+    if isinstance(part.get("text"), str)
+)
+
+if not content.strip():
+    raise SystemExit("Model returned no text")
+
+parsed = json.loads(content)
+findings = parsed.get("findings", [])
+
+if not isinstance(findings, list) or len(findings) != 5:
+    raise SystemExit("Invalid findings count")
+
+if {item.get("type") for item in findings} != set(types):
+    raise SystemExit("Invalid finding types")
+
+for item in findings:
+    if not isinstance(item.get("summary"), str):
+        raise SystemExit("Missing summary")
+    if not item["summary"].strip():
+        raise SystemExit("Empty summary")
     item["status"] = "仮説"
+    item["source"] = str(item.get("source") or "")
+
+report = {
+    "format": "orxelia-research-v1",
+    "project": project,
+    "researchedAt": today.isoformat(),
+    "findings": findings
+}
 
 feed = {
     "format": "orxelia-auto-feed-v1",
-    "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    "generatedAt": datetime.datetime.now(
+        datetime.timezone.utc
+    ).isoformat(),
     "reports": [report]
 }
+
 path = pathlib.Path("ai-reports/latest.json")
-path.parent.mkdir(exist_ok=True)
-path.write_text(json.dumps(feed, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-print("Report generated:", project)
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_text(
+    json.dumps(feed, ensure_ascii=False, indent=2) + "\n",
+    encoding="utf-8"
+)
+
+print("SUCCESS:", project, "using", model)
