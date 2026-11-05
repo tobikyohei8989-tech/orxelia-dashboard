@@ -8,6 +8,7 @@ const today = () => new Intl.DateTimeFormat("sv-SE", {timeZone:"Asia/Tokyo"}).fo
 const key = "orxelia-dashboard-v1";
 const recoveryKey = "orxelia-local-recovery-v16";
 const salesKey = "orxelia-sales-v17-local";
+const backupKey = "orxelia-safety-history-v18";
 const types = ["日次候補", "過去の候補", "既存プロジェクト"];
 const stages = ["未確認", "未検証", "検証中", "開発中", "販売中", "収益化済み", "保留", "終了"];
 const priorities = ["未設定", "高", "中", "低"];
@@ -51,9 +52,31 @@ function downloadRecoverySnapshot() {
   document.body.append(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
+function keepSafetyCopy(reason) {
+  if (!readable) throw Error("データが読めないため、安全コピーを作成できません。");
+  const rawSales = localStorage.getItem(salesKey);
+  if (rawSales !== null) JSON.parse(rawSales);
+  const previous = localStorage.getItem(backupKey);
+  const history = previous ? JSON.parse(previous) : [];
+  if (!Array.isArray(history)) throw Error("安全コピーの形式が不正です。更新を停止しました。");
+  const entry = {at:new Date().toISOString(),reason,portfolio:data,sales:rawSales};
+  // Keep three previous versions without modifying the current saved record.
+  localStorage.setItem(backupKey,JSON.stringify([entry,...history].slice(0,3)));
+}
+function exportSafetyCopy() {
+  const raw = localStorage.getItem(backupKey);
+  if (!raw) throw Error("安全コピーはまだありません。データを編集すると自動作成されます。");
+  const history = JSON.parse(raw);
+  const url = URL.createObjectURL(new Blob([JSON.stringify(history,null,2)],{type:"application/json"}));
+  const link=document.createElement("a"); link.href=url;
+  link.download="ORXELIA-safety-history-"+today()+".json";
+  document.body.append(link); link.click(); link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
 function save(next) {
   if (!readable) throw Error("保存領域を読み込めないため編集できません。");
   validate(next);
+  keepSafetyCopy("事業・収支・判断の変更前");
   localStorage.setItem(key, JSON.stringify(next));
   data = next;
 }
@@ -346,7 +369,7 @@ function settings() {
     panel('<h3>引き継ぎ事業台帳（19件）</h3><p>既存の事業を保持し、未登録の候補だけ追加します。類似名称は別名として残る場合があります。実績・開発状況は自動確定しません。</p>' + action("追加候補を確認して取り込む","mergeCatalog")) +
     importLogPanel() +
     panel('<h3>初期データ・バックアップ</h3><p>初回は同梱の「初期データ.json」を読み込んでください。読み込みは現在の内容を全件置き換えます。</p>' +
-      '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + action("端末内の復旧用データを書き出す","recoveryExport") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
+      '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + action("端末内の復旧用データを書き出す","recoveryExport") + action("直近3世代の安全コピーを書き出す","safetyExport") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
     '<div class="head"><h3>運用条件</h3></div>' + panel('<p>初期予算上限 ¥3,000 ／ 新規固定費 ¥0。配布構成でのアプリ費用は初期・月額ともに ¥0。</p><p>ログインすると同じアカウントの端末間で同期します。毎朝7:30の定期作業は、このPCとCodexアプリの起動、ログイン済みブラウザーが必要です。工程ごとの報告は「進捗」で確認できます。会計サービスは未連携です。</p><p id="offline">オフラインの状態を確認中…</p>');
 }
 
@@ -377,7 +400,7 @@ function sales() {
     panel('<h3>営業パイプライン</h3>'+grid(salesStages.map(x=>metric(x,counts[x]+"件","手動記録")))+
     (rows.length ? rows.map(r=>'<article><h3>'+esc(r.name)+'</h3><p>'+esc(r.note)+'</p><label>段階<select data-sales-id="'+esc(r.id)+'">'+salesStages.map(x=>'<option'+(x===r.stage?' selected':'')+'>'+x+'</option>').join('')+'</select></label>'+action('削除','salesDelete',r.id)+'</article>').join('') : '<p>登録はありません。</p>'));
 }
-function saveSales(rows) { if (loadSales() === null) throw Error("営業データが読み込めません。"); localStorage.setItem(salesKey,JSON.stringify(rows)); }
+function saveSales(rows) { if (loadSales() === null) throw Error("営業データが読み込めません。"); keepSafetyCopy("営業データ変更前"); localStorage.setItem(salesKey,JSON.stringify(rows)); }
 function salesExport() {
   const rows=loadSales(); if (rows === null) throw Error("営業データを読み込めません。");
   const csv=[['案件名','段階','メモ'],...rows.map(r=>[r.name,r.stage,r.note])].map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
@@ -506,6 +529,7 @@ document.addEventListener("click", event => {
       if (confirm("この営業記録を削除しますか？")) { saveSales(rows.filter(r=>r.id!==value)); render(); }
     }
     if (kind === "recoveryExport") downloadRecoverySnapshot();
+    if (kind === "safetyExport") exportSafetyCopy();
     else if (kind === "project" || kind === "dailyProject") editProject(value,kind === "dailyProject");
     if (kind === "ledger") editLedger(value);
     if (kind === "decision") editDecision(value);
