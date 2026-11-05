@@ -9,6 +9,7 @@ const key = "orxelia-dashboard-v1";
 const recoveryKey = "orxelia-local-recovery-v16";
 const salesKey = "orxelia-sales-v17-local";
 const backupKey = "orxelia-safety-history-v18";
+const tasksKey = "orxelia-action-tasks-v25-local";
 const types = ["日次候補", "過去の候補", "既存プロジェクト"];
 const stages = ["未確認", "未検証", "検証中", "開発中", "販売中", "収益化済み", "保留", "終了"];
 const priorities = ["未設定", "高", "中", "低"];
@@ -284,6 +285,38 @@ function strategyAnalysis() {
     '<p>この順位は開発投資の承認ではありません。顧客ヒアリング・競合調査・獲得費用の検証後に判断してください。</p>');
 }
 
+function executiveInsights() {
+  const targetPerBusiness = 100000, goalBusinesses = 10, taxAssumption = 0.30;
+  const latestMonths = [...new Set(data.ledger.map(r => r.month))].sort().reverse();
+  const latest = latestMonths[0];
+  const rows = latest ? data.ledger.filter(r => r.month === latest) : [];
+  const byProject = new Map(rows.map(r => [r.project,r]));
+  const verified = data.projects.map(p => ({p,r:byProject.get(p.id)})).filter(x=>x.r);
+  const estimate = r => Math.max(0,(r.revenue-r.cost)*(1-taxAssumption));
+  const achievers = verified.filter(x => estimate(x.r) >= targetPerBusiness);
+  const gap = Math.max(0,goalBusinesses-achievers.length);
+  const outstanding = data.projects.filter(p=>!['保留','終了'].includes(p.stage)).map(p=>{
+    const r=byProject.get(p.id);
+    const missing=[];
+    if(!r) missing.push('月次収支');
+    if(!p.customer?.trim()) missing.push('想定顧客');
+    if(!p.next?.trim()) missing.push('次の行動');
+    if(!p.reviewBy) missing.push('判断期限');
+    return {p,r,missing};
+  });
+  const needs = outstanding.filter(x=>x.missing.length).sort((a,b)=>b.missing.length-a.missing.length).slice(0,8);
+  const near = outstanding.filter(x=>x.r && x.r.revenue>x.r.cost).sort((a,b)=>estimate(b.r)-estimate(a.r)).slice(0,5);
+  return heading('経営分析・次の行動') +
+    panel('<h3>2027年末の目標に対する現在地</h3><p>目標：独立した10事業で、それぞれ月間税引後純利益10万円以上。以下は登録された収支のみに基づく参考値です。</p>'+
+      grid([metric('目標事業数',goalBusinesses+'事業','2027年末'),metric('参考達成数',achievers.length+'事業',latest ? latest+'の入力済み収支から試算':'収支データ未登録'),metric('目標との差',gap+'事業','参考達成数との差'),metric('収支入力',verified.length+' / '+data.projects.length+'事業',latest||'対象月なし')])+
+      '<p class="warn">注意：税率30%を一律に仮定した概算です。売上−入力費用を税引前利益とみなす単純計算であり、実際の税引後純利益・達成認定ではありません。未入力事業は未達成ではなく「不明」です。</p>')+
+    panel('<h3>次に確認すべき情報</h3><p>以下は入力不足を機械的に抽出した確認候補です。自動調査や外部への連絡は実行しません。</p>'+
+      (needs.length ? '<div class="model-list">'+needs.map(x=>'<p><strong>'+esc(x.p.name)+'</strong>：'+esc(x.missing.join('・'))+'を確認</p>').join('')+'</div>':'<p>入力不足として抽出された項目はありません。</p>'))+
+    panel('<h3>収支がプラスの事業（参考順位）</h3><p>直近の入力済み月 '+esc(latest||'なし')+'。収支未登録の事業は順位に含みません。</p>'+
+      (near.length ? '<div class="model-list">'+near.map(x=>'<p><strong>'+esc(x.p.name)+'</strong>：参考税引後 '+yen(Math.floor(estimate(x.r)))+' ／ 月額目標との差 '+yen(Math.max(0,targetPerBusiness-Math.floor(estimate(x.r))))+'</p>').join('')+'</div>':'<p>入力済みで収支がプラスの事業はありません。</p>'))+
+    strategyAnalysis() + financeModel();
+}
+
 function finance() {
   const rows = data.ledger.filter(r => r.month === month);
   const revenue = rows.reduce((total,r) => total + r.revenue,0);
@@ -369,7 +402,7 @@ function settings() {
     panel('<h3>引き継ぎ事業台帳（19件）</h3><p>既存の事業を保持し、未登録の候補だけ追加します。類似名称は別名として残る場合があります。実績・開発状況は自動確定しません。</p>' + action("追加候補を確認して取り込む","mergeCatalog")) +
     importLogPanel() +
     panel('<h3>初期データ・バックアップ</h3><p>初回は同梱の「初期データ.json」を読み込んでください。読み込みは現在の内容を全件置き換えます。</p>' +
-      '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + action("端末内の復旧用データを書き出す","recoveryExport") + action("直近3世代の安全コピーを書き出す","safetyExport") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
+      '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + action("端末内の復旧用データを書き出す","recoveryExport") + action("直近3世代の安全コピーを書き出す","safetyExport") + action("全データをまとめてJSON出力","bundleExport") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
     '<div class="head"><h3>運用条件</h3></div>' + panel('<p>初期予算上限 ¥3,000 ／ 新規固定費 ¥0。配布構成でのアプリ費用は初期・月額ともに ¥0。</p><p>ログインすると同じアカウントの端末間で同期します。毎朝7:30の定期作業は、このPCとCodexアプリの起動、ログイン済みブラウザーが必要です。工程ごとの報告は「進捗」で確認できます。会計サービスは未連携です。</p><p id="offline">オフラインの状態を確認中…</p>');
 }
 
@@ -408,6 +441,43 @@ function salesExport() {
   const a=document.createElement('a');a.href=url;a.download='ORXELIA-sales-'+today()+'.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 
+// v25: action tracking is intentionally local; never claim cloud synchronization.
+const taskStates = ["未着手","進行中","完了","保留"];
+function loadTasks() {
+  try {
+    const raw = localStorage.getItem(tasksKey);
+    if (!raw) return [];
+    const rows = JSON.parse(raw);
+    if (!Array.isArray(rows) || rows.length > 3000 || !rows.every(t => t && typeof t.id === "string" && typeof t.title === "string" && t.title.length <= 160 && typeof t.project === "string" && typeof t.due === "string" && (t.due === "" || /^\d{4}-\d{2}-\d{2}$/.test(t.due)) && taskStates.includes(t.state))) throw Error();
+    return rows;
+  } catch { return null; }
+}
+function saveTasks(rows) {
+  if (loadTasks() === null) throw Error("実行タスクを読み込めないため変更を停止しました。");
+  keepSafetyCopy("実行タスクの変更前");
+  localStorage.setItem(tasksKey,JSON.stringify(rows));
+}
+function downloadJson(name,value) {
+  const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:"application/json"}));
+  const a=document.createElement("a"); a.href=url;a.download=name;a.rel="noopener";
+  document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+function exportBundle() {
+  if (!readable || loadSales()===null || loadTasks()===null) throw Error("読み込めないデータがあります。書き出しを停止しました。");
+  downloadJson("ORXELIA-all-local-"+today()+".json",{format:"orxelia-bundle-v25",exportedAt:new Date().toISOString(),portfolio:data,sales:loadSales(),tasks:loadTasks()});
+}
+function tasks() {
+  const rows=loadTasks();
+  if (rows===null) return heading("実行タスク")+panel('<p class="warn">タスクの保存データを読み込めません。上書き防止のため編集を停止しました。</p>');
+  const overdue=rows.filter(t=>t.state!=="完了" && t.due && t.due<today());
+  const choices=data.projects.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
+  const sorted=[...rows].sort((a,b)=>(a.state==="完了")-(b.state==="完了") || (a.due||"9999").localeCompare(b.due||"9999"));
+  return heading("実行タスク",action("タスクJSON出力","tasksExport"))+
+    panel('<h3>行動の見える化</h3><p>経営判断から実行へ。タスクは手動で登録・更新します。AIによる自動実行や外部への連絡はありません。</p>'+grid([metric("登録タスク",rows.length+"件","端末内の記録"),metric("進行中",rows.filter(t=>t.state==="進行中").length+"件","手動更新"),metric("期限超過",overdue.length+"件","未完了のみ"),metric("完了",rows.filter(t=>t.state==="完了").length+"件","手動更新")]))+
+    panel('<h3>タスクを追加</h3><form id="task-form"><label>やること<input name="title" maxlength="160" required></label><label>対象事業<select name="project"><option value="">共通・未指定</option>'+choices+'</select></label><label>期限<input name="due" type="date"></label><button class="primary">タスク登録</button></form>')+
+    panel('<h3>タスク一覧</h3><p>保存先はこの端末のみです。機密情報は登録しないでください。</p>'+(sorted.length?sorted.map(t=>'<article><h3>'+esc(t.title)+'</h3><p>'+esc(data.projects.find(p=>p.id===t.project)?.name||"共通")+' ／ 期限 '+esc(t.due||"未設定")+'</p><label>進捗<select data-task-id="'+esc(t.id)+'">'+taskStates.map(state=>'<option'+(state===t.state?' selected':'')+'>'+state+'</option>').join('')+'</select></label>'+action("削除","taskDelete",t.id)+'</article>').join(''):'<p>まだタスクがありません。</p>'));
+}
+
 function render() {
   const projects = data.projects;
   const ideas = projects.filter(p => p.type === types[0] && p.date === date);
@@ -421,7 +491,7 @@ function render() {
     if (button.dataset.tab === tab) button.setAttribute("aria-current","page");
     else button.removeAttribute("aria-current");
   });
-  $("view").innerHTML = {portfolio,daily,progress,sales,finance,decisions,settings}[tab]();
+  $("view").innerHTML = {portfolio,daily,progress,sales,finance,insights:executiveInsights,tasks,decisions,settings}[tab]();
   if ($("offline")) $("offline").textContent = offlineStatus;
 }
 
@@ -529,6 +599,9 @@ document.addEventListener("click", event => {
       if (confirm("この営業記録を削除しますか？")) { saveSales(rows.filter(r=>r.id!==value)); render(); }
     }
     if (kind === "recoveryExport") downloadRecoverySnapshot();
+    if (kind === "bundleExport") exportBundle();
+    if (kind === "tasksExport") downloadJson("ORXELIA-tasks-"+today()+".json",loadTasks());
+    if (kind === "taskDelete") { const rows=loadTasks(); if(rows===null) throw Error("タスクを読み込めません。"); if(confirm("このタスクを削除しますか？")) {saveTasks(rows.filter(t=>t.id!==value));render();} }
     if (kind === "safetyExport") exportSafetyCopy();
     else if (kind === "project" || kind === "dailyProject") editProject(value,kind === "dailyProject");
     if (kind === "ledger") editLedger(value);
@@ -873,4 +946,22 @@ document.addEventListener("change",event => {
     const rows=loadSales(); if (rows===null || !salesStages.includes(event.target.value)) throw Error("営業データを読み込めません。");
     saveSales(rows.map(r=>r.id===id?{...r,stage:event.target.value}:r));render();
   } catch(e) { $("notice").textContent=e.message || "変更できませんでした。"; }
+});
+
+// v25 delegated task controls
+document.addEventListener("submit",event=>{
+  if(event.target.id!=="task-form")return;
+  event.preventDefault();
+  try {const rows=loadTasks();if(rows===null)throw Error("タスクを読み込めません。");
+    const v=Object.fromEntries(new FormData(event.target));
+    const title=String(v.title||"").trim();if(!title||title.length>160)throw Error("タスク名を確認してください。");
+    if(v.project&&!data.projects.some(p=>p.id===v.project))throw Error("対象事業を確認してください。");
+    saveTasks([...rows,{id:crypto.randomUUID(),title,project:String(v.project||""),due:String(v.due||""),state:"未着手"}]);render();
+  }catch(e){$("notice").textContent=e.message||"保存できませんでした。";}
+});
+document.addEventListener("change",event=>{
+  const id=event.target.dataset?.taskId;if(!id)return;
+  try {const rows=loadTasks();if(rows===null||!taskStates.includes(event.target.value))throw Error("タスクを更新できません。");
+    saveTasks(rows.map(t=>t.id===id?{...t,state:event.target.value}:t));render();
+  }catch(e){$("notice").textContent=e.message||"更新できませんでした。";}
 });
