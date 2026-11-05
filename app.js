@@ -136,10 +136,10 @@ function decisions() {
     panel('<p>判断の記録は未登録です。</p>'));
 }
 function settings() {
-  return heading("データ管理") +
+  return heading("データ管理") + (window.orxeliaSync?.view() || "") +
     panel('<h3>初期データ・バックアップ</h3><p>初回は同梱の「初期データ.json」を読み込んでください。読み込みは現在の内容を全件置き換えます。</p>' +
       '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
-    '<div class="head"><h3>運用条件</h3></div>' + panel('<p>初期予算上限 ¥3,000 ／ 新規固定費 ¥0。配布構成でのアプリ費用は初期・月額ともに ¥0。</p><p>保存先はこの端末のブラウザーです。外部データ、会計、毎朝7:30のレポートは未連携です。別端末へは書き出したJSONを移してください。</p><p id="offline">オフラインの状態を確認中…</p>');
+    '<div class="head"><h3>運用条件</h3></div>' + panel('<p>初期予算上限 ¥3,000 ／ 新規固定費 ¥0。配布構成でのアプリ費用は初期・月額ともに ¥0。</p><p>ログインすると同じアカウントの端末間で同期します。会計サービスと毎朝7:30のレポートは未連携です。</p><p id="offline">オフラインの状態を確認中…</p>');
 }
 
 function render() {
@@ -364,5 +364,139 @@ async function importDailyLink(hash = location.hash) {
 }
 window.addEventListener("hashchange",() => importDailyLink());
 importDailyLink();
+
+
+
+window.ORXELIA_PUBLISHABLE_KEY = 'sb_publishable_T9287hFW7tudpePLIu9c_w_9xsxTujp';
+"use strict";
+
+// A cloud write is conditional on the revision read by this device.
+const sync = (() => {
+  const endpoint = "https://yzlxcfncdtojajlhihap.supabase.co";
+  const sessionKey = "orxelia-sync-session";
+  const markerKey = "orxelia-sync-baseline";
+  const table = "/rest/v1/orxelia_workspace";
+  let session, baseline;
+  try {
+    session = JSON.parse(localStorage.getItem(sessionKey));
+    baseline = JSON.parse(localStorage.getItem(markerKey));
+  } catch {}
+  let busy = false;
+  let message = "";
+  const ordered = value => Array.isArray(value) ? value.map(ordered) :
+    value && typeof value === "object" ? Object.fromEntries(Object.keys(value).sort().map(k => [k,ordered(value[k])])) : value;
+  const signature = value => JSON.stringify(ordered(value));
+  const populated = value => value.projects.length || value.ledger.length || value.decisions.length;
+
+  function status(text) {
+    message = text;
+    const target = document.getElementById("sync-status");
+    if (target) target.textContent = text;
+  }
+  function setSession(result) {
+    session = {...result,expires_at:result.expires_at || Date.now()/1000 + result.expires_in};
+    localStorage.setItem(sessionKey,JSON.stringify(session));
+  }
+  async function request(path, options = {}, authenticated = true) {
+    if (authenticated && session.expires_at < Date.now()/1000 + 60) {
+      const refreshed = await request("/auth/v1/token?grant_type=refresh_token",
+        {method:"POST",body:JSON.stringify({refresh_token:session.refresh_token})},false);
+      setSession(refreshed);
+    }
+    const headers = {apikey:window.ORXELIA_PUBLISHABLE_KEY,"Content-Type":"application/json",...options.headers};
+    if (authenticated) headers.Authorization = "Bearer " + session.access_token;
+    const response = await fetch(endpoint + path,{...options,headers,cache:"no-store"});
+    if (!response.ok) throw Error("HTTP " + response.status);
+    return response.status === 204 ? null : response.json();
+  }
+  function remember(revision, snapshot) {
+    baseline = {owner:session.user.id,revision,snapshot:signature(snapshot)};
+    localStorage.setItem(markerKey,JSON.stringify(baseline));
+  }
+  function adopt(remote) {
+    save(remote.snapshot);
+    remember(remote.revision,remote.snapshot);
+    if (!data.projects.some(p => p.date === date)) {
+      date = data.projects.map(p => p.date).filter(Boolean).sort().at(-1) || today();
+    }
+    if (!$("editor").open) render();
+  }
+  async function run(credentials) {
+    if (busy || !window.ORXELIA_PUBLISHABLE_KEY || (!session && !credentials) || !readable || $("editor").open) return;
+    busy = true;
+    try {
+      if (credentials) {
+        status("ログイン中…");
+        setSession(await request("/auth/v1/token?grant_type=password",{method:"POST",body:JSON.stringify(credentials)},false));
+        render();
+      }
+      const [remote] = await request(table + "?select=revision,snapshot&limit=1");
+      if (remote) validate(remote.snapshot);
+      if ($("editor").open) return;
+      const snapshot = data;
+      const local = signature(snapshot);
+      const sameAccount = baseline?.owner === session.user.id;
+      const dirty = sameAccount ? baseline.snapshot !== local : !!populated(snapshot);
+      if (!remote) {
+        if (sameAccount) {
+          status("クラウド側の保存を確認できません。端末データは保持しています。");
+          return;
+        }
+        if (dirty) {
+          const [created] = await request(table,{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify({snapshot})});
+          remember(created.revision,snapshot);
+        }
+      } else if (signature(remote.snapshot) === local) {
+        remember(remote.revision,snapshot);
+      } else if (!dirty || (!sameAccount && ["projects","ledger","decisions"].every(group =>
+        snapshot[group].every(item => remote.snapshot[group].some(saved => signature(saved) === signature(item)))))) {
+        adopt(remote);
+      } else if (sameAccount && remote.revision === baseline.revision) {
+        const [updated] = await request(table + "?revision=eq." + baseline.revision,
+          {method:"PATCH",headers:{Prefer:"return=representation"},
+           body:JSON.stringify({revision:baseline.revision+1,snapshot})});
+        if (!updated) {
+          status("別の端末で更新されました。端末データは保持しています。");
+          return;
+        }
+        remember(updated.revision,snapshot);
+      } else {
+        status("端末とクラウドの両方に異なる記録があります。上書きを止めました。「JSONを書き出す」で端末の記録を保存できます。");
+        return;
+      }
+      status("自動同期中 ／ " + new Date().toLocaleTimeString("ja-JP") + " に確認");
+    } catch {
+      status(credentials ? "ログインまたは接続に失敗しました。入力と通信を確認してください。" :
+        "同期できませんでした。端末データは保持し、接続後に再試行します。");
+    } finally {
+      busy = false;
+    }
+  }
+  function view() {
+    if (!window.ORXELIA_PUBLISHABLE_KEY) return "";
+    return '<div class="panel"><h3>iPhone・PCの自動同期</h3><p id="sync-status" role="status">' +
+      esc(message || (session ? "接続を確認中…" : "同じアカウントで各端末からログインしてください。")) + '</p>' +
+      (session ? '<button id="sync-now" type="button">今すぐ同期</button>' :
+        '<form id="sync-login"><label>メール<input type="email" name="email" autocomplete="username" required></label><label>パスワード<input type="password" name="password" autocomplete="current-password" required></label><button class="primary">ログインして同期</button></form>') + '</div>';
+  }
+  document.addEventListener("submit", event => {
+    if (event.target.id !== "sync-login") return;
+    event.preventDefault();
+    const values = Object.fromEntries(new FormData(event.target));
+    event.target.elements.password.value = "";
+    run(values);
+  });
+  document.addEventListener("click", event => {
+    if (event.target.id === "sync-now") run();
+  });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) run(); });
+  window.addEventListener("online",() => run());
+  setInterval(() => { if (!document.hidden) run(); },15000);
+  return {run,view};
+})();
+window.orxeliaSync = sync;
+render();
+sync.run();
+
 
 
