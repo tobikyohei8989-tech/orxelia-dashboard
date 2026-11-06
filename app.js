@@ -424,6 +424,47 @@ function decisionReview(index, status) {
   render();
   $("notice").textContent = "経営判断を記録しました。外部への操作は実行していません。";
 }
+const validationRepo = "tobikyohei8989-tech/orxelia-dashboard";
+let validationRun = null;
+let validationChecked = 0;
+let validationError = false;
+
+function showValidationStatus() {
+  const target = $("quote-validation-status");
+  if (!target) return;
+  const run = validationRun;
+  const status = !run ? (validationError ? "取得できません" : "確認中") :
+    run.status === "completed" ?
+      ({success:"合格",failure:"失敗",cancelled:"中止",timed_out:"時間切れ",skipped:"実行なし"}[run.conclusion] || "完了") :
+      run.status === "in_progress" ? "実行中" : "実行待ち";
+  const time = run ? new Intl.DateTimeFormat("ja-JP",{
+    timeZone:"Asia/Tokyo",dateStyle:"short",timeStyle:"short"
+  }).format(new Date(run.updated_at)) : "";
+  target.innerHTML = badge(status) + (run ?
+    '<span> ' + esc(time) + ' JST</span> <a class="demo-link" href="https://github.com/' + validationRepo +
+    '/actions/runs/' + run.id + '" target="_blank" rel="noopener">実行結果</a>' : "") +
+    (validationError && run ? '<span> ／ 最新情報を取得できません</span>' : "");
+}
+
+async function refreshValidationStatus() {
+  if (!$("quote-validation-status") || document.hidden || Date.now() - validationChecked < 75000) return;
+  validationChecked = Date.now();
+  try {
+    const response = await fetch("https://api.github.com/repos/" + validationRepo +
+      "/actions/workflows/quote-validation.yml/runs?branch=main&per_page=1",
+      {signal:AbortSignal.timeout(8000)});
+    if (!response.ok) throw Error("Workflow status unavailable");
+    const feed = await response.json();
+    const run = feed.workflow_runs?.[0];
+    if (!Number.isSafeInteger(run?.id) || !Number.isFinite(Date.parse(run.updated_at))) throw Error("No valid run");
+    validationRun = run;
+    validationError = false;
+  } catch {
+    validationError = true;
+  }
+  showValidationStatus();
+}
+
 function launchDecisions() {
   const projects = [...data.projects].sort((a,b) =>
     Number(Object.hasOwn(businessEconomics,b.name)) - Number(Object.hasOwn(businessEconomics,a.name)));
@@ -455,6 +496,9 @@ function launchDecisions() {
       (plan ? details("試算条件",'<p>' + esc(plan.note) + '</p>') : "") + '</article>';
   });
   return '<section id="launch-decisions" tabindex="-1">' + heading("事業別の販売判断") +
+    (projects.some(project => project.name === "見積もり催促・追客管理") ?
+      panel('<h3>見積もり催促・追客管理の自動テスト</h3><div id="quote-validation-status" role="status">確認中</div>' +
+        '<p>模擬案件を使った動作テスト。市場調査・販売実績とは別の記録です。</p>') : "") +
     '<p>月間原価は固定費と契約ごとの原価の合計。売上と利益は基準シナリオ・税引前。</p>' +
     (rows.length ? '<div class="decision-table" tabindex="0" role="region" aria-label="全事業の月間採算"><table><thead><tr>' +
       '<th scope="col">事業</th><th scope="col">月間原価</th><th scope="col">月間売上見込み</th><th scope="col">月間利益</th>' +
@@ -870,6 +914,8 @@ function render() {
     settings
   }[tab]();
   expanded.forEach(openSection);
+  showValidationStatus();
+  refreshValidationStatus();
   if ($("offline")) $("offline").textContent = offlineStatus;
 }
 
@@ -1402,3 +1448,5 @@ document.addEventListener("change",event=>{
     saveTasks(rows.map(t=>t.id===id?{...t,state:event.target.value}:t));render();
   }catch(e){$("notice").textContent=e.message||"更新できませんでした。";}
 });
+
+setInterval(refreshValidationStatus,75000);
