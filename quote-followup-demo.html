@@ -36,6 +36,7 @@ button{cursor:pointer}form{margin-block:1rem}#notice{min-height:1.5em}.due{color
 </ul>
 </details>
 </section>
+<script src="business-economics.js?v=56"></script>
 <script>
 "use strict";
 
@@ -138,20 +139,9 @@ document.addEventListener("change",event=>{
 });
 render();
 
-function projectEconomics({price,fixed,variable,low,base,high}) {
- const contribution=price-variable;
- return {
-  contribution,
-  breakEven:contribution>0?Math.ceil(fixed/contribution):fixed===0&&contribution===0?0:null,
-  scenarios:[low,base,high].map(count=>({
-   count,revenue:price*count,cost:fixed+variable*count,profit:contribution*count-fixed
-  }))
- };
-}
-
-const plan={price:1480,fixed:4000,variable:100,low:0,base:2,high:5};
+const plan=businessEconomics["見積もり催促・追客管理"];
 const result=projectEconomics(plan);
-const initialCost=12000;
+const initialCost=plan.initial;
 const highCasePayback=Math.ceil(initialCost/result.scenarios[2].profit);
 const yen=value=>new Intl.NumberFormat("ja-JP",{style:"currency",currency:"JPY"}).format(value);
 el("projection").innerHTML="<p>月額 <strong>"+yen(plan.price)+"</strong> ／ 原価 <strong>"+

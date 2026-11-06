@@ -424,6 +424,29 @@ function decisionReview(index, status) {
   render();
   $("notice").textContent = "経営判断を記録しました。外部への操作は実行していません。";
 }
+function launchDecisions() {
+  const cards = data.projects.map(project => {
+    const plan = Object.hasOwn(businessEconomics,project.name) ? businessEconomics[project.name] : null;
+    const result = plan ? projectEconomics(plan) : null;
+    const price = plan?.price ?? project.price;
+    const amount = value => value == null ? "未算定" : yen(value);
+    const scenarios = result ? result.scenarios.map(({count,profit},index) =>
+      badge(["低位","基準","高位"][index] + " " + count + "契約 ／ " + yen(profit))).join("") :
+      '<p>契約見込み・月間利益　未算定</p>';
+    return '<article><h3>' + esc(project.name) + '</h3>' +
+      badge(project.stage) + badge(plan ? "条件別試算" : "試算準備中") +
+      '<p>月額価格仮説 <strong>' + amount(price) + '</strong> ／ 1契約あたり月間原価 <strong>' +
+      amount(plan?.variable) + '</strong></p><p>月間固定費 <strong>' + amount(plan?.fixed) +
+      '</strong> ／ 初期準備費 <strong>' + amount(plan?.initial) +
+      '</strong></p><p>月次損益分岐 <strong>' +
+      (result ? (result.breakEven === null ? "到達不可" : result.breakEven + "契約") : "未算定") +
+      '</strong></p><div class="chips">' + scenarios + '</div>' +
+      (plan ? details("試算条件",'<p>' + esc(plan.note) + '</p>') : "") + '</article>';
+  });
+  return heading("事業別の販売判断") + '<p>月間利益は税引前。計画試算と登録済みの価格仮説を表示します。</p>' +
+    (cards.length ? grid(cards) : panel('<p>登録事業がありません。</p>'));
+}
+
 function decisions() {
   return heading("経営判断", action("＋ 判断を記録","decision","",true)) +
     (data.decisions.some(d => !d.activity) ? grid(data.decisions.map((d,i) => ({d,i})).filter(({d}) => !d.activity).sort((a,b) => b.d.date.localeCompare(a.d.date)).map(({d,i}) =>
@@ -826,7 +849,7 @@ function render() {
   const expanded = [...$("view").querySelectorAll("details[open]")].map(d => d.firstElementChild.textContent);
   $("view").innerHTML = {
     home, portfolio:() => portfolio() + details("日次候補",daily()),
-    verification:() => heading("AI事業調査") + ideaReviewPanel() + details("経営判断の履歴",decisions()) + existingResearchPanel() + verification(),
+    verification:() => heading("AI事業調査") + details("経営判断",launchDecisions() + decisions()) + ideaReviewPanel() + existingResearchPanel() + verification(),
     finance:() => finance() + details("営業・販売の記録",sales()),
     settings
   }[tab]();
@@ -950,7 +973,7 @@ document.addEventListener("click", event => {
     if (kind === "reviewReject") decisionReview(Number(value),"却下");
     if (kind === "export") exportData();
     if (kind === "mergeCatalog") mergeCatalog();
-    if (kind === "openDecisions") { tab = "verification"; render(); $("view").querySelector("details").open = true; }
+    if (kind === "openDecisions") { tab = "verification"; render(); openSection("経営判断"); }
     if (kind === "openTasks") { tab = "home"; render(); $("view").querySelector("details").open = true; }
     if (kind === "openEvidence") { tab = "verification"; render(); }
     if (kind === "researchAdopt") reviewIdea(researchReviews[Number(value)],"決定済み");
