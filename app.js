@@ -430,9 +430,9 @@ function launchDecisions() {
     const result = plan ? projectEconomics(plan) : null;
     const price = plan?.price ?? project.price;
     const amount = value => value == null ? "未算定" : yen(value);
-    const scenarios = result ? result.scenarios.map(({count,profit},index) =>
-      badge(["低位","基準","高位"][index] + " " + count + "契約 ／ " + yen(profit))).join("") :
-      '<p>契約見込み・月間利益　未算定</p>';
+    const scenarios = result ? result.scenarios.map(({count,revenue,profit},index) =>
+      badge(["低位","基準","高位"][index] + " " + count + "契約 ／ 売上 " + yen(revenue) + " ／ 利益 " + yen(profit))).join("") :
+      '<p>契約見込み・月間売上・月間利益　未算定</p>';
     return '<article><h3>' + esc(project.name) + '</h3>' +
       badge(project.stage) + badge(plan ? "条件別試算" : "試算準備中") +
       '<p>月額価格仮説 <strong>' + amount(price) + '</strong> ／ 1契約あたり月間原価 <strong>' +
