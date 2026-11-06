@@ -206,7 +206,7 @@ const businessStageIndex = {"未確認":0,"未検証":0,"検証中":1,"開発中
 function portfolioProgress(project, evidence) {
   const index = businessStageIndex[project.stage];
   const records = evidence?.filter(row => row.project === project.id);
-  const confirmed = records?.filter(row => ["資料確認済み","顧客確認済み","販売実績確認済み"].includes(row.status)).length;
+  const confirmed = records?.filter(row => ["資料確認済み","社内動作確認済み","販売実績確認済み"].includes(row.status)).length;
   return '<article class="business-progress"><h3>' + esc(project.name) + '</h3>' +
     badge(project.stage) + (project.priority === "未設定" ? "" : badge("優先度 " + project.priority)) +
     (index === undefined ? "" : '<ol class="business-steps" aria-label="事業の段階">' +
@@ -302,7 +302,7 @@ function strategyAnalysis() {
       '<p><strong>' + esc(p.name) + '</strong>：' + score + '点（' + esc(p.stage) + '）' +
       (hasSales ? '／売上記録あり' : '／売上未確認') +
       '<br>不足情報：' + esc(missing.join('・') || 'この基準ではなし') + '</p>').join('') + '</div>' : '<p>分析対象の事業がありません。</p>') +
-    '<p>この順位は開発投資の承認ではありません。顧客ヒアリング・競合調査・獲得費用の検証後に判断してください。</p>');
+    '<p>この順位は開発投資の承認ではありません。競合調査、社内試作、公開後の販売実績を基に判断してください。</p>');
 }
 
 function executiveInsights() {
@@ -518,8 +518,9 @@ function tasks() {
 
 
 // v30: evidence is manually entered, not autonomous AI research.
-const evidenceTypes = ["公開市場データ","競合実績・価格","収益試算","低コスト・一人運営","法務・技術リスク","小規模販売検証","顧客ヒアリング"];
-const evidenceStatuses = ["未検証","仮説","資料確認済み","販売実績確認済み","顧客確認済み"];
+const evidenceTypes = ["公開市場データ","競合実績・価格","収益試算","低コスト・一人運営","法務・技術リスク","小規模販売検証","顧客ヒアリング","社内動作検証"];
+const newEvidenceTypes = evidenceTypes.filter(type => type !== "顧客ヒアリング");
+const evidenceStatuses = ["未検証","仮説","資料確認済み","販売実績確認済み","顧客確認済み","社内動作確認済み"];
 function loadEvidence() {
   try {
     const raw=localStorage.getItem(evidenceKey);
@@ -682,7 +683,7 @@ function exportTasksCalendar() {
 }
 function researchPrompt() {
   const names=data.projects.map(p=>p.name).join("、");
-  const prompt=`ORXELIAの事業候補について、公開一次資料・公式料金表・公開統計を中心に最新の市場調査をしてください。調査対象の事業名は「${data.projects[0]?.name||"事業名を指定"}」。他の候補は ${names||"未登録"} です。市場需要、競合実績・価格、税引後の収益試算、低コスト・一人運営、法務・技術リスクを検証。未確認の数字は推定と明記し、原典URLと調査日を記載してください。顧客ヒアリングは不要。出力はJSONのみ。形式: {"format":"orxelia-research-v1","project":"対象事業名","researchedAt":"YYYY-MM-DD","findings":[{"type":"公開市場データ","status":"仮説","summary":"根拠・限界・結論","source":"出典URL"}]}。typeは「公開市場データ」「競合実績・価格」「収益試算」「低コスト・一人運営」「法務・技術リスク」から選択。外部公開・費用発生・連絡は行わないでください。`;
+  const prompt=`ORXELIAの事業候補について、公開一次資料・公式料金表・公開統計を中心に最新の市場調査をしてください。調査対象の事業名は「${data.projects[0]?.name||"事業名を指定"}」。他の候補は ${names||"未登録"} です。市場需要、競合実績・価格、税引後の収益試算、低コスト・一人運営、法務・技術リスクを検証。未確認の数字は推定と明記し、原典URLと調査日を記載してください。顧客ヒアリング・アンケート・モニター募集は提案しないでください。社内で試作・動作確認し、公開後の購入件数・売上で評価する手順を提案してください。出力はJSONのみ。形式: {"format":"orxelia-research-v1","project":"対象事業名","researchedAt":"YYYY-MM-DD","findings":[{"type":"公開市場データ","status":"仮説","summary":"根拠・限界・結論","source":"出典URL"}]}。typeは「公開市場データ」「競合実績・価格」「収益試算」「低コスト・一人運営」「法務・技術リスク」から選択。外部公開・費用発生・連絡は行わないでください。`;
   if(navigator.clipboard?.writeText) navigator.clipboard.writeText(prompt).then(()=>$("notice").textContent="AI調査依頼文をコピーしました。ChatGPTへ貼り付けてください。").catch(()=>downloadText("ORXELIA-research-prompt.txt",prompt,"text/plain"));
   else downloadText("ORXELIA-research-prompt.txt",prompt,"text/plain");
 }
@@ -719,12 +720,12 @@ function verification() {
     return {name:p.name,coverage,missing:verificationWeights.filter(w=>!done.includes(w)).map(w=>w.label),stale:own.filter(r=>evidenceFreshness(r).startsWith("再調査")).length};
   }).sort((a,b)=>b.coverage-a.coverage);
   return heading("公開情報による事業検証",action("検証データJSON出力","evidenceExport"))+
-    panel('<h3>検証方針（2026年11月版）</h3><p>顧客ヒアリングは任意。公開市場データ・競合・収益試算・運営適性・法務リスクの5軸で確認します。</p><p><strong>根拠充足率は成功確率や事業評価点ではありません。</strong>出典を登録した資料確認済み項目の配点合計です。AIが資料を自動取得・検証したものではありません。</p>'+
+    panel('<h3>検証方針（2026年11月版）</h3><p>公開資料の確認 → 自社で試作・動作確認 → 商品を公開 → 購入件数・売上を確認。</p><p><strong>根拠充足率は成功確率や事業評価点ではありません。</strong>出典を登録した資料確認済み項目の配点合計です。AIが資料を自動取得・検証したものではありません。</p>'+
       verificationWeights.map(w=>'<p>'+esc(w.label)+'：'+w.points+'点分の根拠</p>').join("")+
       '<p>市場の検索量は購買需要を保証しません。競合の非公開売上・契約数は推定値として扱ってください。</p>')+
     panel('<h3>事業別の根拠充足状況</h3>'+(scorecard.length?scorecard.map(x=>'<article><h3>'+esc(x.name)+'</h3><p>根拠充足率 '+x.coverage+'/100（成功確率ではありません）</p><p>不足：'+esc(x.missing.join("、")||"5軸の資料記録あり。内容の妥当性は未監査")+'</p>'+(x.stale?'<p>再調査推奨：'+x.stale+'件</p>':'')+'</article>').join(""):'<p>対象事業がありません。</p>'))+
     aiFeedPanel()+freeConnectionsPanel()+researchImportPanel()+
-    panel('<h3>検証結果を登録</h3><form id="evidence-form"><label>対象事業<select name="project" required><option value="">選択してください</option>'+opts+'</select></label><label>検証の種類<select name="type">'+evidenceTypes.map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認状況<select name="status">'+evidenceStatuses.map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認内容・未解決事項<textarea name="summary" maxlength="1000" required></textarea></label><label>出典URL・資料名（資料確認済みの場合は確認した一次資料）<input name="source" maxlength="500"></label><button class="primary">検証記録を保存</button></form>')+
+    panel('<h3>検証結果を登録</h3><form id="evidence-form"><label>対象事業<select name="project" required><option value="">選択してください</option>'+opts+'</select></label><label>検証の種類<select name="type">'+newEvidenceTypes.map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認状況<select name="status">'+evidenceStatuses.filter(x=>x!=="顧客確認済み").map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認内容・未解決事項<textarea name="summary" maxlength="1000" required></textarea></label><label>出典URL・資料名（資料確認済みの場合は確認した一次資料）<input name="source" maxlength="500"></label><button class="primary">検証記録を保存</button></form>')+
     panel('<h3>検証履歴（出典と鮮度）</h3>'+(recent.length?recent.slice(0,100).map(r=>'<article><h3>'+esc(projectName(r.project))+'</h3><p>'+esc(r.type)+' ／ '+esc(r.status)+' ／ '+esc(r.date)+' ／ '+esc(evidenceFreshness(r))+'</p><p>'+esc(r.summary)+'</p><p>根拠：'+esc(r.source||"未記録")+'</p>'+action("削除","evidenceDelete",r.id)+'</article>').join(""):'<p>まだ根拠がありません。公開情報の出典と調査日を登録してください。</p>'));
 }
 
@@ -1006,7 +1007,7 @@ document.addEventListener("submit", event => {
   event.preventDefault();
   try {
     const f=Object.fromEntries(new FormData(event.target));
-    if(!data.projects.some(p=>p.id===f.project)||!evidenceTypes.includes(f.type)||!evidenceStatuses.includes(f.status)||!String(f.summary||"").trim()) throw Error("入力を確認してください。");
+    if(!data.projects.some(p=>p.id===f.project)||!newEvidenceTypes.includes(f.type)||!evidenceStatuses.includes(f.status)||!String(f.summary||"").trim()) throw Error("入力を確認してください。");
     const rows=loadEvidence();
     if(rows===null) throw Error("検証記録を読み込めません。");
     if (f.status === "資料確認済み" && !String(f.source || "").trim()) throw Error("確認した一次資料のURLまたは資料名を入力してください。");
