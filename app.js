@@ -967,7 +967,12 @@ function render() {
   const projects = data.projects;
   const activities = latestProjectActivities();
   const active = projects.filter(project => !["保留","終了"].includes(project.stage));
-  const progressState = project => activities.get(normalizedName(project.name))?.state || project.stage;
+  const progressState = project => {
+    const state = activities.get(normalizedName(project.name))?.state || project.stage;
+    if (project.name === currentResearchProject && state === "判断待ち" &&
+        !["販売中","収益化済み"].includes(project.stage)) return "検証中";
+    return state;
+  };
   const latest = active.map(project => ({project,activity:activities.get(normalizedName(project.name))}))
     .filter(({activity}) => activity).sort((a,b) => Date.parse(b.activity.updatedAt)-Date.parse(a.activity.updatedAt))[0];
   $("work-now").innerHTML = latest ?
@@ -976,7 +981,7 @@ function render() {
     '<span class="eyebrow">最新の作業報告</span><span>同期された報告はまだありません。</span>';
   $("metrics").innerHTML = [
     metric("事業総数", projects.length, "登録済み"),
-    metric("検証中", active.filter(p => progressState(p) === "検証中").length, "最新の検証報告を反映"),
+    metric("検証中", active.filter(p => progressState(p) === "検証中").length, "試作テスト・販売前の根拠確認"),
     metric("開発中", active.filter(p => ["試作中","開発中"].includes(progressState(p))).length, "最新の試作報告を反映"),
     metric("収益化済み", projects.filter(p => p.stage === "収益化済み").length, "登録ステータスの集計")
   ].join("");
