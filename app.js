@@ -518,9 +518,55 @@ function importLogPanel() {
   const logs = (data.importLog || []).slice(-12).reverse();
   return panel('<h3>日次取り込み履歴</h3><p>追加実績のみ記録します。過去の取り込み分は自動復元されません。</p>' + (logs.length ? '<ol>' + logs.map(r => '<li>' + esc(r.at.slice(0,16).replace("T"," ")) + ' ／ 対象日 ' + esc(r.date) + ' ／ 候補 ' + r.projects + '件・判断 ' + r.decisions + '件</li>').join("") + '</ol>' : '<p>記録はありません。</p>'));
 }
+function retainQuoteProject() {
+  const keep = data.projects.filter(p => normalizedName(p.name) === normalizedName("見積もり催促・追客管理"));
+  if (keep.length !== 1) throw Error("残す事業が1件に特定できないため、削除を停止しました。");
+  const removed = data.projects.filter(p => p.id !== keep[0].id);
+  if (!removed.length) throw Error("削除対象の事業がありません。");
+  const tasks = loadTasks(), evidence = loadEvidence();
+  if (!readable || tasks === null || evidence === null || loadSales() === null) {
+    throw Error("既存データを読み込めないため、削除を停止しました。");
+  }
+  const ids = new Set(removed.map(p => p.id));
+  const names = new Set(removed.map(p => normalizedName(p.name)));
+  const ledger = data.ledger.filter(row => !ids.has(row.project));
+  const decisions = data.decisions.filter(row =>
+    !names.has(normalizedName(row.activity?.task || row.title)) &&
+    !(/^AI既存事業調査 /.test(row.source) && ids.has(row.source.replace(/^AI既存事業調査 \d{4}-\d{2}-\d{2} /,""))));
+  const next = {...data,projects:keep,ledger,decisions};
+  const nextTasks = tasks.filter(row => !ids.has(row.project));
+  const nextEvidence = evidence.filter(row => !ids.has(row.project));
+  if (!confirm("残す事業：見積もり催促・追客管理\n\n削除する事業 " + removed.length + "件\n" +
+    removed.map(p => p.name).join("、") + "\n\n収支 " + (data.ledger.length-ledger.length) +
+    "件 ／ 判断・進捗 " + (data.decisions.length-decisions.length) + "件 ／ タスク " +
+    (tasks.length-nextTasks.length) + "件 ／ 検証 " + (evidence.length-nextEvidence.length) +
+    "件\nバックアップを書き出しますか？")) return;
+  exportBundle();
+  if (!confirm("バックアップのダウンロードを確認したら削除を確定してください。同期済みの台帳にも削除が反映されます。")) return;
+  validate(next);
+  keepSafetyCopy("不要な事業の一括削除前");
+  const updates = [[tasksKey,nextTasks],[evidenceKey,nextEvidence],[key,next]];
+  const previous = updates.map(([storageKey]) => [storageKey,localStorage.getItem(storageKey)]);
+  try {
+    for (const [storageKey,value] of updates) localStorage.setItem(storageKey,JSON.stringify(value));
+  } catch (error) {
+    for (const [storageKey,value] of previous) {
+      if (value === null) localStorage.removeItem(storageKey);
+      else localStorage.setItem(storageKey,value);
+    }
+    throw error;
+  }
+  data = next;
+  tab = "portfolio";
+  filter = "すべて";
+  render();
+  $("notice").textContent = removed.length + "事業を削除しました。同期をご利用の場合は設定で同期状態を確認してください。";
+}
+
 function settings() {
   return heading("設定・データ管理") + (window.orxeliaSync?.view() || "") +
     panel('<h3>引き継ぎ事業台帳（19件）</h3><p>既存の事業を保持し、未登録の候補だけ追加します。類似名称は別名として残る場合があります。実績・開発状況は自動確定しません。</p>' + action("追加候補を確認して取り込む","mergeCatalog")) +
+    panel('<h3>事業の一括削除</h3><p>見積もり催促・追客管理だけを残します。削除対象とバックアップを確認してから確定できます。</p>' + action("削除対象を確認","retainQuoteProject")) +
     importLogPanel() +
     panel('<h3>初期データ・バックアップ</h3><p>初回は同梱の「初期データ.json」を読み込んでください。読み込みは現在の内容を全件置き換えます。</p>' +
       '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + action("端末内の復旧用データを書き出す","recoveryExport") + action("直近3世代の安全コピーを書き出す","safetyExport") + action("全データをまとめてJSON出力","bundleExport") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
@@ -1044,6 +1090,7 @@ document.addEventListener("click", event => {
     if (kind === "ideaAdopt") reviewIdea(dailyIdeas[Number(value)],"決定済み");
     if (kind === "ideaHold") reviewIdea(dailyIdeas[Number(value)],"保留");
     if (kind === "ideaReject") reviewIdea(dailyIdeas[Number(value)],"却下");
+    if (kind === "retainQuoteProject") retainQuoteProject();
     if (kind === "aiFeedRefresh") autoImportAiFeed();
     if (kind === "researchPrompt") researchPrompt();
     if (kind === "portfolioCsv") exportPortfolioCsv();
