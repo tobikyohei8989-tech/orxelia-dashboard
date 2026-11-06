@@ -13,6 +13,10 @@ runInNewContext(script + `
   assert.deepEqual(Array.from(samples.filter(row => needsFollowUp(row, day)), row => row.id).join(","), expected.join(","));
   assert.equal(samples.filter(row => row.status === "未対応" && !validDay(row.nextDate)).map(row => row.id).join(","), "Q20");
   assert.equal(validDay("2026-02-30"), false);
+  assert.equal(validDay("2028-02-29"), true);
+  assert.equal(needsFollowUp({status:"未対応",nextDate:""},day), false);
+  assert.equal(needsFollowUp({status:"未対応",nextDate:"2026-11-07"},day), false);
+  assert.equal(needsFollowUp({status:"未対応",nextDate:day},day), true);
   assert.equal(needsFollowUp({status:"対応済み",nextDate:day},day), false);
   console.log("20 synthetic cases: 6 expected follow-ups, 0 missed, 0 false positives, 1 missing date.");
 `, {assert, console});

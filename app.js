@@ -424,6 +424,7 @@ function decisionReview(index, status) {
   render();
   $("notice").textContent = "経営判断を記録しました。外部への操作は実行していません。";
 }
+const currentResearchProject = "見積もり催促・追客管理";
 const validationRepo = "tobikyohei8989-tech/orxelia-dashboard";
 let validationRun = null;
 let validationChecked = 0;
@@ -496,9 +497,14 @@ function launchDecisions() {
       (plan ? details("試算条件",'<p>' + esc(plan.note) + '</p>') : "") + '</article>';
   });
   return '<section id="launch-decisions" tabindex="-1">' + heading("事業別の販売判断") +
-    (projects.some(project => project.name === "見積もり催促・追客管理") ?
+    (projects.some(project => project.name === currentResearchProject) ?
       panel('<h3>見積もり催促・追客管理の自動テスト</h3><div id="quote-validation-status" role="status">確認中</div>' +
-        '<p>模擬案件を使った動作テスト。市場調査・販売実績とは別の記録です。</p>') : "") +
+        '<p>模擬案件を使った動作テスト。市場調査・販売実績とは別の記録です。</p>') +
+      panel('<h3>販売判断は保留</h3><div class="chips">' + badge("市場資料あり") +
+        badge("対象層の購入需要は未確認") + badge("商用原価は未確定") + '</div>' +
+        details("市場調査の出典と適用範囲",
+          '<ul><li>営業支援ツール導入済みBtoB企業の営業管理職111名の調査で、9割以上が提案後の状況把握を難しいと回答。小規模事業者の購入率を示す調査ではありません。 <a href="https://sonybn.co.jp/news/2026/1021/" target="_blank" rel="noopener">調査原文</a></li>' +
+          '<li>競合には見積提出後の連絡時期を知らせる機能があります。 <a href="https://ai-dounyuu.com/quote-automation/" target="_blank" rel="noopener">競合の公式機能</a></li></ul>')) : "") +
     '<p>月間原価は固定費と契約ごとの原価の合計。売上と利益は基準シナリオ・税引前。</p>' +
     (rows.length ? '<div class="decision-table" tabindex="0" role="region" aria-label="全事業の月間採算"><table><thead><tr>' +
       '<th scope="col">事業</th><th scope="col">月間原価</th><th scope="col">月間売上見込み</th><th scope="col">月間利益</th>' +
@@ -729,7 +735,8 @@ async function autoImportAiFeed() {
     const feed=JSON.parse(body);
     if(!feed || feed.format!=="orxelia-auto-feed-v1" || !Array.isArray(feed.reports) || feed.reports.length>30) throw Error("公開レポート形式が不正");
     dailyIdeas = feed.reports.flatMap(report => {
-      const idea = report?.idea;
+      if (report?.project !== currentResearchProject) return [];
+      const idea = report.idea;
       const day = report?.researchedAt;
       if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day) || !idea ||
           ![idea.name,idea.customer,idea.offer,idea.next].every(value =>
@@ -742,6 +749,7 @@ async function autoImportAiFeed() {
     const incoming=[];let skipped=0;
     researchReviews = [];
     for(const item of feed.reports){
+      if (item?.project !== currentResearchProject) {skipped++;continue;}
       try {
         const report=normalizeResearchReport(item);
         researchReviews.push({name:report.project.name, project:report.project.id, day:report.date,
@@ -766,7 +774,7 @@ async function autoImportAiFeed() {
   }
 }
 function aiFeedPanel(){
-  return panel('<h3>AI調査の自動反映（v50）</h3><p>'+esc(aiFeedStatus)+'</p><p>公開リポジトリの ai-reports/latest.json を読み込み、既存の事業に一致する調査結果を端末へ自動追加します。出典は人が確認するまで「仮説」です。個人情報・機密情報を公開レポートに含めないでください。</p>'+action("公開レポートを再確認","aiFeedRefresh")+'<p>GitHub ActionsのAI生成設定がない場合、レポートは自動生成されません。データの自動反映とAIによる調査の自動実行は別の機能です。</p>');
+  return panel('<h3>AI調査の自動反映（v50）</h3><p>'+esc(aiFeedStatus)+'</p><p>公開リポジトリの ai-reports/latest.json を読み込み、現在の調査対象「見積もり催促・追客管理」の仮説だけを端末へ自動追加します。出典は人が確認するまで「仮説」です。個人情報・機密情報を公開レポートに含めないでください。</p>'+action("公開レポートを再確認","aiFeedRefresh")+'<p>GitHub ActionsのAI生成設定がない場合、レポートは自動生成されません。データの自動反映とAIによる調査の自動実行は別の機能です。</p>');
 }
 // v45: zero-fee, no-OAuth interoperability. No third-party account connection is claimed.
 function downloadText(name,content,mime) {
