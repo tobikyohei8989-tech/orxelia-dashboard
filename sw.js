@@ -1,5 +1,5 @@
-const cacheName = "orxelia-shell-v66";
-const files = ["./", "index.html", "style.css?v=66", "app.js?v=66", "business-economics.js?v=66", "manifest.webmanifest", "mark.svg", "apple.png", "icon-192.png", "icon-512.png"];
+const cacheName = "orxelia-shell-v67";
+const files = ["./", "index.html", "style.css?v=67", "app.js?v=67", "business-economics.js?v=67", "manifest.webmanifest", "mark.svg", "apple.png", "icon-192.png", "icon-512.png"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(cacheName).then(cache => cache.addAll(files)).then(() => self.skipWaiting()));
 });
