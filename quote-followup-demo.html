@@ -6,6 +6,13 @@ label{display:inline-block;margin:10px 18px 10px 0}input,select,button{padding:1
 #metrics{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}#metrics span{padding:16px;background:#151d2d;border-radius:8px}
 .table{overflow:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{text-align:left;padding:12px;border-bottom:1px solid #303649}
 button{cursor:pointer}form{margin-block:1rem}#notice{min-height:1.5em}.due{color:#e5c995}.review{color:#ffbc9e}
+
+#economics{margin-block:2rem;padding:1rem;border:1px solid #67728a;border-radius:8px}
+#economics input{width:8rem}
+#projection{display:block;line-height:1.7}
+#economics th,#economics td{text-align:right}
+#economics th:first-child{text-align:left}
+#economics .loss{color:#ffbc9e}
 </style><h1>見積もり催促・追客管理</h1>
 <p>今日対応する見積と、期限の確認が必要な見積を一覧で確認できます。社内試作のため、案件名には社内管理番号などを使ってください。</p>
 <label>データ <select id="mode"><option value="work">社内試作（端末に保存）</option><option value="sample">操作確認（架空20件）</option></select></label>
@@ -15,6 +22,21 @@ button{cursor:pointer}form{margin-block:1rem}#notice{min-height:1.5em}.due{color
 <label>基準日 <input id="day" type="date"></label>
 <label>表示 <select id="filter"><option value="due">追客対象</option><option value="all">全件</option><option value="review">期限の確認が必要</option></select></label>
 <div id="metrics" role="status"></div><div class="table"><table><thead><tr><th>見積</th><th>案件名・管理番号</th><th>対応状況</th><th>次の対応日</th><th>判定</th><th>操作</th></tr></thead><tbody id="rows"></tbody></table></div>
+<section id="economics" aria-labelledby="economics-title">
+<h2 id="economics-title">販売判断｜月次試算</h2>
+<p>価格・費用・契約数の仮定を入力すると、3シナリオの売上と利益が比較できます。販売実績は未確認です。</p>
+<form id="assumptions">
+<label>月額単価（税抜・円）<input name="price" type="number" min="0" max="1000000000" step="1" value="1480" required></label>
+<label>月間固定費（円）<input name="fixed" type="number" min="0" max="1000000000" step="1" required></label>
+<label>1契約あたり月間原価（円）<input name="variable" type="number" min="0" max="1000000000" step="1" required></label>
+<label>有料契約数・低位<input name="low" type="number" min="0" max="1000000" step="1" required></label>
+<label>有料契約数・基準<input name="base" type="number" min="0" max="1000000" step="1" required></label>
+<label>有料契約数・高位<input name="high" type="number" min="0" max="1000000" step="1" required></label>
+<button>試算する</button>
+</form>
+<p>原価には決済手数料や契約ごとに発生する費用を、固定費にはサーバー代や月次の運用工数を金額に換算して含めます。月額1,480円は既存の価格仮説です。</p>
+<div id="projection" aria-live="polite">原価と契約数を入力すると表示されます。</div>
+</section>
 <script>
 "use strict";
 
@@ -116,4 +138,36 @@ document.addEventListener("change",event=>{
  render();
 });
 render();
+
+function projectEconomics({price,fixed,variable,low,base,high}) {
+ const contribution=price-variable;
+ return {
+  contribution,
+  breakEven:contribution>0?Math.ceil(fixed/contribution):fixed===0&&contribution===0?0:null,
+  scenarios:[low,base,high].map(count=>({
+   count,revenue:price*count,cost:fixed+variable*count,profit:contribution*count-fixed
+  }))
+ };
+}
+
+el("assumptions").addEventListener("submit",event=>{
+ event.preventDefault();
+ const values=Object.fromEntries([...new FormData(event.target)].map(([key,value])=>[key,Number(value)]));
+ const output=el("projection");
+ if(values.low>values.base||values.base>values.high) {
+  output.textContent="契約数は低位 ≤ 基準 ≤ 高位の順で入力してください。";
+  return;
+ }
+ const result=projectEconomics(values);
+ const yen=value=>new Intl.NumberFormat("ja-JP",{style:"currency",currency:"JPY"}).format(value);
+ output.innerHTML="<p>1契約あたりの限界利益 <strong>"+yen(result.contribution)+"</strong> ／ 損益分岐 <strong>"+
+  (result.breakEven===null?"黒字化できない条件":result.breakEven+"契約")+"</strong></p>"+
+  '<div class="table"><table><thead><tr><th>想定</th><th>有料契約</th><th>月間売上</th><th>月間費用</th><th>月間利益（税引前）</th></tr></thead><tbody>'+
+  result.scenarios.map(({count,revenue,cost,profit},index)=>"<tr><th>"+["低位","基準","高位"][index]+"</th><td>"+count+
+   "件</td><td>"+yen(revenue)+"</td><td>"+yen(cost)+"</td><td"+(profit<0?' class="loss"':"")+"><strong>"+yen(profit)+"</strong></td></tr>").join("")+
+  "</tbody></table></div>";
+});
+el("assumptions").addEventListener("input",()=>{
+ el("projection").textContent="入力が更新されました。試算するボタンで結果を表示します。";
+});
 </script></html>
