@@ -1,0 +1,25 @@
+name: Quote follow-up validation
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 23 * * *'
+  push:
+    paths:
+      - quote-followup-demo.html
+      - scripts/check_quote_followup.mjs
+      - .github/workflows/quote-validation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check follow-up rules on synthetic data
+        run: node scripts/check_quote_followup.mjs | tee -a "$GITHUB_STEP_SUMMARY"
