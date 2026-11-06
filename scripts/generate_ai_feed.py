@@ -247,8 +247,14 @@ prompt = f"""
 - 全項目を未検証の仮説として扱うこと。
 - JSONオブジェクトのみを返すこと。
 
+既存事業の分析とは別に、初期投資5万円以内・原則1人で
+初売上を早く検証できる新規事業案を1件提案してください。
+顧客の課題、売る商品・仮の価格・集客経路、最初の販売検証を
+具体的に記述し、観測済みの需要や実績とは扱わないでください。
+
 JSON形式：
 {{
+  "idea": {{"name": "新規事業名", "customer": "顧客と課題", "offer": "商品・価格仮説・集客経路", "next": "最初の販売検証"}},
   "findings": [
     {{
       "type": "公開市場データ",
@@ -313,7 +319,17 @@ def validate(result):
         item["status"] = "仮説"
         item["source"] = ""
 
-    return findings
+    # A malformed idea must not interrupt the existing-business feed.
+    idea = parsed.get("idea")
+    limits = {"name": 140, "customer": 300, "offer": 300, "next": 300}
+    if not isinstance(idea, dict) or not all(
+        isinstance(idea.get(field), str)
+        and 0 < len(idea[field].strip()) <= limit
+        for field, limit in limits.items()
+    ):
+        return findings, None
+
+    return findings, {field: idea[field].strip() for field in limits}
 
 
 def load_existing_reports(path):
@@ -446,7 +462,7 @@ def main():
                 retries=3,
             )
 
-            findings = validate(result)
+            findings, idea = validate(result)
             selected_model = model
             break
 
@@ -488,6 +504,9 @@ def main():
         "researchedAt": TODAY.isoformat(),
         "findings": findings,
     }
+
+    if idea:
+        report["idea"] = idea
 
     output, count = save_feed(report)
 
