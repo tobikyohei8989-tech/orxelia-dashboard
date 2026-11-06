@@ -30,7 +30,7 @@ try {
   $("notice").textContent = "保存データを読み込めません。元のデータを保護するため編集を停止しました。";
 }
 
-let tab = "portfolio";
+let tab = "home";
 let filter = "すべて";
 let date = data.projects.map(p => p.date).filter(Boolean).sort().at(-1) || today();
 let month = today().slice(0,7);
@@ -61,7 +61,7 @@ function keepSafetyCopy(reason) {
   const previous = localStorage.getItem(backupKey);
   const history = previous ? JSON.parse(previous) : [];
   if (!Array.isArray(history)) throw Error("安全コピーの形式が不正です。更新を停止しました。");
-  const entry = {at:new Date().toISOString(),reason,portfolio:data,sales:rawSales};
+  const entry = {at:new Date().toISOString(),reason,portfolio:data,sales:rawSales,tasks:localStorage.getItem(tasksKey),evidence:localStorage.getItem(evidenceKey)};
   // Keep three previous versions without modifying the current saved record.
   localStorage.setItem(backupKey,JSON.stringify([entry,...history].slice(0,3)));
 }
@@ -203,7 +203,7 @@ function executiveOverview() {
 function portfolio() {
   const selected = data.projects.filter(p => filter === "すべて" || p.type === filter).sort((a,b) => ({"高":0,"中":1,"低":2,"未設定":3}[a.priority] - {"高":0,"中":1,"低":2,"未設定":3}[b.priority]));
   const filters = ["すべて",...types].map(t => '<option' + (t === filter ? ' selected' : '') + '>' + t + '</option>').join("");
-  return ownerOverview() + executiveOverview() + heading("事業一覧", action("＋ 事業を登録","project","",true)) +
+  return heading("事業一覧", action("＋ 事業を登録","project","",true)) +
     '<label>区分<select id="filter">' + filters + '</select></label>' +
     (selected.length ? grid(selected.map(card)) : panel('<p>この区分の登録は0件です。既存プロジェクトの名称や状況は確認できたものから登録してください。参照チャットの候補は「管理」で初期データを取り込むと表示されます。</p>'));
 }
@@ -332,10 +332,10 @@ function finance() {
   });
   return heading("月次収支") + '<label>対象月<input id="month" type="month" value="' + esc(month) + '"></label>' +
     '<div class="metrics">' +
-    [ ["売上",revenue], ["費用",cost], ["利益",revenue-cost] ].map(([title,value]) =>
-      metric(title, rows.length ? yen(value) : "—", rows.length ? "入力済み " + rows.length + " / " + data.projects.length + "件の合計" : "実績未登録")).join("") +
+    [ ["売上",revenue], ["費用",cost], ["差引収支",revenue-cost] ].map(([title,value]) =>
+      metric(title, rows.length ? yen(value) : "未登録", rows.length ? "入力済み " + rows.length + " / " + data.projects.length + "件の合計" : "実績未登録")).join("") +
     '</div><p>差引収支は入力した売上 − 費用であり、営業利益・税引後純利益とは異なります。確認済みの月次実績だけを登録してください。</p>' +
-    (records.length ? grid(records) : panel('<p>収支を入力する事業を先に登録してください。</p>')) + financeModel() + strategyAnalysis();
+    (records.length ? grid(records) : panel('<p>収支を入力する事業を先に登録してください。</p>'));
 }
 
 const quoteDemo = '<a class="demo-link" href="./quote-followup-demo.html" target="_blank" rel="noopener">試作を開く</a>';
@@ -409,7 +409,7 @@ function decisions() {
   return heading("経営判断", action("＋ 判断を記録","decision","",true)) +
     (data.decisions.some(d => !d.activity) ? grid(data.decisions.map((d,i) => ({d,i})).filter(({d}) => !d.activity).sort((a,b) => b.d.date.localeCompare(a.d.date)).map(({d,i}) =>
       '<article><h3>' + esc(d.title) + '</h3><div class="chips">' + badge(d.date) + badge(d.status) +
-      '</div><p>' + esc(d.note) + '</p><p>出典　' + esc(d.source) + '</p>' + (d.status === '提案' ? '<div class="actions">' + action('承認','reviewApprove',i) + action('保留','reviewHold',i) + action('却下','reviewReject',i) + '</div>' : '') + action("編集","decision",i) + '</article>')) :
+      '</div><p>' + esc(d.note) + '</p><p>出典　' + esc(d.source) + '</p>' + (d.status === '提案' ? '<div class="actions">' + action('承認','reviewApprove',i) + action('保留','reviewHold',i) + action('却下','reviewReject',i) + '</div>' : '') + (/^AI(?:事業案|既存事業調査) /.test(d.source) ? "" : action("編集","decision",i)) + '</article>')) :
     panel('<p>判断の記録は未登録です。</p>'));
 }
 function importLogPanel() {
@@ -417,12 +417,12 @@ function importLogPanel() {
   return panel('<h3>日次取り込み履歴</h3><p>追加実績のみ記録します。過去の取り込み分は自動復元されません。</p>' + (logs.length ? '<ol>' + logs.map(r => '<li>' + esc(r.at.slice(0,16).replace("T"," ")) + ' ／ 対象日 ' + esc(r.date) + ' ／ 候補 ' + r.projects + '件・判断 ' + r.decisions + '件</li>').join("") + '</ol>' : '<p>記録はありません。</p>'));
 }
 function settings() {
-  return heading("データ管理") + (window.orxeliaSync?.view() || "") +
+  return heading("設定・データ管理") + (window.orxeliaSync?.view() || "") +
     panel('<h3>引き継ぎ事業台帳（19件）</h3><p>既存の事業を保持し、未登録の候補だけ追加します。類似名称は別名として残る場合があります。実績・開発状況は自動確定しません。</p>' + action("追加候補を確認して取り込む","mergeCatalog")) +
     importLogPanel() +
     panel('<h3>初期データ・バックアップ</h3><p>初回は同梱の「初期データ.json」を読み込んでください。読み込みは現在の内容を全件置き換えます。</p>' +
       '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + action("端末内の復旧用データを書き出す","recoveryExport") + action("直近3世代の安全コピーを書き出す","safetyExport") + action("全データをまとめてJSON出力","bundleExport") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
-    '<div class="head"><h3>運用条件</h3></div>' + panel('<p>初期予算上限 ¥3,000 ／ 新規固定費 ¥0。配布構成でのアプリ費用は初期・月額ともに ¥0。</p><p>ログインすると同じアカウントの端末間で同期します。毎朝7:30の定期作業は、このPCとCodexアプリの起動、ログイン済みブラウザーが必要です。工程ごとの報告は「進捗」で確認できます。会計サービスは未連携です。</p><p id="offline">オフラインの状態を確認中…</p>');
+    '<div class="head"><h3>運用条件</h3></div>' + panel('<p>初期予算上限 ¥3,000 ／ 新規固定費 ¥0。配布構成でのアプリ費用は初期・月額ともに ¥0。</p><p>ログインすると同じアカウントの端末間で同期します。毎朝7:30の定期作業は、このPCとCodexアプリの起動、ログイン済みブラウザーが必要です。工程ごとの報告はホームの「作業進捗」で確認できます。会計サービスは未連携です。</p><p id="offline">オフラインの状態を確認中…</p>');
 }
 
 
@@ -563,6 +563,9 @@ function normalizeResearchReport(raw) {
 }
 
 // v50: read-only public feed; no API credentials in the browser.
+let dailyIdeas = [];
+let researchReviews = [];
+const maxAiFeedSize = 1000000; // 30 reports, including multibyte text and new ideas.
 const aiFeedPath = "ai-reports/latest.json";
 const aiFeedStateKey = "orxelia-ai-feed-state-v50";
 let aiFeedStatus = "未確認（公開レポートを確認中）";
@@ -572,16 +575,29 @@ async function autoImportAiFeed() {
   try {
     const response=await fetch(new URL(aiFeedPath,location.href).href+"?t="+Date.now(),{cache:"no-store"});
     if(!response.ok) throw Error("公開レポートなし（HTTP "+response.status+"）");
-    if(Number(response.headers.get("content-length")||0)>200000) throw Error("レポートのサイズ超過");
-    const body=await response.text();if(body.length>200000)throw Error("レポートのサイズ超過");
+    if(Number(response.headers.get("content-length")||0)>maxAiFeedSize) throw Error("レポートのサイズ超過");
+    const body=await response.text();if(body.length>maxAiFeedSize)throw Error("レポートのサイズ超過");
     const feed=JSON.parse(body);
     if(!feed || feed.format!=="orxelia-auto-feed-v1" || !Array.isArray(feed.reports) || feed.reports.length>30) throw Error("公開レポート形式が不正");
+    dailyIdeas = feed.reports.flatMap(report => {
+      const idea = report?.idea;
+      const day = report?.researchedAt;
+      if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day) || !idea ||
+          ![idea.name,idea.customer,idea.offer,idea.next].every(value =>
+            typeof value === "string" && value.trim() && value.length <= 300) ||
+          idea.name.length > 140 || !normalizedName(idea.name)) return [];
+      return [{...idea, day, source:"AI事業案 " + day + " " + normalizedName(idea.name)}];
+    }).sort((a,b) => b.day.localeCompare(a.day));
     const rows=loadEvidence();if(rows===null)throw Error("既存記録を読み込めません");
     const signatures=new Set(rows.map(r=>[r.project,r.type,r.summary,r.source,r.date].join("\u001f")));
     const incoming=[];let skipped=0;
+    researchReviews = [];
     for(const item of feed.reports){
       try {
         const report=normalizeResearchReport(item);
+        researchReviews.push({name:report.project.name, project:report.project.id, day:report.date,
+          source:"AI既存事業調査 " + report.date + " " + report.project.id,
+          offer:report.findings.map(row => row.type + "： " + row.summary).join("\n")});
         for(const row of report.findings){
           const key=[row.project,row.type,row.summary,row.source,row.date].join("\u001f");
           if(signatures.has(key)){skipped++;continue;}
@@ -594,10 +610,10 @@ async function autoImportAiFeed() {
     aiFeedCheckedAt=new Date().toLocaleString("ja-JP");
     aiFeedStatus="公開レポートを確認：新規"+incoming.length+"件、既存・対象外"+skipped+"件。AI生成の記録は仮説として保存";
     try{localStorage.setItem(aiFeedStateKey,JSON.stringify({status:aiFeedStatus,checkedAt:aiFeedCheckedAt}));}catch{}
-    if(tab==="verification" || tab==="command")render();
+    if((tab==="verification" || tab==="home") && !$("view").contains(document.activeElement))render();
   } catch(error){
     aiFeedStatus="自動反映待機："+String(error.message||"通信エラー");
-    if(tab==="verification" || tab==="command")render();
+    if((tab==="verification" || tab==="home") && !$("view").contains(document.activeElement))render();
   }
 }
 function aiFeedPanel(){
@@ -689,8 +705,89 @@ function verification() {
       '<p>市場の検索量は購買需要を保証しません。競合の非公開売上・契約数は推定値として扱ってください。</p>')+
     panel('<h3>事業別の根拠充足状況</h3>'+(scorecard.length?scorecard.map(x=>'<article><h3>'+esc(x.name)+'</h3><p>根拠充足率 '+x.coverage+'/100（成功確率ではありません）</p><p>不足：'+esc(x.missing.join("、")||"5軸の資料記録あり。内容の妥当性は未監査")+'</p>'+(x.stale?'<p>再調査推奨：'+x.stale+'件</p>':'')+'</article>').join(""):'<p>対象事業がありません。</p>'))+
     aiFeedPanel()+freeConnectionsPanel()+researchImportPanel()+
-    panel('<h3>検証結果を登録</h3><form id="evidence-form"><label>対象事業<select name="project" required><option value="">選択してください</option>'+opts+'</select></label><label>検証の種類<select name="type">'+evidenceTypes.map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認状況<select name="status">'+evidenceStatuses.map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認内容・未解決事項<textarea name="summary" maxlength="1000" required></textarea></label><label>出典URL・資料名・調査対象（個人情報は入力しない）<input name="source" maxlength="500"></label><button class="primary">検証記録を保存</button></form>')+
+    panel('<h3>検証結果を登録</h3><form id="evidence-form"><label>対象事業<select name="project" required><option value="">選択してください</option>'+opts+'</select></label><label>検証の種類<select name="type">'+evidenceTypes.map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認状況<select name="status">'+evidenceStatuses.map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認内容・未解決事項<textarea name="summary" maxlength="1000" required></textarea></label><label>出典URL・資料名（資料確認済みの場合は確認した一次資料）<input name="source" maxlength="500"></label><button class="primary">検証記録を保存</button></form>')+
     panel('<h3>検証履歴（出典と鮮度）</h3>'+(recent.length?recent.slice(0,100).map(r=>'<article><h3>'+esc(projectName(r.project))+'</h3><p>'+esc(r.type)+' ／ '+esc(r.status)+' ／ '+esc(r.date)+' ／ '+esc(evidenceFreshness(r))+'</p><p>'+esc(r.summary)+'</p><p>根拠：'+esc(r.source||"未記録")+'</p>'+action("削除","evidenceDelete",r.id)+'</article>').join(""):'<p>まだ根拠がありません。公開情報の出典と調査日を登録してください。</p>'));
+}
+
+const details = (title, content) => '<details class="panel"><summary>' + title + '</summary>' + content + '</details>';
+function openSection(title) {
+  const section = [...$("view").querySelectorAll("details")].find(d => d.firstElementChild.textContent === title);
+  if (section) section.open = true;
+}
+
+function ideaReviewPanel(limit = dailyIdeas.length) {
+  return panel('<h3>新規事業の提案</h3><p>AI生成仮説・Web調査なし</p>' +
+    (dailyIdeas.length ? dailyIdeas.slice(0,limit).map((idea,index) => {
+      const status = data.decisions.find(d => d.source === idea.source)?.status;
+      return '<article><h4>' + esc(idea.name) + '</h4>' + badge(idea.day) +
+        badge(status === "決定済み" ? "採用" : status || "判断待ち") +
+        '<p>顧客と課題　' + esc(idea.customer) + '</p><p>商品と販売仮説　' + esc(idea.offer) +
+        '</p><p>最初の販売検証　' + esc(idea.next) + '</p>' +
+        (!status || status === "保留" ? '<div class="actions">' +
+          action("採用","ideaAdopt",index) + action("保留","ideaHold",index) +
+          action("却下","ideaReject",index) + '</div>' : '') + '</article>';
+    }).join("") : '<p>新規提案はまだありません。</p>'));
+}
+
+function reviewIdea(idea, status) {
+  if (!idea) throw Error("事業案が見つかりません。");
+  const prior = data.decisions.find(d => d.source === idea.source);
+  if (prior && prior.status !== "保留") throw Error("判断済みの事業案です。");
+  if (prior?.status === status) return;
+  const projects = [...data.projects];
+  if (status === "決定済み" && !idea.project) {
+    if (projects.some(p => normalizedName(p.name) === normalizedName(idea.name))) {
+      throw Error("同名の事業が登録済みです。事業一覧で確認してください。");
+    }
+    projects.push({id:crypto.randomUUID(), name:idea.name, type:types[2], stage:"検証中",
+      priority:"未設定", date:"", rank:0, price:null, customer:idea.customer, next:idea.next,
+      note:"AI生成仮説・Web調査なし\n" + idea.offer, source:idea.source,
+      history:[{date:today(), note:"利用者がAI事業案を採用"}]});
+  }
+  const decision = {date:today(), title:idea.name, status, source:idea.source,
+    note:[prior?.note, today() + " " + (status === "決定済み" ? "採用" : status),
+      "AI生成仮説・Web調査なし", idea.customer, idea.offer, idea.next].filter(Boolean).join("\n")};
+  save({...data, projects, decisions:prior ?
+    data.decisions.map(d => d === prior ? decision : d) : [...data.decisions,decision]});
+  if (status === "決定済み" && !idea.project) { tab = "portfolio"; filter = "すべて"; }
+  render();
+  $("notice").textContent = status === "決定済み" && !idea.project ? "採用し、検証中の事業として登録しました。" : "判断を保存しました。";
+}
+
+function existingResearchPanel() {
+  const latest = [...researchReviews].sort((a,b) => b.day.localeCompare(a.day));
+  return details("既存事業のAI分析と判断", panel('<p>AI生成仮説・Web調査なし</p>' +
+    (latest.length ? latest.map(report => {
+      const status = data.decisions.find(d => d.source === report.source)?.status;
+      const index = researchReviews.indexOf(report);
+      return '<article><h3>' + esc(report.name) + '</h3>' + badge(report.day) +
+        badge(status === "決定済み" ? "採用" : status || "判断待ち") +
+        '<ul>' + report.offer.split("\n").map(line => '<li>' + esc(line) + '</li>').join("") + '</ul>' +
+        '<div class="actions">' +
+        (!status || status === "保留" ?
+          action("採用","researchAdopt",index) + action("保留","researchHold",index) + action("却下","researchReject",index) : "") +
+        (status === "決定済み" ? action("事業の次の行動を編集","project",report.project) : "") +
+        '</div></article>';
+    }).join("") : '<p>事業一覧に一致する公開レポートはありません。</p>')));
+}
+
+function home() {
+  const focus = activeQueue()[0] || data.projects.find(p => ["販売中","収益化済み"].includes(p.stage));
+  const taskRows = loadTasks();
+  const nextTasks = (taskRows || []).filter(t => t.state !== "完了")
+    .sort((a,b) => (a.due || "9999").localeCompare(b.due || "9999")).slice(0,3);
+  const rows = data.ledger.filter(r => r.month === today().slice(0,7));
+  const revenue = rows.reduce((total,r) => total + r.revenue,0);
+  const balance = rows.reduce((total,r) => total + r.revenue-r.cost,0);
+  return heading("今日の収益化アクション") +
+    panel('<h3>次の一手</h3>' + (focus ?
+      '<p>' + esc(focus.name) + ' ／ ' + esc(focus.next || "次の販売検証を登録") + '</p>' +
+      action("事業を編集","project",focus.id) : '<p>AI事業調査で、最初に販売検証する事業を選びます。</p>') +
+      (taskRows === null ? '<p>タスクを読み込めません。</p>' :
+        nextTasks.map(t => '<p>' + esc(t.title) + ' ／ ' + esc(t.due || "期限未設定") + '</p>').join(""))) +
+    '<div class="metrics">' + metric("今月の売上",rows.length ? yen(revenue) : "未登録","登録済み " + rows.length + "事業") +
+    metric("今月の差引収支",rows.length ? yen(balance) : "未登録","売上 − 費用・税引前") + '</div>' +
+    ideaReviewPanel(1) + pendingDecisionSummary() + details("実行タスク",tasks()) + details("作業進捗",progress());
 }
 
 function render() {
@@ -706,7 +803,14 @@ function render() {
     if (button.dataset.tab === tab) button.setAttribute("aria-current","page");
     else button.removeAttribute("aria-current");
   });
-  $("view").innerHTML = {portfolio,daily,progress,sales,finance,insights:executiveInsights,tasks,command:commandCenter,verification,tasks,decisions,settings}[tab]();
+  const expanded = [...$("view").querySelectorAll("details[open]")].map(d => d.firstElementChild.textContent);
+  $("view").innerHTML = {
+    home, portfolio:() => portfolio() + details("日次候補",daily()),
+    verification:() => heading("AI事業調査") + ideaReviewPanel() + details("経営判断の履歴",decisions()) + existingResearchPanel() + verification(),
+    finance:() => finance() + details("営業・販売の記録",sales()),
+    settings
+  }[tab]();
+  expanded.forEach(openSection);
   if ($("offline")) $("offline").textContent = offlineStatus;
 }
 
@@ -756,7 +860,7 @@ function editProject(id, isDaily) {
       if (values.history) change.push(values.history);
       if (change.length) updated.history.push({date:today(),note:change.join(" ／ ")});
       save({...data,projects:old ? data.projects.map(item => item.id === id ? updated : item) : [...data.projects,updated]});
-      if (isIdea && tab === "daily") date = updated.date;
+      if (isIdea) date = updated.date;
       if (tab === "portfolio" && filter !== "すべて" && filter !== updated.type) filter = updated.type;
     });
   const type = $("form").elements.type;
@@ -783,7 +887,7 @@ function editDecision(index) {
     input("date","日付","date",old?.date || today(),'required') +
     select("status","区分",["提案","決定済み","保留","却下"],old?.status || "提案") +
     area("note","判断・根拠・次の行動",old?.note), values => {
-      const row = {...values,source:"利用者による手動記録"};
+      const row = {...values,source:old?.source || "利用者による手動記録"};
       save({...data,decisions:old ? data.decisions.map(d => d === old ? row : d) : [...data.decisions,row]});
     });
 }
@@ -826,9 +930,15 @@ document.addEventListener("click", event => {
     if (kind === "reviewReject") decisionReview(Number(value),"却下");
     if (kind === "export") exportData();
     if (kind === "mergeCatalog") mergeCatalog();
-    if (kind === "openDecisions") { tab = "decisions"; render(); }
-    if (kind === "openTasks") { tab = "tasks"; render(); }
+    if (kind === "openDecisions") { tab = "verification"; render(); $("view").querySelector("details").open = true; }
+    if (kind === "openTasks") { tab = "home"; render(); $("view").querySelector("details").open = true; }
     if (kind === "openEvidence") { tab = "verification"; render(); }
+    if (kind === "researchAdopt") reviewIdea(researchReviews[Number(value)],"決定済み");
+    if (kind === "researchHold") reviewIdea(researchReviews[Number(value)],"保留");
+    if (kind === "researchReject") reviewIdea(researchReviews[Number(value)],"却下");
+    if (kind === "ideaAdopt") reviewIdea(dailyIdeas[Number(value)],"決定済み");
+    if (kind === "ideaHold") reviewIdea(dailyIdeas[Number(value)],"保留");
+    if (kind === "ideaReject") reviewIdea(dailyIdeas[Number(value)],"却下");
     if (kind === "aiFeedRefresh") autoImportAiFeed();
     if (kind === "researchPrompt") researchPrompt();
     if (kind === "portfolioCsv") exportPortfolioCsv();
@@ -880,6 +990,7 @@ document.addEventListener("submit", event => {
     if(!data.projects.some(p=>p.id===f.project)||!evidenceTypes.includes(f.type)||!evidenceStatuses.includes(f.status)||!String(f.summary||"").trim()) throw Error("入力を確認してください。");
     const rows=loadEvidence();
     if(rows===null) throw Error("検証記録を読み込めません。");
+    if (f.status === "資料確認済み" && !String(f.source || "").trim()) throw Error("確認した一次資料のURLまたは資料名を入力してください。");
     rows.push({id:crypto.randomUUID(),project:f.project,type:f.type,status:f.status,summary:String(f.summary).trim().slice(0,1000),source:String(f.source||"").trim().slice(0,500),date:today()});
     saveEvidence(rows);render();$("notice").textContent="検証記録を端末内に保存しました。";
   }catch(error){$("notice").textContent=error.message;}
@@ -1178,7 +1289,7 @@ const sync = (() => {
   document.addEventListener("visibilitychange", () => { if (!document.hidden) run(); });
   window.addEventListener("online",() => run());
   setInterval(() => { if (!document.hidden) run(); },15000);
-  setInterval(() => { if (!document.hidden && tab === "progress" && !$("editor").open) render(); },60000);
+  setInterval(() => { if (!document.hidden && tab === "home" && !$("editor").open && !$("view").contains(document.activeElement)) render(); },60000);
   return {run,view};
 })();
 window.orxeliaSync = sync;
