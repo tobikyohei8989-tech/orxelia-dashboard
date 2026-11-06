@@ -203,12 +203,20 @@ function executiveOverview() {
 const businessSteps = ["候補","検証","開発","販売","収益化"];
 const businessStageIndex = {"未確認":0,"未検証":0,"検証中":1,"開発中":2,"販売中":3,"収益化済み":4};
 
-function portfolioProgress(project, evidence) {
-  const index = businessStageIndex[project.stage];
+function displayedBusinessStage(project, activities) {
+  if (["販売中","収益化済み","保留","終了"].includes(project.stage)) return project.stage;
+  const state = activities.get(normalizedName(project.name))?.state;
+  if (state === "検証中" || (state === "判断待ち" && project.name === currentResearchProject)) return "検証中";
+  if (state === "試作中") return "開発中";
+  return project.stage;
+}
+
+function portfolioProgress(project, evidence, stage) {
+  const index = businessStageIndex[stage];
   const records = evidence?.filter(row => row.project === project.id);
   const confirmed = records?.filter(row => ["資料確認済み","社内動作確認済み","販売実績確認済み"].includes(row.status)).length;
   return '<article class="business-progress"><h3>' + esc(project.name) + '</h3>' +
-    badge(project.stage) + (project.priority === "未設定" ? "" : badge("優先度 " + project.priority)) +
+    badge(stage) + (project.priority === "未設定" ? "" : badge("優先度 " + project.priority)) +
     (index === undefined ? "" : '<ol class="business-steps" aria-label="事業の段階">' +
       businessSteps.map((step,i) => '<li' + (i === index ? ' aria-current="step"' : '') + '>' + step + '</li>').join("") + '</ol>') +
     '<p>' + (records ? (records.length ? '確認済み ' + confirmed + '件 ／ 未確認・仮説 ' + (records.length-confirmed) + '件' : '検証記録なし') : '検証記録を読み込めません') + '</p>' +
@@ -216,15 +224,15 @@ function portfolioProgress(project, evidence) {
     details("事業の詳細・編集",card(project)) + '</article>';
 }
 
-function portfolio() {
+function portfolio(activities) {
   const selected = data.projects.filter(p => filter === "すべて" || p.type === filter).sort((a,b) => ({"高":0,"中":1,"低":2,"未設定":3}[a.priority] - {"高":0,"中":1,"低":2,"未設定":3}[b.priority]));
   const filters = ["すべて",...types].map(t => '<option' + (t === filter ? ' selected' : '') + '>' + t + '</option>').join("");
   const evidence = loadEvidence();
-  const counts = ["未確認","未検証","検証中","開発中","販売中","収益化済み","保留","終了"].map(stage =>
-    metric(stage,selected.filter(p => p.stage === stage).length,"件")).join("");
+  const counts = stages.map(stage =>
+    metric(stage,selected.filter(p => displayedBusinessStage(p, activities) === stage).length,"件")).join("");
   return heading("事業一覧", action("＋ 事業を登録","project","",true)) +
     '<label>区分<select id="filter">' + filters + '</select></label>' +
-    (selected.length ? '<div class="metrics portfolio-counts" aria-label="登録ステータス別の事業数">' + counts + '</div>' + grid(selected.map(project => portfolioProgress(project,evidence))) : panel('<p>この区分の登録は0件です。既存プロジェクトの名称や状況は確認できたものから登録してください。参照チャットの候補は「管理」で初期データを取り込むと表示されます。</p>'));
+    (selected.length ? '<div class="metrics portfolio-counts" aria-label="進捗ステータス別の事業数">' + counts + '</div>' + grid(selected.map(project => portfolioProgress(project,evidence,displayedBusinessStage(project, activities)))) : panel('<p>この区分の登録は0件です。既存プロジェクトの名称や状況は確認できたものから登録してください。参照チャットの候補は「管理」で初期データを取り込むと表示されます。</p>'));
 }
 
 function activeQueue() {
@@ -967,12 +975,6 @@ function render() {
   const projects = data.projects;
   const activities = latestProjectActivities();
   const active = projects.filter(project => !["保留","終了"].includes(project.stage));
-  const progressState = project => {
-    const state = activities.get(normalizedName(project.name))?.state || project.stage;
-    if (project.name === currentResearchProject && state === "判断待ち" &&
-        !["販売中","収益化済み"].includes(project.stage)) return "検証中";
-    return state;
-  };
   const latest = active.map(project => ({project,activity:activities.get(normalizedName(project.name))}))
     .filter(({activity}) => activity).sort((a,b) => Date.parse(b.activity.updatedAt)-Date.parse(a.activity.updatedAt))[0];
   $("work-now").innerHTML = latest ?
@@ -981,8 +983,8 @@ function render() {
     '<span class="eyebrow">最新の作業報告</span><span>同期された報告はまだありません。</span>';
   $("metrics").innerHTML = [
     metric("事業総数", projects.length, "登録済み"),
-    metric("検証中", active.filter(p => progressState(p) === "検証中").length, "試作テスト・販売前の根拠確認"),
-    metric("開発中", active.filter(p => ["試作中","開発中"].includes(progressState(p))).length, "最新の試作報告を反映"),
+    metric("検証中", active.filter(p => displayedBusinessStage(p, activities) === "検証中").length, "試作テスト・販売前の根拠確認"),
+    metric("開発中", active.filter(p => displayedBusinessStage(p, activities) === "開発中").length, "最新の試作報告を反映"),
     metric("収益化済み", projects.filter(p => p.stage === "収益化済み").length, "登録ステータスの集計")
   ].join("");
   document.querySelectorAll("[data-tab]").forEach(button => {
@@ -991,7 +993,7 @@ function render() {
   });
   const expanded = [...$("view").querySelectorAll("details[open]")].map(d => d.firstElementChild.textContent);
   $("view").innerHTML = {
-    home, portfolio:() => portfolio() + details("日次候補",daily()),
+    home, portfolio:() => portfolio(activities) + details("日次候補",daily()),
     verification:() => heading("事業案・販売判断") + launchDecisions() + details("過去の経営判断",decisions()) + ideaReviewPanel() + existingResearchPanel() + details("検証記録・取り込み",verification()),
     finance:() => finance() + details("営業・販売の記録",sales()),
     settings
