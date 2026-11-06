@@ -425,12 +425,22 @@ function decisionReview(index, status) {
   $("notice").textContent = "経営判断を記録しました。外部への操作は実行していません。";
 }
 function launchDecisions() {
-  const cards = [...data.projects].sort((a,b) =>
-    Number(Object.hasOwn(businessEconomics,b.name)) - Number(Object.hasOwn(businessEconomics,a.name))).map(project => {
+  const projects = [...data.projects].sort((a,b) =>
+    Number(Object.hasOwn(businessEconomics,b.name)) - Number(Object.hasOwn(businessEconomics,a.name)));
+  const amount = value => value == null ? "未算定" : yen(value);
+  const rows = projects.map(project => {
+    const plan = Object.hasOwn(businessEconomics,project.name) ? businessEconomics[project.name] : null;
+    const base = plan ? projectEconomics(plan).scenarios[1] : null;
+    return '<tr><th scope="row">' + esc(project.name) + '<small>' +
+      (base ? "条件別試算・基準" : "試算準備中") + '</small></th><td>' +
+      amount(base?.cost) + '</td><td>' + amount(base?.revenue) + '</td><td' +
+      (base?.profit < 0 ? ' class="warn"' : '') + '><strong>' + amount(base?.profit) +
+      '</strong></td></tr>';
+  });
+  const cards = projects.filter(project => Object.hasOwn(businessEconomics,project.name)).map(project => {
     const plan = Object.hasOwn(businessEconomics,project.name) ? businessEconomics[project.name] : null;
     const result = plan ? projectEconomics(plan) : null;
     const price = plan?.price ?? project.price;
-    const amount = value => value == null ? "未算定" : yen(value);
     const scenarios = result ? result.scenarios.map(({count,revenue,profit},index) =>
       badge(["低位","基準","高位"][index] + " " + count + "契約 ／ 売上 " + yen(revenue) + " ／ 利益 " + yen(profit))).join("") :
       '<p>契約見込み・月間売上・月間利益　未算定</p>';
@@ -444,8 +454,13 @@ function launchDecisions() {
       '</strong></p><div class="chips">' + scenarios + '</div>' +
       (plan ? details("試算条件",'<p>' + esc(plan.note) + '</p>') : "") + '</article>';
   });
-  return '<section id="launch-decisions" tabindex="-1">' + heading("事業別の販売判断") + '<p>月間利益は税引前。計画試算と登録済みの価格仮説を表示します。</p>' +
-    (cards.length ? grid(cards.slice(0,1)) + (cards.length > 1 ? details("ほかの事業の販売判断",grid(cards.slice(1))) : "") : panel('<p>登録事業がありません。</p>')) + '</section>';
+  return '<section id="launch-decisions" tabindex="-1">' + heading("事業別の販売判断") +
+    '<p>月間原価は固定費と契約ごとの原価の合計。売上と利益は基準シナリオ・税引前。</p>' +
+    (rows.length ? '<div class="decision-table" tabindex="0" role="region" aria-label="全事業の月間採算"><table><thead><tr>' +
+      '<th scope="col">事業</th><th scope="col">月間原価</th><th scope="col">月間売上見込み</th><th scope="col">月間利益</th>' +
+      '</tr></thead><tbody>' + rows.join("") + '</tbody></table></div>' :
+      panel('<p>登録事業がありません。</p>')) +
+    (cards.length ? details("契約数・損益分岐・試算の根拠",grid(cards)) : "") + '</section>';
 }
 
 function decisions() {

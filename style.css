@@ -30,3 +30,11 @@ progress{width:100%;height:12px;accent-color:var(--gold)}
   font-weight: 700;
 }
 .business-progress > details { margin-top: .75rem; }
+
+.decision-table { overflow-x: auto; margin-block: 1rem; }
+.decision-table table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.decision-table th, .decision-table td { padding: .7rem .55rem; border-bottom: 1px solid #64748b; }
+.decision-table thead { background: #1b2335; }
+.decision-table th { text-align: left; }
+.decision-table td { text-align: right; white-space: nowrap; }
+.decision-table small { display: block; font-weight: normal; }
