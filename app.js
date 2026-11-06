@@ -870,17 +870,16 @@ function verification() {
   const scorecard=data.projects.filter(p=>p.stage!=="終了"&&p.stage!=="保留").map(p=>{
     const own=rows.filter(r=>r.project===p.id);
     const done=verificationWeights.filter(w=>own.some(r=>r.type===w.type&&r.status==="資料確認済み"&&r.source.trim()));
-    const coverage=done.reduce((sum,w)=>sum+w.points,0);
-    return {name:p.name,coverage,missing:verificationWeights.filter(w=>!done.includes(w)).map(w=>w.label),stale:own.filter(r=>evidenceFreshness(r).startsWith("再調査")).length};
-  }).sort((a,b)=>b.coverage-a.coverage);
+    return {name:p.name,confirmed:done.length,missing:verificationWeights.filter(w=>!done.includes(w)).map(w=>w.label),stale:own.filter(r=>evidenceFreshness(r).startsWith("再調査")).length};
+  }).sort((a,b)=>b.confirmed-a.confirmed);
   return heading("公開情報による事業検証",action("検証データJSON出力","evidenceExport"))+
-    panel('<h3>検証方針（2026年11月版）</h3><p>公開資料の確認 → 自社で試作・動作確認 → 商品を公開 → 購入件数・売上を確認。</p><p><strong>根拠充足率は成功確率や事業評価点ではありません。</strong>出典を登録した資料確認済み項目の配点合計です。AIが資料を自動取得・検証したものではありません。</p>'+
-      verificationWeights.map(w=>'<p>'+esc(w.label)+'：'+w.points+'点分の根拠</p>').join("")+
-      '<p>市場の検索量は購買需要を保証しません。競合の非公開売上・契約数は推定値として扱ってください。</p>')+
-    panel('<h3>事業別の根拠充足状況</h3>'+(scorecard.length?scorecard.map(x=>'<article><h3>'+esc(x.name)+'</h3><p>根拠充足率 '+x.coverage+'/100（成功確率ではありません）</p><p>不足：'+esc(x.missing.join("、")||"5軸の資料記録あり。内容の妥当性は未監査")+'</p>'+(x.stale?'<p>再調査推奨：'+x.stale+'件</p>':'')+'</article>').join(""):'<p>対象事業がありません。</p>'))+
-    aiFeedPanel()+freeConnectionsPanel()+researchImportPanel()+
+    panel('<h3>この端末の検証記録</h3><p>手動で登録した資料確認済み記録の件数です。販売判断に掲載した公開資料は、事業別の販売判断にまとまっています。</p>' +
+      (scorecard.length ? scorecard.map(x=>'<p>' + esc(x.name) + ' ／ 資料の登録がある項目 ' +
+        x.confirmed + ' / ' + verificationWeights.length + (x.stale ? ' ／ 再調査推奨 ' + x.stale + '件' : '') + '</p>').join("") :
+        '<p>対象事業がありません。</p>'))+
+    details("AIレポートの取り込み・データ出力",aiFeedPanel()+freeConnectionsPanel()+researchImportPanel())+
     panel('<h3>検証結果を登録</h3><form id="evidence-form"><label>対象事業<select name="project" required><option value="">選択してください</option>'+opts+'</select></label><label>検証の種類<select name="type">'+newEvidenceTypes.map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認状況<select name="status">'+evidenceStatuses.filter(x=>x!=="顧客確認済み").map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認内容・未解決事項<textarea name="summary" maxlength="1000" required></textarea></label><label>出典URL・資料名（資料確認済みの場合は確認した一次資料）<input name="source" maxlength="500"></label><button class="primary">検証記録を保存</button></form>')+
-    panel('<h3>検証履歴（出典と鮮度）</h3>'+(recent.length?recent.slice(0,100).map(r=>'<article><h3>'+esc(projectName(r.project))+'</h3><p>'+esc(r.type)+' ／ '+esc(r.status)+' ／ '+esc(r.date)+' ／ '+esc(evidenceFreshness(r))+'</p><p>'+esc(r.summary)+'</p><p>根拠：'+esc(r.source||"未記録")+'</p>'+action("削除","evidenceDelete",r.id)+'</article>').join(""):'<p>まだ根拠がありません。公開情報の出典と調査日を登録してください。</p>'));
+    panel('<h3>検証履歴（出典と鮮度）</h3>'+(recent.length?recent.slice(0,100).map(r=>'<article><h3>'+esc(projectName(r.project))+'</h3><p>'+esc(r.type)+' ／ '+esc(r.status)+' ／ '+esc(r.date)+' ／ '+esc(evidenceFreshness(r))+'</p><p>'+esc(r.summary)+'</p><p>根拠：'+esc(r.source||"未記録")+'</p>'+action("削除","evidenceDelete",r.id)+'</article>').join(""):'<p>この端末に登録された検証履歴はありません。</p>'));
 }
 
 const details = (title, content) => '<details class="panel"><summary>' + title + '</summary>' + content + '</details>';
@@ -973,7 +972,7 @@ function render() {
     .filter(({activity}) => activity).sort((a,b) => Date.parse(b.activity.updatedAt)-Date.parse(a.activity.updatedAt))[0];
   $("work-now").innerHTML = latest ?
     '<span class="eyebrow">最新の作業報告</span><strong>' + esc(latest.project.name) + '</strong>' +
-    badge(latest.activity.state) + (latest.activity.current ? '<span class="work-note">' + esc(latest.activity.current) + '</span>' : "") :
+    badge(latest.project.name === currentResearchProject && latest.activity.state === "判断待ち" ? "販売保留・根拠確認中" : latest.activity.state) + (latest.activity.current ? '<span class="work-note">' + esc(latest.activity.current) + '</span>' : "") :
     '<span class="eyebrow">最新の作業報告</span><span>同期された報告はまだありません。</span>';
   $("metrics").innerHTML = [
     metric("事業総数", projects.length, "登録済み"),
@@ -988,7 +987,7 @@ function render() {
   const expanded = [...$("view").querySelectorAll("details[open]")].map(d => d.firstElementChild.textContent);
   $("view").innerHTML = {
     home, portfolio:() => portfolio() + details("日次候補",daily()),
-    verification:() => heading("事業案・販売判断") + launchDecisions() + details("経営判断の履歴",decisions()) + ideaReviewPanel() + existingResearchPanel() + verification(),
+    verification:() => heading("事業案・販売判断") + launchDecisions() + details("過去の経営判断",decisions()) + ideaReviewPanel() + existingResearchPanel() + details("検証記録・取り込み",verification()),
     finance:() => finance() + details("営業・販売の記録",sales()),
     settings
   }[tab]();
@@ -1292,8 +1291,10 @@ async function importDailyLink(hash = location.hash) {
     preserveRecoverySnapshot("日次レポート追加前");
     save({...data,projects,decisions,importLog:[...(data.importLog || []),log].slice(-200)});
     date = incoming.projects[0]?.date || date;
-    tab = incoming.decisions.some(d => d.activity) ? "progress" : "daily";
+    const hasProgress = incoming.decisions.some(d => d.activity);
+    tab = hasProgress ? "home" : added ? "portfolio" : "verification";
     render();
+    openSection(hasProgress ? "作業進捗" : added ? "日次候補" : "過去の経営判断");
     $("notice").textContent = added || proposals
       ? "日次候補 " + added + "案・判断 " + proposals + "件を追加しました。"
       : "追加できる新しい記録はありません。日次一覧で対象日の内容を確認してください。";
