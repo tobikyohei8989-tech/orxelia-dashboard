@@ -38,3 +38,9 @@ progress{width:100%;height:12px;accent-color:var(--gold)}
 .decision-table th { text-align: left; }
 .decision-table td { text-align: right; white-space: nowrap; }
 .decision-table small { display: block; font-weight: normal; }
+
+.hero { padding: 1.15rem 0 .85rem; }
+.work-now { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem .75rem; margin-block: .65rem 1rem; }
+.work-now .work-note { flex-basis: 100%; color: var(--dim); overflow-wrap: anywhere; }
+.hero .metrics { grid-template-columns: repeat(4,minmax(0,1fr)); }
+@media(max-width:640px) { .hero .metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } }

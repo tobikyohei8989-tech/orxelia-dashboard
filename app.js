@@ -377,7 +377,7 @@ function currentProgress(events) {
   return events.find(d => !d.activity.current.startsWith("過去の調査記録。"));
 }
 
-function developmentProjects() {
+function latestProjectActivities() {
   const latestByName = new Map();
   for (const events of progressGroups()) {
     const latest = currentProgress(events)?.activity;
@@ -387,11 +387,7 @@ function developmentProjects() {
       latestByName.set(name,latest);
     }
   }
-  return data.projects.filter(project => {
-    if (["保留","終了"].includes(project.stage)) return false;
-    const activity = latestByName.get(normalizedName(project.name));
-    return activity ? activity.state === "試作中" : project.stage === "開発中";
-  });
+  return latestByName;
 }
 
 function progressCard(events, showHistory) {
@@ -960,7 +956,7 @@ function home() {
   return heading("今日の収益化アクション") +
     panel('<h3>次の一手</h3>' + (focus ?
       '<p>' + esc(focus.name) + ' ／ ' + esc(focus.next || "次の販売検証を登録") + '</p>' +
-      action("事業を編集","project",focus.id) : '<p>AI事業調査で、最初に販売検証する事業を選びます。</p>') +
+      action("事業を編集","project",focus.id) : '<p>事業案・販売判断で、最初に販売検証する事業を選びます。</p>') +
       (taskRows === null ? '<p>タスクを読み込めません。</p>' :
         nextTasks.map(t => '<p>' + esc(t.title) + ' ／ ' + esc(t.due || "期限未設定") + '</p>').join(""))) +
     '<div class="metrics">' + metric("今月の売上",rows.length ? yen(revenue) : "未登録","登録済み " + rows.length + "事業") +
@@ -970,11 +966,19 @@ function home() {
 
 function render() {
   const projects = data.projects;
-  const ideas = projects.filter(p => p.type === types[0] && p.date === date);
+  const activities = latestProjectActivities();
+  const active = projects.filter(project => !["保留","終了"].includes(project.stage));
+  const progressState = project => activities.get(normalizedName(project.name))?.state || project.stage;
+  const latest = active.map(project => ({project,activity:activities.get(normalizedName(project.name))}))
+    .filter(({activity}) => activity).sort((a,b) => Date.parse(b.activity.updatedAt)-Date.parse(a.activity.updatedAt))[0];
+  $("work-now").innerHTML = latest ?
+    '<span class="eyebrow">最新の作業報告</span><strong>' + esc(latest.project.name) + '</strong>' +
+    badge(latest.activity.state) + (latest.activity.current ? '<span class="work-note">' + esc(latest.activity.current) + '</span>' : "") :
+    '<span class="eyebrow">最新の作業報告</span><span>同期された報告はまだありません。</span>';
   $("metrics").innerHTML = [
     metric("事業総数", projects.length, "登録済み"),
-    metric("重点候補", ideas.filter(p => p.rank).length, date + " の重点候補"),
-    metric("開発中", developmentProjects().length, "最新の試作・開発報告を反映"),
+    metric("検証中", active.filter(p => progressState(p) === "検証中").length, "最新の検証報告を反映"),
+    metric("開発中", active.filter(p => ["試作中","開発中"].includes(progressState(p))).length, "最新の試作報告を反映"),
     metric("収益化済み", projects.filter(p => p.stage === "収益化済み").length, "登録ステータスの集計")
   ].join("");
   document.querySelectorAll("[data-tab]").forEach(button => {
@@ -984,7 +988,7 @@ function render() {
   const expanded = [...$("view").querySelectorAll("details[open]")].map(d => d.firstElementChild.textContent);
   $("view").innerHTML = {
     home, portfolio:() => portfolio() + details("日次候補",daily()),
-    verification:() => heading("AI事業調査") + launchDecisions() + details("経営判断の履歴",decisions()) + ideaReviewPanel() + existingResearchPanel() + verification(),
+    verification:() => heading("事業案・販売判断") + launchDecisions() + details("経営判断の履歴",decisions()) + ideaReviewPanel() + existingResearchPanel() + verification(),
     finance:() => finance() + details("営業・販売の記録",sales()),
     settings
   }[tab]();
