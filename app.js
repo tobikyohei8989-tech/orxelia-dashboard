@@ -200,12 +200,31 @@ function executiveOverview() {
     '</p><p>2027年末目標：10事業が各月10万円以上の税引後純利益。現在の収支入力は売上と費用のみのため、達成率は算定していません。未入力の事業は0円とみなしません。</p></div>') + pendingDecisionSummary();
 }
 
+const businessSteps = ["候補","検証","開発","販売","収益化"];
+const businessStageIndex = {"未確認":0,"未検証":0,"検証中":1,"開発中":2,"販売中":3,"収益化済み":4};
+
+function portfolioProgress(project, evidence) {
+  const index = businessStageIndex[project.stage];
+  const records = evidence?.filter(row => row.project === project.id);
+  const confirmed = records?.filter(row => ["資料確認済み","顧客確認済み","販売実績確認済み"].includes(row.status)).length;
+  return '<article class="business-progress"><h3>' + esc(project.name) + '</h3>' +
+    badge(project.stage) + (project.priority === "未設定" ? "" : badge("優先度 " + project.priority)) +
+    (index === undefined ? "" : '<ol class="business-steps" aria-label="事業の段階">' +
+      businessSteps.map((step,i) => '<li' + (i === index ? ' aria-current="step"' : '') + '>' + step + '</li>').join("") + '</ol>') +
+    '<p>' + (records ? (records.length ? '確認済み ' + confirmed + '件 ／ 未確認・仮説 ' + (records.length-confirmed) + '件' : '検証記録なし') : '検証記録を読み込めません') + '</p>' +
+    '<p>次の行動　' + esc(project.next || "未設定") + '</p>' +
+    details("事業の詳細・編集",card(project)) + '</article>';
+}
+
 function portfolio() {
   const selected = data.projects.filter(p => filter === "すべて" || p.type === filter).sort((a,b) => ({"高":0,"中":1,"低":2,"未設定":3}[a.priority] - {"高":0,"中":1,"低":2,"未設定":3}[b.priority]));
   const filters = ["すべて",...types].map(t => '<option' + (t === filter ? ' selected' : '') + '>' + t + '</option>').join("");
+  const evidence = loadEvidence();
+  const counts = ["未確認","未検証","検証中","開発中","販売中","収益化済み","保留","終了"].map(stage =>
+    metric(stage,selected.filter(p => p.stage === stage).length,"件")).join("");
   return heading("事業一覧", action("＋ 事業を登録","project","",true)) +
     '<label>区分<select id="filter">' + filters + '</select></label>' +
-    (selected.length ? grid(selected.map(card)) : panel('<p>この区分の登録は0件です。既存プロジェクトの名称や状況は確認できたものから登録してください。参照チャットの候補は「管理」で初期データを取り込むと表示されます。</p>'));
+    (selected.length ? '<div class="metrics portfolio-counts" aria-label="登録ステータス別の事業数">' + counts + '</div>' + grid(selected.map(project => portfolioProgress(project,evidence))) : panel('<p>この区分の登録は0件です。既存プロジェクトの名称や状況は確認できたものから登録してください。参照チャットの候補は「管理」で初期データを取り込むと表示されます。</p>'));
 }
 
 function activeQueue() {
