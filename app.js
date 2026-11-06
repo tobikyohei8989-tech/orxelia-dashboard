@@ -373,13 +373,34 @@ function progressGroups() {
   ).sort((a,b) => Date.parse(b[0].activity.updatedAt) - Date.parse(a[0].activity.updatedAt));
 }
 
+function currentProgress(events) {
+  return events.find(d => !d.activity.current.startsWith("過去の調査記録。"));
+}
+
+function developmentProjects() {
+  const latestByName = new Map();
+  for (const events of progressGroups()) {
+    const latest = currentProgress(events)?.activity;
+    if (!latest) continue;
+    const name = normalizedName(latest.task);
+    if (Date.parse(latest.updatedAt) > (Date.parse(latestByName.get(name)?.updatedAt) || 0)) {
+      latestByName.set(name,latest);
+    }
+  }
+  return data.projects.filter(project => {
+    if (["保留","終了"].includes(project.stage)) return false;
+    const activity = latestByName.get(normalizedName(project.name));
+    return activity ? activity.state === "試作中" : project.stage === "開発中";
+  });
+}
+
 function progressCard(events, showHistory) {
-  const latest = events.find(d => !d.activity.current.startsWith("過去の調査記録。")) || events[0];
+  const latest = currentProgress(events) || events[0];
   const a = latest.activity;
   const ready = hasTrial(a);
   const oldReview = a.blocker === "ご自身の試用・承認待ち。承認後に本格開発へ進む。";
   const status = oldReview ? "試作できました" : a.state === "準備中" ? "準備中" : a.state;
-  const current = ready ? "見積もりの一覧と、対応済みへの切り替えをテストしました。" : (a.current || "まだ報告がありません。");
+  const current = a.current || "まだ報告がありません。";
   const next = oldReview ? "AIが費用のかからない改善を続けます。" : (a.next || "次の作業はまだ決まっていません。");
   const reason = a.blocker && !oldReview ? '<p><strong>止まっている理由</strong>　' + esc(a.blocker) + '</p>' : '';
   const owner = reason ? "止まっている理由を確認してください。" :
@@ -953,7 +974,7 @@ function render() {
   $("metrics").innerHTML = [
     metric("事業総数", projects.length, "登録済み"),
     metric("重点候補", ideas.filter(p => p.rank).length, date + " の重点候補"),
-    metric("開発中", projects.filter(p => p.stage === "開発中").length, "登録ステータスの集計"),
+    metric("開発中", developmentProjects().length, "最新の試作・開発報告を反映"),
     metric("収益化済み", projects.filter(p => p.stage === "収益化済み").length, "登録ステータスの集計")
   ].join("");
   document.querySelectorAll("[data-tab]").forEach(button => {
