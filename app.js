@@ -425,7 +425,8 @@ function decisionReview(index, status) {
   $("notice").textContent = "経営判断を記録しました。外部への操作は実行していません。";
 }
 function launchDecisions() {
-  const cards = data.projects.map(project => {
+  const cards = [...data.projects].sort((a,b) =>
+    Number(Object.hasOwn(businessEconomics,b.name)) - Number(Object.hasOwn(businessEconomics,a.name))).map(project => {
     const plan = Object.hasOwn(businessEconomics,project.name) ? businessEconomics[project.name] : null;
     const result = plan ? projectEconomics(plan) : null;
     const price = plan?.price ?? project.price;
@@ -443,8 +444,8 @@ function launchDecisions() {
       '</strong></p><div class="chips">' + scenarios + '</div>' +
       (plan ? details("試算条件",'<p>' + esc(plan.note) + '</p>') : "") + '</article>';
   });
-  return heading("事業別の販売判断") + '<p>月間利益は税引前。計画試算と登録済みの価格仮説を表示します。</p>' +
-    (cards.length ? grid(cards) : panel('<p>登録事業がありません。</p>'));
+  return '<section id="launch-decisions" tabindex="-1">' + heading("事業別の販売判断") + '<p>月間利益は税引前。計画試算と登録済みの価格仮説を表示します。</p>' +
+    (cards.length ? grid(cards.slice(0,1)) + (cards.length > 1 ? details("ほかの事業の販売判断",grid(cards.slice(1))) : "") : panel('<p>登録事業がありません。</p>')) + '</section>';
 }
 
 function decisions() {
@@ -849,7 +850,7 @@ function render() {
   const expanded = [...$("view").querySelectorAll("details[open]")].map(d => d.firstElementChild.textContent);
   $("view").innerHTML = {
     home, portfolio:() => portfolio() + details("日次候補",daily()),
-    verification:() => heading("AI事業調査") + details("経営判断",launchDecisions() + decisions()) + ideaReviewPanel() + existingResearchPanel() + verification(),
+    verification:() => heading("AI事業調査") + launchDecisions() + details("経営判断の履歴",decisions()) + ideaReviewPanel() + existingResearchPanel() + verification(),
     finance:() => finance() + details("営業・販売の記録",sales()),
     settings
   }[tab]();
@@ -973,7 +974,7 @@ document.addEventListener("click", event => {
     if (kind === "reviewReject") decisionReview(Number(value),"却下");
     if (kind === "export") exportData();
     if (kind === "mergeCatalog") mergeCatalog();
-    if (kind === "openDecisions") { tab = "verification"; render(); openSection("経営判断"); }
+    if (kind === "openDecisions") { tab = "verification"; render(); $("launch-decisions").focus(); }
     if (kind === "openTasks") { tab = "home"; render(); $("view").querySelector("details").open = true; }
     if (kind === "openEvidence") { tab = "verification"; render(); }
     if (kind === "researchAdopt") reviewIdea(researchReviews[Number(value)],"決定済み");
