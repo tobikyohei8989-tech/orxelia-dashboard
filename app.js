@@ -952,7 +952,7 @@ function home() {
   const rows = data.ledger.filter(r => r.month === today().slice(0,7));
   const revenue = rows.reduce((total,r) => total + r.revenue,0);
   const balance = rows.reduce((total,r) => total + r.revenue-r.cost,0);
-  return heading("今日の収益化アクション") +
+  return heading("今日の収益化アクション") + (window.orxeliaSync?.dailyReportView() || "") +
     panel('<h3>次の一手</h3>' + (focus ?
       '<p>' + esc(focus.name) + ' ／ ' + esc(focus.next || "次の販売検証を登録") + '</p>' +
       action("事業を編集","project",focus.id) : '<p>事業案・販売判断で、最初に販売検証する事業を選びます。</p>') +
@@ -1369,6 +1369,17 @@ const sync = (() => {
     }
     if (!$("editor").open) render();
   }
+  let dailyReport = null;
+  function dailyReportView() {
+    if (!session || dailyReport?.owner !== session.user.id) return "";
+    const {row, failed} = dailyReport;
+    if (failed) return panel('<h3>日次事業開発レポート</h3><p>読み込めませんでした。</p>');
+    if (!row) return panel('<h3>日次事業開発レポート</h3><p>保存されたレポートはまだありません。</p>');
+    const {report_date, report} = row;
+    return panel('<h3>日次事業開発レポート</h3><p>' + esc(report_date) +
+      ' ／ ' + esc(report.project || "") + '</p><pre style="white-space:pre-wrap">' +
+      esc(report.summary || "") + '</pre>');
+  }
   async function run(credentials) {
     if (recoveryToken) return;
     if (busy || !window.ORXELIA_PUBLISHABLE_KEY || (!session && !credentials) || !readable || $("editor").open) return;
@@ -1379,6 +1390,15 @@ const sync = (() => {
         setSession(await request("/auth/v1/token?grant_type=password",{method:"POST",body:JSON.stringify(credentials)},false));
         render();
       }
+      const owner = session.user.id;
+      try {
+        const [row] = await request("/rest/v1/orxelia_daily_reports?select=report_date,report&order=report_date.desc&limit=1");
+        dailyReport = {owner,row};
+      } catch {
+        dailyReport = {owner,failed:true};
+      }
+      if (session?.user.id !== owner || $("editor").open) return;
+      render();
       const [remote] = await request(table + "?select=revision,snapshot&limit=1");
       if (remote) validate(remote.snapshot);
       if ($("editor").open) return;
@@ -1481,7 +1501,7 @@ const sync = (() => {
   window.addEventListener("online",() => run());
   setInterval(() => { if (!document.hidden) run(); },15000);
   setInterval(() => { if (!document.hidden && tab === "home" && !$("editor").open && !$("view").contains(document.activeElement)) render(); },60000);
-  return {run,view};
+  return {run,view,dailyReportView};
 })();
 window.orxeliaSync = sync;
 render();
