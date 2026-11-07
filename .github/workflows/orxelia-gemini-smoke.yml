@@ -1,5 +1,5 @@
 name: ORXELIA Gemini connection smoke test
-# Expand model discovery and report API rejection details
+# Browser-test generated HTML and validate Gemini model failover
 on:
   push:
     paths:
@@ -18,5 +18,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
       - name: Verify Gemini can generate HTML
         run: node scripts/gemini-smoke-test.mjs
