@@ -276,25 +276,43 @@ body.is-home .work-now{margin:4px 0 6px}
 }
 
 
-/* ORXELIA 2.4 — accessible contrast and restrained accent hierarchy */
-:root{--base:#0b1220;--navy:#142235;--card:#1b2d42;--edge:#53677c;--gold:#80ead9;--text:#f8fafc;--dim:#d0dbe5}
-body{background:linear-gradient(180deg,#101b2d 0%,#0b1220 70%)}
-header{background:#101b2d;border-bottom-color:#465b71}
-.metric,article,.panel{background:#1b2d42;border-color:#4d6378;box-shadow:none}
-p,label,.metric small,.metric span,.work-note{color:#d0dbe5}
-.priority-card{background:#20364d;border:1px solid #698197;box-shadow:none}
-.priority-card h3,.portfolio-tile h3,.proposal-item-title{color:#ffffff}
-.priority-card p,.portfolio-tile p,.proposal-item-body>p{color:#d8e3ec}
-.priority-label{color:#c3f6ec}
-.priority-state,.portfolio-status,.proposal-item-status{background:#30475c;color:#f2fafc;border-color:#71899b}
-.count-pill{background:#243b51;color:#e8f6f4;border-color:#6e8497}
-nav{background:#1a2b40;border-color:#5b7083;box-shadow:none}
-nav button{color:#e4ecf4}
-nav button[aria-current]{background:#80ead9;color:#08242a}
-button,.file{background:#2a4056;border-color:#70869a;color:#f7fbff}
-button.primary,.primary,.portfolio-tile>button,.home-links button:last-child{background:#80ead9;color:#08242a;border-color:#80ead9}
-button:hover{border-color:#a1f4e6}
-.home-stats,.proposal-intro,.proposal-item,.proposal-next,.owner-next{background:#1c3045;border-color:#5c7286}
-.home-stats>summary,summary,.eyebrow{color:#a8f3e7}
-input:not([type=file]),select,textarea{background:#15283c;border-color:#74899b;color:#fff}
-@media(max-width:640px){.quick-table tr{background:#20364d;border-color:#698197}.quick-table td:before{color:#d3e1eb}}
+/* ORXELIA 2.4 — light business theme, readable on mobile */
+:root{color-scheme:light;--base:#f3f6fa;--navy:#ffffff;--card:#ffffff;--edge:#d5dee9;--gold:#1764bc;--text:#17283d;--dim:#52657a;background:var(--base);color:var(--text)}
+html,body{background:#f3f6fa;color:var(--text)}
+header{background:#ffffff;border-bottom:1px solid #d5dee9}
+.brand strong{color:#173b68}.brand small{color:#52657a}
+.hero h1,.home-intro h2,h2,h3,.proposal-item-title,.portfolio-tile h3{color:#17283d}
+p,label,.metric small,.metric span,.work-note,.portfolio-tile p,.proposal-item-body>p,.priority-card p{color:#52657a}
+.metric,article,.panel,.priority-card,.portfolio-tile,.proposal-item,.proposal-intro,.home-stats,.owner-next,.proposal-next,.proposal-meta,.empty-state{background:#ffffff;background-image:none;color:#17283d;border:1px solid #d5dee9;box-shadow:0 2px 8px rgba(27,49,76,.045)}
+.metric b{color:#173b68}
+.priority-card h3,.portfolio-tile h3,.proposal-item-title,.empty-state strong{color:#17283d}
+.priority-label{color:#225d9b}
+.priority-state,.portfolio-status,.proposal-item-status{background:#eaf2fc;color:#184c82;border:1px solid #bdd3eb}
+.count-pill,.chip,.proposal-summary span{background:#eef4fa;color:#254b72;border:1px solid #cbd9e9}
+nav{background:#ffffff;border:1px solid #d5dee9;box-shadow:0 2px 8px rgba(27,49,76,.05)}
+nav button{color:#40536b;background:transparent}
+nav button[aria-current],button[aria-current]{background:#1764bc;color:#ffffff;border-color:#1764bc}
+button,.file,.home-links button{background:#f7f9fc;color:#21466e;border:1px solid #bfcfdf}
+button.primary,.primary,.portfolio-tile>button,.home-links button:last-child,.owner-next .demo-link{background:#1764bc;color:#ffffff;border-color:#1764bc}
+button:hover{border-color:#1764bc}
+button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline-color:#1764bc}
+.eyebrow,summary,.home-stats>summary,.owner-next h4,.quick-attention{color:#225d9b}
+.proposal-item>summary{color:#17283d}
+.proposal-item>summary:after{color:#1764bc}
+.proposal-next{border-left:4px solid #1764bc}
+.quick-table-scroll{background:#ffffff;border-color:#d5dee9}
+.quick-table thead,.decision-table thead{background:#eaf2fc;color:#173b68}
+.quick-table th,.quick-table td,.decision-table th,.decision-table td{border-color:#d5dee9;color:#263d56}
+input:not([type=file]),select,textarea{background:#ffffff;border-color:#aebfd0;color:#17283d}
+input::placeholder,textarea::placeholder{color:#64748b}
+dialog{background:#ffffff;color:#17283d;border-color:#c6d3e0}
+dialog::backdrop{background:rgba(20,38,60,.45)}
+.proposal-failure,.warn{background:#fff3ed;color:#923e21;border:1px solid #e8b9a4}
+.proposal-failure strong,.proposal-failure p{color:#923e21}
+footer,footer span{color:#63758a}
+@media(max-width:640px){
+.quick-table tr{background:#ffffff;background-image:none;border:1px solid #d5dee9;box-shadow:none}
+.quick-table tbody th{border-color:#d5dee9;color:#17283d}
+.quick-table td:before{color:#52657a}
+.quick-table td:last-child{color:#344d68}
+}
