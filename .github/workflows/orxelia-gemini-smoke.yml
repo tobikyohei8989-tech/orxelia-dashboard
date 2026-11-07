@@ -1,5 +1,5 @@
-name: ORXELIA Gemini connection smoke test
-# Browser-test generated HTML and validate Gemini model failover
+name: ORXELIA AI business prototype validation
+# Isolated business prototype generation and browser validation
 on:
   push:
     paths:
@@ -22,5 +22,5 @@ jobs:
         run: |
           npm install --no-save playwright@1.58.2
           npx playwright install --with-deps chromium
-      - name: Verify Gemini can generate HTML
+      - name: Generate and browser-test business prototype
         run: node scripts/gemini-smoke-test.mjs
