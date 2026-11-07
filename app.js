@@ -1016,7 +1016,9 @@ function home() {
 function render() {
   // iOS Japanese IME: never replace a focused textarea while the user composes text.
   const activeRevision=document.activeElement;
-  if(document.querySelector("details[data-prototype-preview][open]") || activeRevision?.matches?.('textarea[data-revision-input]')){
+  // Keep the iframe mounted during use: replacing srcdoc resets the entire app and its forms.
+  if(document.querySelector("details[data-prototype-preview][open]")) return;
+  if(activeRevision?.matches?.('textarea[data-revision-input]')){
     saveOrxeliaDraft(activeRevision.dataset.revisionInput,activeRevision.value);
     return;
   }
