@@ -274,3 +274,45 @@ body.is-home .work-now{margin:4px 0 6px}
  .proposal-item-body>button{width:100%;margin:6px 0;min-height:48px}
  .proposal-item-body iframe{max-height:390px}
 }
+
+
+/* ORXELIA 2.4 — light business theme, readable on mobile */
+:root{color-scheme:light;--base:#f3f6fa;--navy:#ffffff;--card:#ffffff;--edge:#d5dee9;--gold:#1764bc;--text:#17283d;--dim:#52657a;background:var(--base);color:var(--text)}
+html,body{background:#f3f6fa;color:var(--text)}
+header{background:#ffffff;border-bottom:1px solid #d5dee9}
+.brand strong{color:#173b68}.brand small{color:#52657a}
+.hero h1,.home-intro h2,h2,h3,.proposal-item-title,.portfolio-tile h3{color:#17283d}
+p,label,.metric small,.metric span,.work-note,.portfolio-tile p,.proposal-item-body>p,.priority-card p{color:#52657a}
+.metric,article,.panel,.priority-card,.portfolio-tile,.proposal-item,.proposal-intro,.home-stats,.owner-next,.proposal-next,.proposal-meta,.empty-state{background:#ffffff;background-image:none;color:#17283d;border:1px solid #d5dee9;box-shadow:0 2px 8px rgba(27,49,76,.045)}
+.metric b{color:#173b68}
+.priority-card h3,.portfolio-tile h3,.proposal-item-title,.empty-state strong{color:#17283d}
+.priority-label{color:#225d9b}
+.priority-state,.portfolio-status,.proposal-item-status{background:#eaf2fc;color:#184c82;border:1px solid #bdd3eb}
+.count-pill,.chip,.proposal-summary span{background:#eef4fa;color:#254b72;border:1px solid #cbd9e9}
+nav{background:#ffffff;border:1px solid #d5dee9;box-shadow:0 2px 8px rgba(27,49,76,.05)}
+nav button{color:#40536b;background:transparent}
+nav button[aria-current],button[aria-current]{background:#1764bc;color:#ffffff;border-color:#1764bc}
+button,.file,.home-links button{background:#f7f9fc;color:#21466e;border:1px solid #bfcfdf}
+button.primary,.primary,.portfolio-tile>button,.home-links button:last-child,.owner-next .demo-link{background:#1764bc;color:#ffffff;border-color:#1764bc}
+button:hover{border-color:#1764bc}
+button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline-color:#1764bc}
+.eyebrow,summary,.home-stats>summary,.owner-next h4,.quick-attention{color:#225d9b}
+.proposal-item>summary{color:#17283d}
+.proposal-item>summary:after{color:#1764bc}
+.proposal-next{border-left:4px solid #1764bc}
+.quick-table-scroll{background:#ffffff;border-color:#d5dee9}
+.quick-table thead,.decision-table thead{background:#eaf2fc;color:#173b68}
+.quick-table th,.quick-table td,.decision-table th,.decision-table td{border-color:#d5dee9;color:#263d56}
+input:not([type=file]),select,textarea{background:#ffffff;border-color:#aebfd0;color:#17283d}
+input::placeholder,textarea::placeholder{color:#64748b}
+dialog{background:#ffffff;color:#17283d;border-color:#c6d3e0}
+dialog::backdrop{background:rgba(20,38,60,.45)}
+.proposal-failure,.warn{background:#fff3ed;color:#923e21;border:1px solid #e8b9a4}
+.proposal-failure strong,.proposal-failure p{color:#923e21}
+footer,footer span{color:#63758a}
+@media(max-width:640px){
+.quick-table tr{background:#ffffff;background-image:none;border:1px solid #d5dee9;box-shadow:none}
+.quick-table tbody th{border-color:#d5dee9;color:#17283d}
+.quick-table td:before{color:#52657a}
+.quick-table td:last-child{color:#344d68}
+}
