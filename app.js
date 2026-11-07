@@ -1375,12 +1375,24 @@ const sync = (() => {
   function dailyReportView() {
     if (!session || dailyReport?.owner !== session.user.id) return "";
     const {row, failed} = dailyReport;
-    if (failed) return panel('<h3>日次事業開発レポート</h3><p>読み込めませんでした。</p>');
+    if (failed) return panel('<h3>日次事業開発レポート</h3><p>読込に失敗しました。設定・データ管理から同期状態を確認してください。</p>');
     if (!row) return panel('<h3>日次事業開発レポート</h3><p>保存されたレポートはまだありません。</p>');
     const {report_date, report} = row;
-    return panel('<h3>日次事業開発レポート</h3><p>' + esc(report_date) +
-      ' ／ ' + esc(report.project || "") + '</p><pre style="white-space:pre-wrap">' +
-      esc(report.summary || "") + '</pre>');
+    const findings = Array.isArray(report?.findings) ? report.findings : [];
+    const evidence = findings.map(f => '<article style="padding:12px 0;border-top:1px solid rgba(180,180,180,.2)">' +
+      '<strong>' + esc(f.type || '調査項目') + '</strong> ／ ' + esc(f.status || '未検証') +
+      '<p style="white-space:pre-wrap">' + esc(f.summary || '') + '</p>' +
+      (typeof f.source === 'string' && /^https:\/\/[^\s<>"]+$/.test(f.source) ?
+        '<a href="' + esc(f.source) + '" target="_blank" rel="noopener noreferrer">一次資料を確認</a>' : '') +
+      '</article>').join('');
+    const phase = report?.phase || report?.approval_status || '未承認・販売保留';
+    return panel('<h3>AI選定事業｜' + esc(report_date) + '</h3>' +
+      '<p><strong>' + esc(report?.project || '事業名未登録') + '</strong></p>' +
+      '<p>進捗：' + esc(phase) + '</p>' +
+      '<p style="white-space:pre-wrap">' + esc(report?.summary || '') + '</p>' +
+      '<details><summary>市場・競合・動作検証の根拠（' + findings.length + '件）</summary>' +
+      (evidence || '<p>詳細データはまだ登録されていません。</p>') + '</details>' +
+      '<p style="font-size:.85em;opacity:.85">これは非公開の日次提案レポートです。事業台帳への登録、開発着手、販売承認は別工程です。試作品の動作確認と販売判断は記録に基づき確認してください。</p>');
   }
   async function run(credentials) {
     if (recoveryToken) return;
