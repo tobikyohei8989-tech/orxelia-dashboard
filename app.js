@@ -1503,7 +1503,7 @@ const sync = (() => {
       }
       if (session?.user.id !== owner || $("editor").open) return;
       try{
-        orxeliaTrialProposals=await request("/rest/v1/orxelia_proposals?select=id,title,status,brief,created_at,design_status,design_html,design_review,prototype_html,test_report,sales_review,error_message,revision_number,revision_summary,revision_history&order=created_at.desc&limit=10");
+        orxeliaTrialProposals=await request("/rest/v1/orxelia_proposals?select=id,title,status,brief,created_at,design_status,design_html,design_review,prototype_html,test_report,sales_review,error_message,revision_number,revision_summary,revision_history,prototype_revision_number,prototype_revision_request,prototype_revision_history&order=created_at.desc&limit=10");
       }catch(e){console.warn("Additional proposal sync failed:",e.message);orxeliaTrialProposals=[]}
       syncStep = "開発レポートの取得";
       const pipelineRows = await request('/rest/v1/orxelia_pipeline?select=report_date,project,phase,deliverables&order=report_date.desc&limit=30');
