@@ -22,17 +22,24 @@ const rest = async (resource,options={}) => {
  return r.status===204?null:r.json();
 };
 const modelCall=async (messages) => {
- const r=await fetch('https://models.github.ai/inference/chat/completions',{
-  method:'POST',headers:{Authorization:'Bearer '+gh,'Content-Type':'application/json'},
-  body:JSON.stringify({model,messages,temperature:0.2,max_tokens:8000})
- });
- if(!r.ok) throw new Error('GitHub Models '+r.status+': '+(await r.text()).slice(0,400));
- const raw=await r.text();let j;
- try { j=JSON.parse(raw); }
- catch { throw new Error('GitHub Models returned non-JSON response (HTTP '+r.status+', content-type '+(r.headers.get('content-type')||'unknown')+', body='+JSON.stringify(raw.slice(0,120))+'). Verify GitHub Models inference access and endpoint; do not treat this as generated code.'); }
- const content=j.choices?.[0]?.message?.content;
- if(typeof content!=='string'||!content.trim()) throw new Error('GitHub Models response lacks generated message content: '+JSON.stringify(j).slice(0,250));
- return content;
+ const attempts=[];
+ const providers=[
+  {name:'GitHub Models',url:'https://models.github.ai/inference/chat/completions',token:gh,body:{model,messages,temperature:0.2,max_tokens:8000}},
+  ...(process.env.GEMINI_API_KEY?[{name:'Gemini',url:'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',token:process.env.GEMINI_API_KEY,body:{contents:[{role:'user',parts:[{text:messages.map(m=>m.role+': '+m.content).join('\\n\\n')}]}],generationConfig:{temperature:0.2,maxOutputTokens:8192}}}]:[])
+ ];
+ for(const p of providers){
+  try{
+   const headers=p.name==='Gemini'?{'x-goog-api-key':p.token,'Content-Type':'application/json'}:{Authorization:'Bearer '+p.token,Accept:'application/vnd.github+json','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28'};
+   const r=await fetch(p.url,{method:'POST',headers,body:JSON.stringify(p.body),signal:AbortSignal.timeout(90000)});
+   const raw=await r.text();let j;
+   try{j=JSON.parse(raw)}catch{throw new Error('Non-JSON response (HTTP '+r.status+', type '+(r.headers.get('content-type')||'unknown')+', sample '+JSON.stringify(raw.slice(0,60))+')')}
+   if(!r.ok)throw new Error('HTTP '+r.status+': '+JSON.stringify(j).slice(0,200));
+   const content=p.name==='Gemini'?j.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join(''):j.choices?.[0]?.message?.content;
+   if(typeof content!=='string'||!content.trim())throw new Error('No generated text in response');
+   console.log('AI provider succeeded:',p.name);return content;
+  }catch(e){attempts.push(p.name+': '+String(e).slice(0,220));console.error('AI provider failed:',p.name,String(e).slice(0,220))}
+ }
+ throw new Error('All configured AI providers failed: '+attempts.join(' | '));
 };
 const parseHTML=text=>{const match=text.match(/\`\`\`(?:html)?\s*([\s\S]*?)\`\`\`/i);return (match?match[1]:text).trim()};
 const safeFile = async (html,dir) => {
@@ -55,7 +62,27 @@ const testHTML=async dir=>{
  if(await inputs.count()) {const first=inputs.first(); const type=await first.getAttribute('type'); await first.fill(type==='number'?'12':'ORXELIA テスト').catch(e=>errors.push('Input interaction: '+e.message.slice(0,130)));}
  if(await page.locator('button').count()) {await page.locator('button').first().click({timeout:3000}).catch(e=>errors.push('Button interaction: '+e.message.slice(0,130)));}
  await page.waitForTimeout(250);
- result={passed:errors.length===0,errors,controls,bodyLength:text.length,checks:['page load','mobile viewport','basic input','button click','javascript errors','external requests']};
+ if((await page.title()).includes('空調試運転メモ')){
+  try{
+   await page.locator('#site').fill('テスト現場');
+   await page.locator('#unit').fill('室内機A');
+   await page.locator('#intake').fill('27');
+   await page.locator('#outlet').fill('15');
+   await page.locator('#speed').fill('2.5');
+   await page.locator('#recordForm button[type=submit]').click();
+   if(!(await page.locator('#count').innerText()).includes('1'))errors.push('Save did not increase record count');
+   if(!(await page.locator('#result').innerText()).includes('12'))errors.push('Temperature difference calculation failed');
+   await page.reload();
+   if(!(await page.locator('#count').innerText()).includes('1'))errors.push('Persistence after reload failed');
+   const downloadPromise=page.waitForEvent('download',{timeout:5000});
+   await page.locator('#csv').click();
+   const download=await downloadPromise;
+   if(!download.suggestedFilename().endsWith('.csv'))errors.push('CSV filename missing');
+   await page.locator('#rows button[data-id]').first().click();
+   if(!(await page.locator('#count').innerText()).includes('0'))errors.push('Delete failed');
+  }catch(e){errors.push('HVAC functional tests: '+e.message.slice(0,180))}
+ }
+ result={passed:errors.length===0,errors,controls,bodyLength:text.length,checks:['page load','mobile viewport','basic input','button click','javascript errors','external requests',...(text.includes('空調試運転メモ')?['HVAC save','temperature difference','reload persistence','CSV download','delete']:[])]};
  }finally{await browser.close();}
  return result;
 };
