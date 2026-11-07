@@ -24,7 +24,8 @@ for(const model of candidates){
    const {status,ok,j}=await request(root+'/models/'+model+':generateContent',{method:'POST',body:JSON.stringify({contents:[{role:'user',parts:[{text:'Build a complete Japanese mobile-first single-file HTML prototype for a solo contractor payment due-date tracker. Include an input for client name, an input for payment amount, a date input for due date, an Add button, a visible list of saved records, a total amount, delete buttons, and persistence with localStorage. No external network calls or dependencies. Return ONLY full HTML starting with <!doctype html>. This is a technical prototype; no claims of verified demand or competitive advantage.'}]}],generationConfig:{temperature:0,maxOutputTokens:8192}})},25000);
    if(ok){
     const out=j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
-    if(/<html[\s>]|<!doctype html/i.test(out)){console.log('Gemini smoke test PASSED; model:',model,'HTML chars:',out.length);await fs.mkdir('build/gemini-smoke',{recursive:true});await fs.writeFile('build/gemini-smoke/index.html',out);passed=true;break}
+    if(j.candidates?.[0]?.finishReason==='MAX_TOKENS'){console.log('Truncated HTML from',model);break;}
+    if(/<html[\s>]|<!doctype html/i.test(out)&&/<\/html>/i.test(out)){console.log('Gemini smoke test PASSED; model:',model,'HTML chars:',out.length);await fs.mkdir('build/gemini-smoke',{recursive:true});await fs.writeFile('build/gemini-smoke/index.html',out);passed=true;break}
     console.log('Model returned no valid HTML:',model,'finishReason:',j.candidates?.[0]?.finishReason);
     break;
    }
@@ -44,6 +45,26 @@ try{
  await page.goto('file://'+process.cwd()+'/build/gemini-smoke/index.html');
  const body=await page.locator('body').innerText();
  const buttons=await page.locator('button').count();
- if(body.length<80||buttons<2||await page.locator('input').count()<3||errors.length)throw Error('Generated HTML browser test failed: '+JSON.stringify({length:body.length,buttons,errors}));
- console.log('Generated business prototype browser test PASSED; buttons:',buttons,'inputs:',await page.locator('input').count());
+ if(body.length<45||buttons<1||await page.locator('input').count()<3||errors.length)throw Error('Generated HTML browser test failed: '+JSON.stringify({length:body.length,buttons,errors}));
+ const inputs=page.locator('input');
+ const all=await inputs.count();
+ let textFilled=false,numberFilled=false,dateFilled=false;
+ for(let i=0;i<all;i++){
+  const el=inputs.nth(i),type=(await el.getAttribute('type')||'text').toLowerCase();
+  if(type==='date'&&!dateFilled){await el.fill('2026-12-15');dateFilled=true}
+  else if(type==='number'&&!numberFilled){await el.fill('12000');numberFilled=true}
+  else if(['text','search'].includes(type)&&!textFilled){await el.fill('ORXELIA検証取引先');textFilled=true}
+ }
+ if(!textFilled||!numberFilled||!dateFilled)throw Error('Required form fields missing: '+JSON.stringify({textFilled,numberFilled,dateFilled}));
+ const before=await page.locator('body').innerText();
+ const clickable=page.locator('button');
+ await clickable.first().click();
+ await page.waitForTimeout(400);
+ const after=await page.locator('body').innerText();
+ if(!after.includes('ORXELIA検証取引先')||!after.includes('12,000')&&!after.includes('12000'))throw Error('Add record failed to render expected saved values');
+ await page.reload();
+ const persisted=await page.locator('body').innerText();
+ if(!persisted.includes('ORXELIA検証取引先'))throw Error('Record did not persist after reload');
+ if(errors.length)throw Error('JavaScript errors: '+JSON.stringify(errors));
+ console.log('Generated business prototype functional test PASSED; inputs:',all,'record persisted:',true);
 }finally{await browser.close()}
