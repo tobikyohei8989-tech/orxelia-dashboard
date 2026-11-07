@@ -236,7 +236,7 @@ function executiveOverview() {
     metric("月間売上",rows.length ? yen(revenue) : "未確認",month + "・入力済みのみ") +
     metric("月間費用",rows.length ? yen(cost) : "未確認",month + "・入力済みのみ") +
     metric("差引収支",finances,"税引前・入力済みのみ") +
-    metric("税引後利益の目標達成率","算定不可","税引後実績の管理は未実装") +
+    '' +
     '</div>' + panel('<h3>最優先の経営課題</h3><p>' +
     (top ? esc(top.name + "：" + (top.next || "次の行動を登録してください")) : "優先案件の試作と動作確認を進めます。") +
     '</p><p>2027年末目標：10事業が各月10万円以上の税引後純利益。現在の収支入力は売上と費用のみのため、達成率は算定していません。未入力の事業は0円とみなしません。</p></div>') + pendingDecisionSummary();
@@ -551,7 +551,7 @@ function launchDecisions() {
     const base = plan ? projectEconomics(plan).scenarios[1] : null;
     return '<tr><th scope="row">' + esc(project.name) + '<small>' +
       (base ? "条件別試算・基準" : "試算準備中") + '</small></th><td>' +
-      amount(base?.cost) + '</td><td>' + amount(base?.revenue) + '</td><td' +
+      amount(base?.cost) + '</td><td>' + (base?esc(base.count)+'件':'未算定') + '</td><td>' + amount(base?.revenue) + '</td><td' +
       (base?.profit < 0 ? ' class="warn"' : '') + '><strong>' + amount(base?.profit) +
       '</strong></td></tr>';
   });
@@ -583,7 +583,7 @@ function launchDecisions() {
           '<li>競合には見積提出後の連絡時期を知らせる機能があります。 <a href="https://ai-dounyuu.com/quote-automation/" target="_blank" rel="noopener">競合の公式機能</a></li></ul>')) : "") +
     '<p>月間原価は固定費と契約ごとの原価の合計。売上と利益は基準シナリオ・税引前。</p>' +
     (rows.length ? '<div class="decision-table" tabindex="0" role="region" aria-label="全事業の月間採算"><table><thead><tr>' +
-      '<th scope="col">事業</th><th scope="col">月間原価</th><th scope="col">月間売上見込み</th><th scope="col">月間利益</th>' +
+      '<th scope="col">事業</th><th scope="col">月間原価</th><th scope="col">基準契約数（試算）</th><th scope="col">月間売上見込み</th><th scope="col">月間利益</th>' +
       '</tr></thead><tbody>' + rows.join("") + '</tbody></table></div>' :
       panel('<p>登録事業がありません。</p>')) +
     (cards.length ? details("契約数・損益分岐・試算の根拠",grid(cards)) : "") + '</section>';
@@ -1029,6 +1029,35 @@ function businessRevenueOverview() {
     '<p>※契約数は現在の営業記録に基づく件数で、事業別の正確な契約数や有効契約数ではありません。今後の契約・決済連携が必要です。</p>'+
     '<button type="button" data-tab="finance">売上・費用を登録する</button>');
 }
+function executiveQuickMatrix() {
+  const period=today().slice(0,7);
+  const ledger=data.ledger.filter(r=>r.month===period);
+  const byId=new Map(data.projects.map(p=>[p.id,p]));
+  const byName=new Map();
+  for(const entry of ledger){
+    const name=byId.get(entry.project)?.name;
+    if(!name)continue;
+    const current=byName.get(name)||{revenue:0,cost:0,records:0};
+    current.revenue+=Number(entry.revenue)||0;
+    current.cost+=Number(entry.cost)||0;
+    current.records++;
+    byName.set(name,current);
+  }
+  const cloudNames=new Set(orxeliaTrialProposals.map(p=>p.title));
+  const projects=[...orxeliaTrialProposals.map(p=>({name:p.title,status:p.status,cloud:true})),
+    ...data.projects.filter(p=>!cloudNames.has(p.name)).map(p=>({name:p.name,status:p.stage,cloud:false}))];
+  const awaiting=new Set(['awaiting_first_approval','development_ready','awaiting_final_approval']);
+  const statusLabel={awaiting_first_approval:'デザイン承認待ち',development_ready:'試作品確認待ち',awaiting_final_approval:'販売判断待ち',awaiting_selection:'生成待ち',designing:'デザイン生成中',revision_requested:'修正待ち',revising:'修正中',approved_for_development:'開発待ち',developing:'開発中',prototype_revision_requested:'試作品修正待ち',prototype_revising:'試作品修正中',sales_review_requested:'販売審査中',final_approved:'販売方針承認済み',on_hold:'保留'};
+  const rows=projects.map(p=>{
+    const actual=byName.get(p.name);
+    const state=statusLabel[p.status]||p.status||'未設定';
+    const label=awaiting.has(p.status)?'<strong class="quick-attention">'+esc(state)+'</strong>':esc(state);
+    return '<tr><th scope="row">'+esc(p.name)+'</th><td>'+label+'</td><td>'+ (actual?yen(actual.revenue):'—')+'</td><td>'+(actual?yen(actual.revenue-actual.cost):'—')+'</td><td>—</td></tr>';
+  }).join('');
+  return '<section class="quick-overview" aria-label="事業別30秒サマリー"><div class="head"><h2>事業別の状況</h2><small>'+esc(period)+' 実績入力分</small></div>'+
+    (rows?'<div class="quick-table-scroll" tabindex="0" role="region" aria-label="事業別ステータスと入力実績"><table class="quick-table"><thead><tr><th scope="col">事業</th><th scope="col">進捗・確認</th><th scope="col">売上</th><th scope="col">差引収支</th><th scope="col">契約数</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p>登録事業はまだありません。</p>')+
+    '<details><summary>数値の見方</summary><p>売上と差引収支は当月の手動入力データです。差引収支は税引前の売上−費用で、営業利益・純利益ではありません。契約数は事業別の確定データと紐付いていないため「—」と表示しています。「—」は0件・0円を意味しません。</p></details></section>';
+}
 function home() {
   const waiting=orxeliaTrialProposals.filter(p=>["awaiting_first_approval","development_ready","awaiting_final_approval"].includes(p.status));
   const running=orxeliaTrialProposals.filter(p=>["awaiting_selection","designing","revision_requested","revising","approved_for_development","developing","prototype_revision_requested","prototype_revising","sales_review_requested"].includes(p.status));
@@ -1038,7 +1067,8 @@ function home() {
     metric("AI作業中・待機",running.length+"件","自動処理の進捗")+
     metric("事業総数",new Set([...data.projects.map(p=>p.name),...orxeliaTrialProposals.map(p=>p.title)]).size+"件","登録名ベース・重複の可能性あり")+'</div>'+
     panel('<h3>次に確認する事業</h3>'+(waitingRows||'<p>現在、確認待ちの案件はありません。AIの作業状況は事業一覧で確認できます。</p>'))+
-    businessRevenueOverview()+
+    executiveQuickMatrix()+
+    details("当月の収支詳細",businessRevenueOverview())+
     details("以前の作業・検証記録", (window.orxeliaSync?.dailyReportView()||"")+ideaReviewPanel(1)+pendingDecisionSummary()+details("実行タスク",tasks())+details("作業進捗",progress()));
 }
 
