@@ -11,7 +11,7 @@ const htmlFrom=(t,allowScripts=false)=>{const m=t.match(/<!doctype html[\s\S]*?<
 async function test(html,interactive=false){const browser=await chromium.launch({headless:true});try{const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const errors=[];page.on('pageerror',e=>errors.push(String(e)));await page.route('https://orxelia.test/**',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));await page.goto('https://orxelia.test/preview',{waitUntil:'load'});const result=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:innerWidth,text:document.body.innerText.length,buttons:document.querySelectorAll('button').length,inputs:document.querySelectorAll('input,textarea,select').length}));return {passed:result.text>100&&result.width<=result.viewport+10&&(!interactive||result.inputs>=2&&result.buttons>=1)&&!errors.length,...result,errors}}finally{await browser.close()}}
 const brief=p=>JSON.stringify({title:p.title,problem:p.brief?.problem,solution:p.brief?.solution,target:p.brief?.target,competitive_position:p.brief?.competitive_position});
 // Process pending proposal stages; production verification run for the second candidate, with human approval gates intact.
-const proposal=(await api('orxelia_proposals?select=*&status=in.(awaiting_selection,revision_requested,approved_for_development,sales_review_requested)&order=created_at.asc&limit=10')).find(p=>p.status==='approved_for_development'||p.status==='sales_review_requested'||p.status==='revision_requested'||p.design_status==='pending');
+const proposal=(await api('orxelia_proposals?select=*&status=in.(awaiting_selection,revision_requested,approved_for_development,prototype_revision_requested,sales_review_requested)&order=created_at.asc&limit=10')).find(p=>p.status==='prototype_revision_requested'||p.status==='approved_for_development'||p.status==='sales_review_requested'||p.status==='revision_requested'||p.design_status==='pending');
 if(!proposal){console.log('No proposal stage work pending');process.exit(0)}
 console.log('Processing proposal',proposal.id,'stage',proposal.status);
 try{
@@ -42,8 +42,18 @@ try{
   const t=await test(h,true);
   await update(proposal.id,{status:t.passed?'development_ready':'failed',prototype_html:h,test_report:{passed:t.passed,details:t,scope:'basic layout and JS errors only; end-to-end interactions, iOS, security and user demand not verified'},error_message:t.passed?null:'Browser smoke test failed'},'developing');
   console.log('Prototype test',JSON.stringify(t));
+ }else if(proposal.status==='prototype_revision_requested'){
+  const feedback=(proposal.prototype_revision_request||'').trim();
+  if(feedback.length<3)throw Error('Missing prototype feedback');
+  await update(proposal.id,{status:'prototype_revising'},'prototype_revision_requested');
+  const h=htmlFrom(await model('You are ORXELIA software engineer revising an already approved PRIVATE functional prototype. Fix the user-reported issue, preserve all other working functions, make iPhone input reliable. CRITICAL: do not rerender forms during typing, including Japanese IME composition. Use safe localStorage with try/catch fallback, no external URLs or dependencies. Output ONLY complete standalone Japanese HTML/CSS/inline JavaScript. Keep working add/list/delete/export/backup and input validation. No publication or payments. User feedback: '+feedback+' ORIGINAL APP: '+(proposal.prototype_html||'').slice(0,26000)+' BUSINESS: '+brief(proposal),16000),true);
+  const t=await test(h,true);
+  const history=Array.isArray(proposal.prototype_revision_history)?proposal.prototype_revision_history:[];
+  const version=(proposal.prototype_revision_number||1)+1;
+  await update(proposal.id,{status:t.passed?'development_ready':'failed',prototype_html:h,prototype_revision_number:version,prototype_revision_request:null,prototype_revision_history:[...history,{version,feedback,passed:t.passed,at:new Date().toISOString()}].slice(-30),test_report:{passed:t.passed,details:t,scope:'basic browser smoke test only; iOS and full end-to-end functions unverified'},error_message:t.passed?null:'Revised prototype browser smoke test failed'},'prototype_revising');
+  console.log('Prototype revision',proposal.id,version,'passed',t.passed);
  }else if(proposal.status==='sales_review_requested'){
   await update(proposal.id,{status:'awaiting_final_approval',sales_review:{recommendation:'needs_evidence',items:['iPhone real-device tests','end-to-end functional testing','customer demand and competitive advantage','legal and privacy review','payment, cancellation and support design','pricing and margin verification'],note:'Sales is NOT ready. Final approval button remains disabled until verified evidence exists.'}},'sales_review_requested');
   console.log('Sales review saved: evidence missing, not ready for final approval');
  }
-}catch(e){console.error('Proposal stage failed',String(e).slice(0,350));const state=(await api(idFilter(proposal.id)+'&select=status'))[0]?.status;if(['designing','revising','developing'].includes(state))await update(proposal.id,{status:'failed',design_status:state==='designing'||state==='revising'?'failed':proposal.design_status,error_message:String(e).slice(0,350)},state);process.exitCode=1}
+}catch(e){console.error('Proposal stage failed',String(e).slice(0,350));const state=(await api(idFilter(proposal.id)+'&select=status'))[0]?.status;if(['designing','revising','developing','prototype_revising'].includes(state))await update(proposal.id,{status:'failed',design_status:state==='designing'||state==='revising'?'failed':proposal.design_status,error_message:String(e).slice(0,350)},state);process.exitCode=1}
