@@ -8,7 +8,7 @@ const sources=files.map(f=>{
   const targets=['function executiveQuickMatrix()','function home()','function render()','function businessRevenueOverview()','function portfolio(','function orxeliaTrialProposalPanel()','document.addEventListener("click"'];
   const excerpts=targets.map(name=>{
    const i=content.indexOf(name);
-   return i<0?'### NOT FOUND '+name:'### '+name+'\\n'+content.slice(i,i+name.includes('orxeliaTrial')?6500:3800);
+   return i<0?'### NOT FOUND '+name:'### '+name+'\\n'+content.slice(i,i+(name.includes('orxeliaTrial')?6500:3800));
   });
   return '### '+f+'\\n'+content.slice(0,10000)+'\\n\\n'+excerpts.join('\\n\\n');
  }
