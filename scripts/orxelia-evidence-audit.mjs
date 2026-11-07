@@ -22,15 +22,17 @@ const candidates=await db('orxelia_proposals?select=*&status=eq.awaiting_final_a
 const pending=candidates.filter(p=>p.sales_review?.recommendation==='needs_evidence'&&(!p.sales_review?.evidence_audit?.checked_at||p.sales_review?.evidence_audit?.research_error||!p.sales_review?.evidence_audit?.research?.sources?.length&&Date.now()-Date.parse(p.sales_review.evidence_audit.checked_at)>20*3600000));
 console.log('Pending evidence cases:',pending.length);
 let failed=0,quotaBlocked=false;
+// Gemini free-tier quota is an external capacity limit, not a repairable application failure.
+// Preserve existing ChatGPT research and run independent prototype smoke tests.
 for(const p of pending.slice(0,8)){
  try{
   let research=null,researchError=null;
-  if(quotaBlocked){researchError='Gemini quota blocked in this run; skipped to avoid repeated 429 requests'}else try{research=await groundedResearch(p)}catch(e){researchError=String(e).slice(0,350);if(/HTTP 429|quota|rate.limit/i.test(researchError))quotaBlocked=true;failed++}
+  if(quotaBlocked){researchError='Gemini quota blocked in this run; skipped to avoid repeated 429 requests'}else try{research=await groundedResearch(p)}catch(e){researchError=String(e).slice(0,350);if(/HTTP 429|quota|rate.limit/i.test(researchError)){quotaBlocked=true;console.warn('Gemini quota exhausted: defer independent review until quota resets');}else failed++;}
   let test={passed:false,reason:'Not run'};
   try{test=await smoke(p.prototype_html)}catch(e){test={passed:false,reason:String(e).slice(0,300)};failed++}
   const price=Number(String(p.brief?.pricing_hypothesis||'').match(/[0-9][0-9,]*/)?.[0].replaceAll(',','')||0);
   const scenarios=price>0?[10,30,100].map(customers=>({customers,monthly_revenue_yen:customers*price,assumption:'Revenue only; costs and conversion are unverified'})):[];
-  const audit={checked_at:new Date().toISOString(),research,research_error:researchError,prototype_smoke:test,pricing_scenarios:scenarios,unverified:['Real iPhone device tests','Full end-to-end interaction tests','Actual customer demand or paid conversions','Legal/privacy professional review','Payment, cancellation and customer support readiness','Verified gross margin and acquisition cost']};
+  const audit={checked_at:new Date().toISOString(),research,research_error:researchError,chatgpt_sources_preserved:(p.sales_review?.chatgpt_competitor_research?.sources||[]).length,prototype_smoke:test,pricing_scenarios:scenarios,unverified:['Real iPhone device tests','Full end-to-end interaction tests','Actual customer demand or paid conversions','Legal/privacy professional review','Payment, cancellation and customer support readiness','Verified gross margin and acquisition cost']};
   const isInternal=String(p.brief?.problem||'').includes('動作検証専用')||String(p.title).includes('自動開発動作検証');
   const recommendation=isInternal?'internal_test_only':'needs_evidence';
   const review={...p.sales_review,recommendation,evidence_audit:audit,note:isInternal?'内部動作検証専用。販売・公開は不可。':research?.sources?.length?'競合調査の参照URLとブラウザ簡易検査を記録しました。販売条件は未充足です。':'調査または根拠URL取得に問題がありました。販売根拠は未確認です。'};
