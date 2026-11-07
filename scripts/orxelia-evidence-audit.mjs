@@ -12,8 +12,8 @@ async function groundedResearch(p){
  const c=j.candidates?.[0];const chunks=c?.groundingMetadata?.groundingChunks||[];
  const sources=[...new Map(chunks.map(v=>v.web).filter(v=>v&&validUrl(v.uri)).map(v=>[v.uri,{url:v.uri,title:v.title||''}])).values()].slice(0,20);
  const text=c?.content?.parts?.map(v=>v.text||'').join('').trim()||'';
- if(!text||!sources.length)throw Error('No grounded sources; no review update');
- return {text:text.slice(0,14000),sources,model:'gemini-2.5-flash',collected_at:new Date().toISOString(),source_status:'search-grounded; external pages not independently audited'};
+ if(!text)throw Error('No research response');
+ return {text:text.slice(0,14000),sources,model:'gemini-2.5-flash',collected_at:new Date().toISOString(),source_status:sources.length?'search-grounded; external pages not independently audited':'no source URLs returned; treat all claims as unverified'};
 }
 async function smoke(html){if(!html)return {passed:false,reason:'No prototype'};const {chromium}=await import('playwright');const b=await chromium.launch({headless:true});try{const page=await b.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});let errors=[];page.on('pageerror',e=>errors.push(String(e).slice(0,200)));await page.route('https://orxelia.test/**',r=>r.fulfill({status:200,contentType:'text/html',body:html}));await page.goto('https://orxelia.test/app',{waitUntil:'load'});const x=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:innerWidth,inputs:document.querySelectorAll('input,textarea,select').length,buttons:document.querySelectorAll('button').length}));return {passed:x.width<=x.viewport+10&&x.inputs>0&&x.buttons>0&&!errors.length,details:x,errors,scope:'Chromium mobile viewport smoke only; not iPhone or end-to-end'}}finally{await b.close()}}
 const candidates=await db('orxelia_proposals?select=*&status=eq.awaiting_final_approval&order=updated_at.asc&limit=30');
@@ -22,14 +22,20 @@ console.log('Pending evidence cases:',pending.length);
 let failed=0;
 for(const p of pending.slice(0,8)){
  try{
-  const research=await groundedResearch(p);
-  const test=await smoke(p.prototype_html);
-  const audit={checked_at:new Date().toISOString(),research,prototype_smoke:test,unverified:['Real iPhone device tests','Full end-to-end interaction tests','Actual customer demand or paid conversions','Legal/privacy professional review','Payment, cancellation and customer support readiness','Verified price and gross margin']};
-  const review={...p.sales_review,recommendation:'needs_evidence',evidence_audit:audit,note:'公開情報の根拠付き調査とブラウザ簡易テストを記録。実機・需要・法務・決済等の未検証項目が残るため販売承認は不可。'};
+  let research=null,researchError=null;
+  try{research=await groundedResearch(p)}catch(e){researchError=String(e).slice(0,350);failed++}
+  let test={passed:false,reason:'Not run'};
+  try{test=await smoke(p.prototype_html)}catch(e){test={passed:false,reason:String(e).slice(0,300)};failed++}
+  const price=Number(String(p.brief?.pricing_hypothesis||'').match(/[0-9][0-9,]*/)?.[0].replaceAll(',','')||0);
+  const scenarios=price>0?[10,30,100].map(customers=>({customers,monthly_revenue_yen:customers*price,assumption:'Revenue only; costs and conversion are unverified'})):[];
+  const audit={checked_at:new Date().toISOString(),research,research_error:researchError,prototype_smoke:test,pricing_scenarios:scenarios,unverified:['Real iPhone device tests','Full end-to-end interaction tests','Actual customer demand or paid conversions','Legal/privacy professional review','Payment, cancellation and customer support readiness','Verified gross margin and acquisition cost']};
+  const isInternal=String(p.brief?.problem||'').includes('動作検証専用')||String(p.title).includes('自動開発動作検証');
+  const recommendation=isInternal?'internal_test_only':'needs_evidence';
+  const review={...p.sales_review,recommendation,evidence_audit:audit,note:isInternal?'内部動作検証専用。販売・公開は不可。':research?.sources?.length?'競合調査の参照URLとブラウザ簡易検査を記録しました。販売条件は未充足です。':'調査または根拠URL取得に問題がありました。販売根拠は未確認です。'};
   const url='orxelia_proposals?id=eq.'+encodeURIComponent(p.id)+'&status=eq.awaiting_final_approval';
   const rows=await db(url,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({sales_review:review,updated_at:new Date().toISOString()})});
   if(rows.length!==1)throw Error('Concurrent status change');
-  console.log('Evidence recorded:',p.title,'sources',research.sources.length,'smoke',test.passed);
+  console.log('Audit recorded:',p.title,'sources',research?.sources?.length||0,'smoke',test.passed,'researchError',researchError||'none');
  }catch(e){failed++;console.error('Evidence failed:',p.title,String(e).slice(0,300));}
 }
 if(failed)process.exitCode=1;
