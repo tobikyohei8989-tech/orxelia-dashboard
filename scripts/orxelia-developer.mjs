@@ -19,7 +19,12 @@ const modelCall=async (messages) => {
   body:JSON.stringify({model,messages,temperature:0.2,max_tokens:8000})
  });
  if(!r.ok) throw new Error('GitHub Models '+r.status+': '+(await r.text()).slice(0,400));
- const j=await r.json();return j.choices?.[0]?.message?.content||'';
+ const raw=await r.text();let j;
+ try { j=JSON.parse(raw); }
+ catch { throw new Error('GitHub Models returned non-JSON response (HTTP '+r.status+', content-type '+(r.headers.get('content-type')||'unknown')+', body='+JSON.stringify(raw.slice(0,120))+'). Verify GitHub Models inference access and endpoint; do not treat this as generated code.'); }
+ const content=j.choices?.[0]?.message?.content;
+ if(typeof content!=='string'||!content.trim()) throw new Error('GitHub Models response lacks generated message content: '+JSON.stringify(j).slice(0,250));
+ return content;
 };
 const parseHTML=text=>{const match=text.match(/\`\`\`(?:html)?\s*([\s\S]*?)\`\`\`/i);return (match?match[1]:text).trim()};
 const safeFile = async (html,dir) => {
