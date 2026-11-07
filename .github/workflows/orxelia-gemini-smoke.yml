@@ -24,3 +24,11 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Generate and browser-test business prototype
         run: node scripts/gemini-smoke-test.mjs
+      - name: Preserve prototype for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orxelia-ai-business-prototype
+          path: build/gemini-smoke/index.html
+          if-no-files-found: ignore
+          retention-days: 7
