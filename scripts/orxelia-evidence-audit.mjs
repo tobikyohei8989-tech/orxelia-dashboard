@@ -19,12 +19,24 @@ async function groundedResearch(p){
 }
 async function smoke(html){if(!html)return {passed:false,reason:'No prototype'};const {chromium}=await import('playwright');const b=await chromium.launch({headless:true});try{const page=await b.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});let errors=[];page.on('pageerror',e=>errors.push(String(e).slice(0,200)));await page.route('https://orxelia.test/**',r=>r.fulfill({status:200,contentType:'text/html',body:html}));await page.goto('https://orxelia.test/app',{waitUntil:'load'});const x=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:innerWidth,inputs:document.querySelectorAll('input,textarea,select').length,buttons:document.querySelectorAll('button').length}));return {passed:x.width<=x.viewport+10&&x.inputs>0&&x.buttons>0&&!errors.length,details:x,errors,scope:'Chromium mobile viewport smoke only; not iPhone or end-to-end'}}finally{await b.close()}}
 const candidates=await db('orxelia_proposals?select=*&status=eq.awaiting_final_approval&order=updated_at.asc&limit=30');
-const pending=candidates.filter(p=>p.sales_review?.recommendation==='needs_evidence'&&(!p.sales_review?.evidence_audit?.checked_at||p.sales_review?.evidence_audit?.research_error||!p.sales_review?.evidence_audit?.research?.sources?.length&&Date.now()-Date.parse(p.sales_review.evidence_audit.checked_at)>20*3600000));
+// Limit paid/free API pressure: audit a case only when due. A 429 triggers a 24-hour
+// cooldown across scheduled runs, while other checks can still be performed.
+const hoursSince=stamp=>stamp?Math.max(0,(Date.now()-Date.parse(stamp))/3600000):Infinity;
+const quotaError=error=>/HTTP 429|quota|rate.limit/i.test(String(error||''));
+const pending=candidates.filter(p=>{
+ if(p.sales_review?.recommendation!=='needs_evidence')return false;
+ const a=p.sales_review?.evidence_audit||{};
+ const elapsed=hoursSince(a.checked_at);
+ if(quotaError(a.research_error))return elapsed>=24;
+ if(a.research_error)return elapsed>=6;
+ if(!a.checked_at)return true;
+ return elapsed>=24;
+});
 console.log('Pending evidence cases:',pending.length);
 let failed=0,quotaBlocked=false;
 // Gemini free-tier quota is an external capacity limit, not a repairable application failure.
 // Preserve existing ChatGPT research and run independent prototype smoke tests.
-for(const p of pending.slice(0,8)){
+for(const p of pending.slice(0,1)){
  try{
   let research=null,researchError=null;
   if(quotaBlocked){researchError='Gemini quota blocked in this run; skipped to avoid repeated 429 requests'}else try{research=await groundedResearch(p)}catch(e){researchError=String(e).slice(0,350);if(/HTTP 429|quota|rate.limit/i.test(researchError)){quotaBlocked=true;console.warn('Gemini quota exhausted: defer independent review until quota resets');}else failed++;}
