@@ -217,7 +217,12 @@ prompt = f"""
 既存事業の分析とは別に、初期投資5万円以内・原則1人で
 初売上を早く検証できる新規事業案を1件提案してください。
 顧客の課題、売る商品・仮の価格・集客経路、最初の販売検証を
-具体的に記述し、観測済みの需要や実績とは扱わないでください。\n新規案は必ず「課題起点」と「配布・自然拡散起点」を両方検討し、より優位な1件を選択してください。\n配布起点では公開URL・共有成果物・招待・受信者の再利用を評価。\n人目に触れるだけでは不可。受信者が自ら作成者になる理由、継続課金理由、無料競合に勝つ条件、直接営業なしの流入経路を具体化。\n既出の見積追客、見積承認、予約ページ、招待状、施工事例、写真共有、家計、コーデ等は新規案として再提案しないこと。\n無料競合に勝てる根拠がなければ勝てると断言しない。販売可能性は未検証とする。
+具体的に記述し、観測済みの需要や実績とは扱わないでください。
+新規案は必ず「課題起点」と「配布・自然拡散起点」を両方検討し、より優位な1件を選択してください。
+配布起点では公開URL・共有成果物・招待・受信者の再利用を評価。
+人目に触れるだけでは不可。受信者が自ら作成者になる理由、継続課金理由、無料競合に勝つ条件、直接営業なしの流入経路を具体化。
+既出の見積追客、見積承認、予約ページ、招待状、施工事例、写真共有、家計、コーデ等は新規案として再提案しないこと。
+無料競合に勝てる根拠がなければ勝てると断言しない。販売可能性は未検証とする。
 
 JSON形式：
 {{
@@ -296,7 +301,10 @@ def validate(result):
     ):
         return findings, None
 
-    extra = ("distribution", "advantage", "recurring", "selection")\n    if not all(isinstance(idea.get(field), str) and 0 < len(idea[field].strip()) <= 600 for field in extra):\n        return findings, None\n    return findings, {field: idea[field].strip() for field in (*limits, *extra)}
+    extra = ("distribution", "advantage", "recurring", "selection")
+    if not all(isinstance(idea.get(field), str) and 0 < len(idea[field].strip()) <= 600 for field in extra):
+        return findings, None
+    return findings, {field: idea[field].strip() for field in (*limits, *extra)}
 
 
 def load_existing_reports(path):
@@ -374,7 +382,8 @@ def save_feed(new_report):
             feed,
             ensure_ascii=False,
             indent=2,
-        ) + "\n",
+        ) + "
+",
         encoding="utf-8",
     )
     temporary.replace(output)
