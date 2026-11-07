@@ -24,7 +24,7 @@ try{
  await page.getByText('✅ 状況・確認日を保存').click();
  assert.match(await page.locator('.record-card').first().innerText(),/受注/);
  await page.reload();assert.match(await page.locator('.record-card').first().innerText(),/受注/);
- await page.getByText('設定', {exact:true}).last().click();
+ await page.locator('.bottom-nav .nav-item').last().click();
  const [download]=await Promise.all([page.waitForEvent('download'),page.getByText('📥 JSONバックアップ出力').click()]);
  const file=await download.path();assert.ok(file);
  const {readFileSync}=await import('node:fs');const data=JSON.parse(readFileSync(file,'utf8'));assert.equal(data[0].status,'won');assert.equal(data[0].history.length,1);
