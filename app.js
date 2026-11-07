@@ -1391,7 +1391,7 @@ const sync = (() => {
     const pipeline = pipelineRecords.find(p => p.report_date === report_date);
     const phaseLabels = {proposal:'提案・承認待ち',development_requested:'開発依頼受付・実行待ち',development_running:'開発中',development_ready:'開発成果確認待ち',sales_review:'販売審査中',sales_approved:'販売承認済み（公開は別途）',held:'保留'};
     const phase = phaseLabels[pipeline?.phase] || report?.phase || report?.approval_status || '未承認・販売保留';
-    const jobStatus = developmentJob?.status === 'queued' ? '<p>開発ジョブ：受付済み（実行エンジン未接続）</p>' : developmentJob ? '<p>開発ジョブ：' + esc(developmentJob.status) + '</p>' : '';
+    const jobStatus = developmentJob?.status === 'queued' ? '<p>開発ジョブ：受付済み（GitHub Actionsの定期実行待ち）</p>' : developmentJob ? '<p>開発ジョブ：' + esc(developmentJob.status) + '</p>' : '';
     const deliverables = Array.isArray(pipeline?.deliverables) ? pipeline.deliverables : [];
     const deliverableView = deliverables.length ? '<details><summary>開発成果物（' + deliverables.length + '件）</summary>' + deliverables.map((d,i) => '<p>' + esc(d.title || '成果物') + '：' + esc(d.status || '未検証') + (d.type === 'prototype' && typeof d.html === 'string' ? ' <button type="button" data-orxelia-download="' + i + '">試作品HTMLを保存</button>' : '') + '</p>').join('') + '</details>' : '<p>開発成果物：未登録</p>';
     const salesAction = pipeline?.phase === 'development_ready' ?
@@ -1399,7 +1399,7 @@ const sync = (() => {
       pipeline?.phase === 'sales_review' ?
       '<p><button type="button" id="orxelia-approve-sales">販売開始を最終承認（公開・決済は実行しない）</button></p>' :
       pipeline?.phase === 'sales_approved' ? '<p>販売承認済み。公開・決済開始は未実行です。</p>' : '';
-    const approvalButton = !approvalRecord ? '<p><button type="button" id="orxelia-approve-development">この事業の開発を承認</button></p><p style="font-size:.85em">承認記録を保存します。承認後に開発要件とテスト項目を自動生成します。AIによるコード開発は未接続です。公開・販売・支出は行いません。</p>' : '<p>開発承認：記録済み（' + esc(approvalRecord.stage) + '）</p>';
+    const approvalButton = !approvalRecord ? '<p><button type="button" id="orxelia-approve-development">この事業の開発を承認</button></p><p style="font-size:.85em">承認記録を保存します。承認後に開発要件とテスト項目を自動生成します。承認後に開発ジョブを登録し、GitHub Actionsが定期的に処理します。公開・販売・支出は行いません。</p>' : '<p>開発承認：記録済み（' + esc(approvalRecord.stage) + '）</p>';
     return panel('<h3>AI選定事業｜' + esc(report_date) + '</h3>' +
       '<p><strong>' + esc(report?.project || '事業名未登録') + '</strong></p>' +
       '<p>進捗：' + esc(phase) + '</p>' + approvalButton + salesAction + jobStatus + deliverableView +
@@ -1564,7 +1564,7 @@ const sync = (() => {
     if (event.target.id !== "orxelia-approve-development") return;
     if (!session || !dailyReport?.row || approvalRecord || busy) return;
     const {report_date,report} = dailyReport.row;
-    if (!report?.project || !confirm("「" + report.project + "」の開発を承認しますか？\\n※承認を記録します。開発の自動起動・公開・販売は行われません。")) return;
+    if (!report?.project || !confirm("「" + report.project + "」の開発を承認しますか？\\n※承認後、開発ジョブが登録され、GitHub Actionsの定期実行対象になります。公開・販売は行われません。")) return;
     busy = true;
     try {
       const [saved] = await request("/rest/v1/orxelia_approvals",{
@@ -1585,7 +1585,7 @@ const sync = (() => {
       } catch (prepareError) {
         status("承認は保存されましたが開発準備の初期化に失敗しました。");
       }
-      status("開発承認を保存しました。開発要件の初期化を実行しました。AIコード生成は未接続です。");
+      status(developmentJob ? "開発承認済み。ジョブを登録しました。GitHub Actionsの実行を待っています。" : "開発承認は保存されましたが、ジョブ登録を確認できません。");
       render();
     } catch(error) {
       alert("開発承認を保存できませんでした。通信・ログイン状態を確認してください。");
