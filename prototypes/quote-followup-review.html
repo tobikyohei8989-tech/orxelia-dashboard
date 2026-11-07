@@ -953,8 +953,8 @@
         Number.isInteger(r.days) && r.days >= 0 && r.days <= 36500 &&
         r.id.length <= 100 && r.client.length <= 200 && r.project.length <= 300 && r.staff.length <= 200 &&
         (!r.status || ['waiting','hold','won','lost'].includes(r.status)) &&
-        (!r.submittedAt || /^\\d{4}-\\d{2}-\\d{2}$/.test(r.submittedAt)) &&
-        (!r.nextAt || /^\\d{4}-\\d{2}-\\d{2}$/.test(r.nextAt)) &&
+        (!r.submittedAt || /^\d{4}-\d{2}-\d{2}$/.test(r.submittedAt)) &&
+        (!r.nextAt || /^\d{4}-\d{2}-\d{2}$/.test(r.nextAt)) &&
         (!r.history || (Array.isArray(r.history) && r.history.length <= 1000 && r.history.every(v=>typeof v==='string' && v.length<=300)))
       )) throw new Error('バックアップの形式が正しくありません');
       if (!confirm(data.length + '件のデータで現在の一覧を置き換えますか？事前にJSONバックアップを保存してください。')) return;
