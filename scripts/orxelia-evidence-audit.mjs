@@ -7,17 +7,19 @@ async function db(path,opts={}){const r=await fetch(base+'/rest/v1/'+path,{...op
 const validUrl=u=>{try{const x=new URL(u);return x.protocol==='https:'&&!!x.hostname&&!['localhost','127.0.0.1'].includes(x.hostname)}catch{return false}};
 async function groundedResearch(p){
  const prompt='Research this Japanese micro-SaaS using live Google Search grounding. Return factual competitor names and official pricing URLs, real alternative workflows (Excel/LINE), customer problem evidence, unit economics assumptions, privacy/legal considerations, and concrete sales differentiation. Do not fabricate metrics, prices, customer interviews, tests, or approval. Clearly distinguish observed facts from hypotheses. Respond in Japanese. Business: '+JSON.stringify({title:p.title,brief:p.brief}).slice(0,7000);
- const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent',{method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],tools:[{google_search:{}}],generationConfig:{temperature:0.1,maxOutputTokens:3000}}),signal:AbortSignal.timeout(90000)});
+ const r=await fetch('https://generativelanguage.googleapis.com/v1beta/interactions',{method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},body:JSON.stringify({model:'gemini-3.8-flash',input:prompt,tools:[{type:'google_search'}]}),signal:AbortSignal.timeout(90000)});
  const j=await r.json();if(!r.ok)throw Error('Grounded Gemini HTTP '+r.status+': '+JSON.stringify(j.error||{}).slice(0,200));
- const c=j.candidates?.[0];const chunks=c?.groundingMetadata?.groundingChunks||[];
- const sources=[...new Map(chunks.map(v=>v.web).filter(v=>v&&validUrl(v.uri)).map(v=>[v.uri,{url:v.uri,title:v.title||''}])).values()].slice(0,20);
- const text=c?.content?.parts?.map(v=>v.text||'').join('').trim()||'';
- if(!text)throw Error('No research response');
+ const parts=(j.outputs||j.output||[]);const steps=j.steps||[];
+ const text=[j.output_text,...parts.flatMap(v=>[v.text,...(v.content||[]).map(x=>x.text)]),...steps.flatMap(v=>(v.output||[]).map(x=>x.text))].filter(v=>typeof v==='string').join('\n').trim();
+ const citations=[...parts,...steps].flatMap(v=>[...(v.annotations||[]),...(v.content||[]).flatMap(c=>c.annotations||[])]);
+ const candidates=[...citations.map(v=>v.url_citation?.url||v.url||v.uri),...steps.flatMap(v=>(v.results||[]).map(x=>x.url))];
+ const sources=[...new Map(candidates.filter(validUrl).map(url=>[url,{url,title:''}])).values()].slice(0,20);
+ if(!text)throw Error('No research text returned; inspect interactions response shape');
  return {text:text.slice(0,14000),sources,model:'gemini-3.8-flash',collected_at:new Date().toISOString(),source_status:sources.length?'search-grounded; external pages not independently audited':'no source URLs returned; treat all claims as unverified'};
 }
 async function smoke(html){if(!html)return {passed:false,reason:'No prototype'};const {chromium}=await import('playwright');const b=await chromium.launch({headless:true});try{const page=await b.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});let errors=[];page.on('pageerror',e=>errors.push(String(e).slice(0,200)));await page.route('https://orxelia.test/**',r=>r.fulfill({status:200,contentType:'text/html',body:html}));await page.goto('https://orxelia.test/app',{waitUntil:'load'});const x=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:innerWidth,inputs:document.querySelectorAll('input,textarea,select').length,buttons:document.querySelectorAll('button').length}));return {passed:x.width<=x.viewport+10&&x.inputs>0&&x.buttons>0&&!errors.length,details:x,errors,scope:'Chromium mobile viewport smoke only; not iPhone or end-to-end'}}finally{await b.close()}}
 const candidates=await db('orxelia_proposals?select=*&status=eq.awaiting_final_approval&order=updated_at.asc&limit=30');
-const pending=candidates.filter(p=>p.sales_review?.recommendation==='needs_evidence'&&(!p.sales_review?.evidence_audit?.checked_at||Date.now()-Date.parse(p.sales_review.evidence_audit.checked_at)>20*3600000));
+const pending=candidates.filter(p=>p.sales_review?.recommendation==='needs_evidence'&&(!p.sales_review?.evidence_audit?.checked_at||p.sales_review?.evidence_audit?.research_error||!p.sales_review?.evidence_audit?.research?.sources?.length&&Date.now()-Date.parse(p.sales_review.evidence_audit.checked_at)>20*3600000));
 console.log('Pending evidence cases:',pending.length);
 let failed=0;
 for(const p of pending.slice(0,8)){
