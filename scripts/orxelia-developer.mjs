@@ -64,6 +64,16 @@ const modelCall=async (messages) => {
  }
  throw new Error('All configured AI providers failed: '+attempts.join(' | '));
 };
+// Gemini acts as an independent UI reviewer. The implementation model then applies its feedback.
+// Review is advisory: never treat a model's opinion as a passing browser test.
+const reviewDesign=async (html,brief)=>{
+ if(!process.env.GEMINI_API_KEY)return {status:'skipped',reason:'Gemini API key unavailable'};
+ const prompt='You are ORXELIA UI/UX design reviewer. Review the following Japanese mobile-first HTML prototype against this project brief. Give concise actionable feedback only; do not rewrite code. Check iPhone layout, hierarchy, legibility, accessible labels, touch targets, status clarity, empty state, and whether all core functions remain discoverable. Do not invent tests or claim features work. Reply in Japanese with at most 6 specific recommendations.\\nBRIEF:\\n'+brief+'\\nHTML:\\n'+html.slice(0,30000);
+ try{
+  const feedback=(await modelCall([{role:'system',content:'You are a critical, independent UI/UX reviewer. Return plain Japanese review text, not HTML.'},{role:'user',content:prompt}])).trim().slice(0,2400);
+  return feedback?{status:'reviewed',feedback}:{status:'failed',reason:'Empty feedback'};
+ }catch(e){console.error('Design review unavailable:',String(e).slice(0,180));return {status:'failed',reason:String(e).slice(0,180)}}
+};
 const parseHTML=text=>{const match=text.match(/\`\`\`(?:html)?\s*([\s\S]*?)\`\`\`/i);return (match?match[1]:text).trim()};
 const safeFile = async (html,dir) => {
  if(!/^<!doctype html>|^<html[\s>]/i.test(html)) throw new Error('AI did not return HTML');
@@ -119,7 +129,7 @@ if(!['development_requested','development_running'].includes(pipelines[0]?.phase
 const patch=async(table,data)=>rest(table+'?'+match,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(data)});
 await patch('orxelia_development_jobs',{status:'running',updated_at:new Date().toISOString()});
 await patch('orxelia_pipeline',{phase:'development_running',updated_at:new Date().toISOString()});
-const dir=path.resolve('build/orxelia-job');let last={passed:false,errors:['Not run']};let html='';let generationMethod='ai_generated';
+const dir=path.resolve('build/orxelia-job');let last={passed:false,errors:['Not run']};let html='';let generationMethod='ai_generated';let designReview={status:'not_run'};let designRevision='not_run';
 try {
  const brief='Project: '+job.project+'\\nSummary: '+pipelines[0].summary;
  const designBrief='Design direction: ORXELIA clean Japanese iPhone UI. White/light gray background, clear blue gradient KPI summary, large legible totals, rounded white record cards, status pills, bottom navigation (Home, Records, Add), generous tap targets, high contrast, accessible labels. Prioritize clarity over decoration. Keep all data handling and legal disclaimers functional; never invent approval or payment status. Responsive and dependency-free.';
@@ -137,6 +147,24 @@ try {
    generationMethod='verified_template_fallback';
    console.log('Using explicit offline template fallback; this is NOT AI-generated.');
   }
+  // Two-agent design loop: generation -> independent Gemini design review -> revised implementation.
+  // Limit to one review and one revision per job to control cost and latency.
+  if(attempt===1 && generationMethod==='ai_generated'){
+   designReview=await reviewDesign(html,brief+'\\n'+designBrief);
+   if(designReview.status==='reviewed'){
+    const original=html;
+    try{
+     const revised=parseHTML(await modelCall([
+      {role:'system',content:'You are ORXELIA implementation engineer. Output ONLY complete self-contained HTML. Preserve all functional interactions, localStorage, input validation and legal notices. No network calls or dependencies.'},
+      {role:'user',content:'Revise this app based on independent UI review. Preserve working features and prioritize readability.\\nPROJECT: '+brief+'\\nREVIEW:\\n'+designReview.feedback+'\\nORIGINAL HTML:\\n'+original}
+     ]));
+     await safeFile(revised,dir);
+     const revisedTest=await testHTML(dir);
+     if(revisedTest.passed){html=revised;last=revisedTest;designRevision='accepted_browser_test_passed';console.log('Design revision accepted after browser test')}
+     else{designRevision='rejected_browser_test_failed';console.log('Design revision rejected:',JSON.stringify(revisedTest.errors));html=original}
+    }catch(e){designRevision='failed';console.log('Design revision failed:',String(e).slice(0,200));html=original}
+   }
+  }
   await safeFile(html,dir);last=await testHTML(dir);
   console.log('Attempt '+attempt,JSON.stringify(last));
   if(last.passed)break;
@@ -146,6 +174,7 @@ try {
  const deliverables=[
  {type:'prototype',title:generationMethod==='ai_generated'?'AI生成試作品（非公開HTML）':'既存テンプレートによる動作試作（AI生成ではありません）',generationMethod,status:last.passed?'generated_tested':'generated_unverified',html,generatedAt:new Date().toISOString()},
  {type:'functional_test',title:'ブラウザ自動スモークテスト',status:last.passed?'passed':'failed',results:last},
+ {type:'design_review',title:'Geminiデザインレビュー・修正結果',status:designReview.status,feedback:designReview.feedback||null,revision:designRevision,reviewedAt:new Date().toISOString()},
  {type:'sales_assets',title:'販売ページ・決済・解約・法務',status:'not_started'}
  ];
  await patch('orxelia_pipeline',{phase:last.passed?'development_ready':'development_running',deliverables,updated_at:new Date().toISOString()});
