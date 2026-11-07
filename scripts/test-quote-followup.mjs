@@ -53,7 +53,7 @@ try{
  await page.locator('.bottom-nav .nav-item').last().click();
  const [csvDownload]=await Promise.all([page.waitForEvent('download'),page.getByText('📊 案件一覧CSVエクスポート').click()]);
  const csv=readFileSync(await csvDownload.path(),'utf8');
- assert.ok(csv.includes(\"'=SUM(1,2)\"));
+ assert.ok(csv.includes("'=SUM(1,2)"));
  assert.ok(csv.includes('提出日,次回確認日,状況'));
  assert.deepEqual(errors,[]);
  console.log('PASS: Chromium 390px create, persistence, contact, status, backup, reset, restore');
