@@ -661,11 +661,11 @@
       if (saved) {
         records = JSON.parse(saved);
       } else {
-        records = INITIAL_DATA;
+        records = [];
         saveStorage();
       }
     } catch(e) {
-      records = INITIAL_DATA;
+      records = [];
     }
     records = Array.isArray(records) ? records.map(normalize) : [];
     render();
@@ -765,7 +765,7 @@
         icon = '❗';
       }
 
-      const formattedAmount = Number(r.amount).toLocaleString();
+      const formattedAmount = Number(r.amount || 0).toLocaleString();
 
       const card = document.createElement('div');
       card.className = `record-card ${cardClass}`;
@@ -909,7 +909,7 @@
 
   function confirmResetData() {
     if(confirm('すべてのデータを初期状態に戻しますか？この操作は元に戻せません。')) {
-      records = [...INITIAL_DATA];
+      records = [];
       saveStorage();
       render();
       alert('データを初期化しました。');
@@ -967,9 +967,9 @@
         if (/^[=+@-]/.test(s)) s = "'" + s; // Spreadsheet formula injection mitigation
         return '"' + s.replace(/"/g, '""') + '"';
       };
-      let csv = '\uFEFFID,顧客名,案件名,金額,担当者,経過日数\n';
+      let csv = '\uFEFFID,顧客名,案件名,金額,担当者,経過日数,提出日,次回確認日,状況\n';
       records.forEach(r => {
-        csv += [r.id, r.client, r.project, r.amount, r.staff, r.days].map(safeCell).join(',') + '\n';
+        csv += [r.id, r.client, r.project, r.amount, r.staff, dueDays(r.submittedAt), r.submittedAt, r.nextAt, r.status].map(safeCell).join(',') + '\n';
       });
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
