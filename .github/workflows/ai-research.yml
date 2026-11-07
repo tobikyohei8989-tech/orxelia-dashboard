@@ -2,6 +2,11 @@
 name: ORXELIA AI research feed
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/generate_ai_feed.py'
+      - '.github/workflows/ai-research.yml'
   workflow_dispatch:
   schedule:
     - cron: '30 22 * * *'
