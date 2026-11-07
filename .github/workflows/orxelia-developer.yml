@@ -1,6 +1,9 @@
 name: ORXELIA private AI developer
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/orxelia-proposal-pipeline.mjs'
   schedule:
     - cron: '*/15 * * * *'
 permissions:
