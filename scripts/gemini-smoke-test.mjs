@@ -1,21 +1,36 @@
 const key=process.env.GEMINI_API_KEY;
 if(!key)throw Error('GEMINI_API_KEY is not configured');
-const url='https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent';
+const root='https://generativelanguage.googleapis.com/v1beta';
+const headers={'x-goog-api-key':key,'Content-Type':'application/json'};
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-let j;
-for(let attempt=1;attempt<=4;attempt++){
- let r;
- try{
-  r=await fetch(url,{method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:'Return only a minimal valid HTML document containing a Japanese heading and one button.'}]}],generationConfig:{temperature:0,maxOutputTokens:2048,thinkingConfig:{thinkingBudget:0}}}),signal:AbortSignal.timeout(30000)});
- }catch(e){
-  if((e.name==='TimeoutError'||e.name==='AbortError'||e instanceof TypeError)&&attempt<4){console.log('Temporary Gemini network/timeout error; retry '+attempt+'/3');await sleep(1500*2**(attempt-1));continue}
-  throw e;
- }
- const raw=await r.text();try{j=JSON.parse(raw)}catch{throw Error('Gemini returned non-JSON HTTP '+r.status+' content-type '+r.headers.get('content-type'))}
- if(r.ok)break;
- if([429,500,502,503,504].includes(r.status)&&attempt<4){console.log('Temporary Gemini HTTP '+r.status+'; retry '+attempt+'/3');await sleep(1500*2**(attempt-1));continue}
- throw Error('Gemini HTTP '+r.status+' '+JSON.stringify(j.error?.message||'unknown').slice(0,250));
+async function request(url,opts={},timeout=20000){
+ const r=await fetch(url,{...opts,headers,signal:AbortSignal.timeout(timeout)});
+ const raw=await r.text();let j;
+ try{j=JSON.parse(raw)}catch{throw Error('Gemini returned non-JSON HTTP '+r.status)}
+ return {status:r.status,ok:r.ok,j};
 }
-const out=j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
-if(!/<html[\s>]|<!doctype html/i.test(out))throw Error('Gemini response did not include an HTML document; finishReason='+j.candidates?.[0]?.finishReason);
-console.log('Gemini smoke test PASSED; generated HTML chars:',out.length);
+const list=await request(root+'/models?pageSize=100');
+if(!list.ok)throw Error('Gemini models discovery HTTP '+list.status+': '+String(list.j.error?.message||'').slice(0,160));
+const available=(list.j.models||[]).filter(m=>m.supportedGenerationMethods?.includes('generateContent')).map(m=>m.name.replace(/^models\//,''));
+const candidates=['gemini-3.8-flash','gemini-3-flash','gemini-2.5-flash-lite','gemini-2.0-flash-lite'].filter(m=>available.includes(m));
+console.log('Available compatible models:',candidates.join(', ')||'(none)');
+if(!candidates.length)throw Error('No supported preferred Gemini model returned by models discovery');
+let passed=false;
+for(const model of candidates){
+ for(let attempt=1;attempt<=2;attempt++){
+  try{
+   const {status,ok,j}=await request(root+'/models/'+model+':generateContent',{method:'POST',body:JSON.stringify({contents:[{role:'user',parts:[{text:'Return only a minimal valid HTML document containing a Japanese heading and one button.'}]}],generationConfig:{temperature:0,maxOutputTokens:2048}})},25000);
+   if(ok){
+    const out=j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
+    if(/<html[\s>]|<!doctype html/i.test(out)){console.log('Gemini smoke test PASSED; model:',model,'HTML chars:',out.length);passed=true;break}
+    console.log('Model returned no valid HTML:',model,'finishReason:',j.candidates?.[0]?.finishReason);
+    break;
+   }
+   console.log('Gemini model',model,'HTTP',status,'attempt',attempt);
+   if(![429,500,502,503,504].includes(status))break;
+  }catch(e){console.log('Gemini model',model,'request error:',e.name)}
+  if(attempt<2)await sleep(1500);
+ }
+ if(passed)break;
+}
+if(!passed)throw Error('No Gemini model completed HTML generation; inspect model availability/quota');
