@@ -1,3 +1,5 @@
+import fs from 'node:fs/promises';
+import { chromium } from 'playwright';
 const key=process.env.GEMINI_API_KEY;
 if(!key)throw Error('GEMINI_API_KEY is not configured');
 const root='https://generativelanguage.googleapis.com/v1beta';
@@ -22,7 +24,7 @@ for(const model of candidates){
    const {status,ok,j}=await request(root+'/models/'+model+':generateContent',{method:'POST',body:JSON.stringify({contents:[{role:'user',parts:[{text:'Return only a minimal valid HTML document containing a Japanese heading and one button.'}]}],generationConfig:{temperature:0,maxOutputTokens:2048}})},25000);
    if(ok){
     const out=j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
-    if(/<html[\s>]|<!doctype html/i.test(out)){console.log('Gemini smoke test PASSED; model:',model,'HTML chars:',out.length);passed=true;break}
+    if(/<html[\s>]|<!doctype html/i.test(out)){console.log('Gemini smoke test PASSED; model:',model,'HTML chars:',out.length);await fs.mkdir('build/gemini-smoke',{recursive:true});await fs.writeFile('build/gemini-smoke/index.html',out);passed=true;break}
     console.log('Model returned no valid HTML:',model,'finishReason:',j.candidates?.[0]?.finishReason);
     break;
    }
@@ -34,3 +36,14 @@ for(const model of candidates){
  if(passed)break;
 }
 if(!passed)throw Error('No Gemini model completed HTML generation; inspect model availability/quota');
+
+const browser=await chromium.launch({headless:true});
+try{
+ const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true});
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('file://'+process.cwd()+'/build/gemini-smoke/index.html');
+ const body=await page.locator('body').innerText();
+ const buttons=await page.locator('button').count();
+ if(body.length<5||buttons<1||errors.length)throw Error('Generated HTML browser test failed: '+JSON.stringify({length:body.length,buttons,errors}));
+ console.log('Generated HTML browser test PASSED; buttons:',buttons);
+}finally{await browser.close()}
