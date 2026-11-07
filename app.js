@@ -1373,6 +1373,8 @@ const sync = (() => {
   }
   let dailyReport = null;
   let approvalRecord = null;
+  let pipelineRecords = [];
+  let developmentJob = null;
   function dailyReportView() {
     if (!session || dailyReport?.owner !== session.user.id) return "";
     const {row, failed} = dailyReport;
@@ -1386,11 +1388,16 @@ const sync = (() => {
       (typeof f.source === 'string' && /^https:\/\/[^\s<>"]+$/.test(f.source) ?
         '<a href="' + esc(f.source) + '" target="_blank" rel="noopener noreferrer">一次資料を確認</a>' : '') +
       '</article>').join('');
-    const phase = approvalRecord?.stage === 'development_requested' ? '開発承認済み・自動開発起動は未接続' : (report?.phase || report?.approval_status || '未承認・販売保留');
+    const pipeline = pipelineRecords.find(p => p.report_date === report_date);
+    const phaseLabels = {proposal:'提案・承認待ち',development_requested:'開発依頼受付・実行待ち',development_running:'開発中',development_ready:'開発成果確認待ち',sales_review:'販売審査中',sales_approved:'販売承認済み（公開は別途）',held:'保留'};
+    const phase = phaseLabels[pipeline?.phase] || report?.phase || report?.approval_status || '未承認・販売保留';
+    const jobStatus = developmentJob?.status === 'queued' ? '<p>開発ジョブ：受付済み（実行エンジン未接続）</p>' : developmentJob ? '<p>開発ジョブ：' + esc(developmentJob.status) + '</p>' : '';
+    const deliverables = Array.isArray(pipeline?.deliverables) ? pipeline.deliverables : [];
+    const deliverableView = deliverables.length ? '<details><summary>開発成果物（' + deliverables.length + '件）</summary>' + deliverables.map(d => '<p>' + esc(d.title || '成果物') + '：' + esc(d.status || '未検証') + '</p>').join('') + '</details>' : '<p>開発成果物：未登録</p>';
     const approvalButton = !approvalRecord ? '<p><button type="button" id="orxelia-approve-development">この事業の開発を承認</button></p><p style="font-size:.85em">承認記録を保存します。開発エンジンの自動起動は別途接続が必要です。公開・販売・支出は行いません。</p>' : '<p>開発承認：記録済み（' + esc(approvalRecord.stage) + '）</p>';
     return panel('<h3>AI選定事業｜' + esc(report_date) + '</h3>' +
       '<p><strong>' + esc(report?.project || '事業名未登録') + '</strong></p>' +
-      '<p>進捗：' + esc(phase) + '</p>' + approvalButton +
+      '<p>進捗：' + esc(phase) + '</p>' + approvalButton + jobStatus + deliverableView +
       '<p style="white-space:pre-wrap">' + esc(report?.summary || '') + '</p>' +
       '<details><summary>市場・競合・動作検証の根拠（' + findings.length + '件）</summary>' +
       (evidence || '<p>詳細データはまだ登録されていません。</p>') + '</details>' +
@@ -1418,6 +1425,12 @@ const sync = (() => {
         dailyReport = {owner,failed:true};
       }
       if (session?.user.id !== owner || $("editor").open) return;
+      const pipelineRows = await request('/rest/v1/orxelia_pipeline?select=report_date,project,phase,deliverables&order=report_date.desc&limit=30');
+      pipelineRecords = pipelineRows;
+      if (dailyReport?.row) {
+        const jobs = await request('/rest/v1/orxelia_development_jobs?select=report_date,project,status&report_date=eq.' + encodeURIComponent(dailyReport.row.report_date) + '&limit=1');
+        developmentJob = jobs.find(j => j.project === dailyReport.row.report?.project) || null;
+      }
       render();
       const [remote] = await request(table + "?select=revision,snapshot&limit=1");
       if (remote) validate(remote.snapshot);
