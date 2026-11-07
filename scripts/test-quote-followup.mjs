@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+const browser=await chromium.launch({headless:true});
+const page=await browser.newPage({viewport:{width:390,height:844},acceptDownloads:true});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+try{
+ await page.goto('http://127.0.0.1:8765/prototypes/quote-followup-review.html');
+ await page.locator('#kpi-total').waitFor();
+ assert.match(await page.locator('#kpi-total').innerText(),/0/);
+ await page.getByText('＋ 新規見積りを登録').click();
+ await page.locator('#inputClient').fill('株式会社 テスト工務店');
+ await page.locator('#inputProject').fill('見積テスト');
+ await page.locator('#inputAmount').fill('100000');
+ await page.locator('#inputSubmitted').fill('2026-11-01');
+ await page.locator('#inputNext').fill('2026-11-07');
+ await page.getByText('登録する').click();
+ assert.match(await page.locator('#kpi-total').innerText(),/1/);
+ await page.reload();
+ assert.match(await page.locator('#kpi-total').innerText(),/1/);
+ await page.locator('.record-card').first().click();
+ await page.getByText('📞 連絡したことを記録').click();
+ assert.match(await page.locator('#actionHistory').innerText(),/連絡済み/);
+ await page.locator('#actionStatus').selectOption('won');
+ await page.getByText('✅ 状況・確認日を保存').click();
+ assert.match(await page.locator('.record-card').first().innerText(),/受注/);
+ await page.reload();assert.match(await page.locator('.record-card').first().innerText(),/受注/);
+ await page.getByText('設定', {exact:true}).last().click();
+ const [download]=await Promise.all([page.waitForEvent('download'),page.getByText('📥 JSONバックアップ出力').click()]);
+ const file=await download.path();assert.ok(file);
+ const {readFileSync}=await import('node:fs');const data=JSON.parse(readFileSync(file,'utf8'));assert.equal(data[0].status,'won');assert.equal(data[0].history.length,1);
+ await page.getByText('🗑️ 全データ初期化（リセット）').click();
+ assert.match(await page.locator('#kpi-total').innerText(),/0/);
+ await page.locator('input[type=file]').setInputFiles(file);
+ assert.match(await page.locator('#kpi-total').innerText(),/1/);
+ assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('orx_estimates'))),data);
+ assert.deepEqual(errors,[]);
+ console.log('PASS: Chromium 390px create, persistence, contact, status, backup, reset, restore');
+}finally{await browser.close();}
