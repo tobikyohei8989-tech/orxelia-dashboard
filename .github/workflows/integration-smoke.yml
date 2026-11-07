@@ -6,6 +6,7 @@ on:
       - 'index.html'
       - 'style.css'
       - 'business-economics.js'
+      - 'scripts/check-business-flow.mjs'
       - '.github/workflows/integration-smoke.yml'
   workflow_dispatch:
 permissions:
@@ -22,6 +23,8 @@ jobs:
         run: |
           node --check app.js
           node --check business-economics.js
+      - name: Business flow contract checks (no writes)
+        run: node scripts/check-business-flow.mjs
       - name: Navigation, workflow and asset wiring checks
         run: |
           node --input-type=module <<'NODE'
