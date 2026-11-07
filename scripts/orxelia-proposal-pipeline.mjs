@@ -1,0 +1,35 @@
+import {chromium} from 'playwright';
+const base=process.env.SUPABASE_URL,secret=process.env.SUPABASE_SERVICE_ROLE_KEY,gemini=process.env.GEMINI_API_KEY;
+if(!base||!secret)throw Error('Supabase server secrets required');
+if(new URL(base).hostname.split('.')[0]!=='yzlxcfncdtojajlhihap')throw Error('Supabase project mismatch');
+const headers={apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'};
+async function api(path,options={}){const r=await fetch(base+'/rest/v1/'+path,{...options,headers:{...headers,...options.headers}});if(!r.ok)throw Error('DB HTTP '+r.status+' '+(await r.text()).slice(0,240));return r.status===204?null:r.json()}
+const idFilter=id=>'orxelia_proposals?id=eq.'+encodeURIComponent(id);
+async function update(id,fields,expected){const rows=await api(idFilter(id)+'&status=eq.'+encodeURIComponent(expected),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({...fields,updated_at:new Date().toISOString()})});if(rows.length!==1)throw Error('Stage changed concurrently');return rows[0]}
+async function model(prompt,max=5500){if(!gemini)throw Error('Gemini key missing');const names=['gemini-flash-lite-latest','gemini-3.8-flash'];let failures=[];for(const name of names){for(let attempt=0;attempt<2;attempt++){try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+name+':generateContent',{method:'POST',headers:{'x-goog-api-key':gemini,'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.25,maxOutputTokens:max}}),signal:AbortSignal.timeout(45000)});const j=await r.json();if(!r.ok){failures.push(name+' HTTP '+r.status);if([429,500,503].includes(r.status)&&attempt===0)continue;break}if(j.candidates?.[0]?.finishReason==='MAX_TOKENS')throw Error('truncated');const text=j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('');if(text?.trim())return text;throw Error('empty model response')}catch(e){failures.push(name+' '+String(e).slice(0,90))}}}throw Error('Gemini unavailable: '+failures.join('; '))}
+const htmlFrom=t=>{const m=t.match(/<!doctype html[\s\S]*?<\/html>/i)||t.match(/<html[\s\S]*?<\/html>/i);if(!m)throw Error('AI did not return complete HTML');const h=m[0];if(h.length>120000)throw Error('HTML too large');if(/<script\b|<iframe\b|<object\b|<embed\b|<form[^>]*action\s*=|https?:\/\//i.test(h))throw Error('Design preview must be static and offline');return h};
+async function test(html,interactive=false){const browser=await chromium.launch({headless:true});try{const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const errors=[];page.on('pageerror',e=>errors.push(String(e)));await page.setContent(html,{waitUntil:'load'});const result=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:innerWidth,text:document.body.innerText.length,buttons:document.querySelectorAll('button').length,inputs:document.querySelectorAll('input,textarea,select').length}));return {passed:result.text>100&&result.width<=result.viewport+10&&(!interactive||result.inputs>=2&&result.buttons>=1)&&!errors.length,...result,errors}}finally{await browser.close()}}
+const brief=p=>JSON.stringify({title:p.title,problem:p.brief?.problem,solution:p.brief?.solution,target:p.brief?.target,competitive_position:p.brief?.competitive_position});
+const proposal=(await api('orxelia_proposals?select=*&status=in.(awaiting_selection,approved_for_development,sales_review_requested)&order=created_at.asc&limit=10')).find(p=>p.status==='approved_for_development'||p.status==='sales_review_requested'||p.design_status==='pending');
+if(!proposal){console.log('No proposal stage work pending');process.exit(0)}
+console.log('Processing proposal',proposal.id,'stage',proposal.status);
+try{
+ if(proposal.status==='awaiting_selection'){
+  await update(proposal.id,{status:'designing',design_status:'generating'},'awaiting_selection');
+  const h=htmlFrom(await model('You are Gemini, the ORXELIA UI designer. Produce ONLY complete standalone Japanese HTML/CSS for a STATIC MOBILE-FIRST DESIGN MOCKUP. No JavaScript, no external URLs, no remote assets. Clearly label as デザイン案（操作できません）. Show KPI card, record cards, and bottom navigation as visual mockup. Never invent real customer results or actual approval. This is NOT a functional app. Business: '+brief(proposal),7000));
+  const t=await test(h);
+  if(!t.passed)throw Error('Design browser check failed '+JSON.stringify(t));
+  const feedback=await model('You are an independent Gemini UX reviewer. In Japanese give up to 5 concrete improvements to this mobile design; prioritize clarity and accessibility. No claim of functional testing. HTML: '+h.slice(0,18000),1100);
+  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:h,design_review:feedback.slice(0,3000),test_report:{design_preview:t}},'designing');
+  console.log('Design preview saved, awaiting first approval');
+ }else if(proposal.status==='approved_for_development'){
+  await update(proposal.id,{status:'developing'},'approved_for_development');
+  const h=htmlFrom(await model('You are ORXELIA engineer implementing the user-approved business. Produce ONLY complete standalone functional Japanese HTML, CSS and inline JS (no external dependencies or network). Mobile-first clear design inspired by this Gemini-reviewed visual mockup, preserve its visual hierarchy and make buttons actually work. Use localStorage, validated forms, list, delete confirmation, JSON backup and CSV export. Clearly label prototype, no real approval/contract or payment claims. Business: '+brief(proposal)+' DESIGN REVIEW: '+(proposal.design_review||'')+' DESIGN HTML: '+(proposal.design_html||'').slice(0,12000),16000));
+  const t=await test(h,true);
+  await update(proposal.id,{status:t.passed?'development_ready':'failed',prototype_html:h,test_report:{passed:t.passed,details:t,scope:'basic layout and JS errors only; end-to-end interactions, iOS, security and user demand not verified'},error_message:t.passed?null:'Browser smoke test failed'},'developing');
+  console.log('Prototype test',JSON.stringify(t));
+ }else if(proposal.status==='sales_review_requested'){
+  await update(proposal.id,{status:'awaiting_final_approval',sales_review:{recommendation:'needs_evidence',items:['iPhone real-device tests','end-to-end functional testing','customer demand and competitive advantage','legal and privacy review','payment, cancellation and support design','pricing and margin verification'],note:'Sales is NOT ready. Final approval button remains disabled until verified evidence exists.'}},'sales_review_requested');
+  console.log('Sales review saved: evidence missing, not ready for final approval');
+ }
+}catch(e){console.error('Proposal stage failed',String(e).slice(0,350));const state=(await api(idFilter(proposal.id)+'&select=status'))[0]?.status;if(['designing','developing'].includes(state))await update(proposal.id,{status:'failed',design_status:state==='designing'?'failed':proposal.design_status,error_message:String(e).slice(0,350)},state);process.exitCode=1}
