@@ -1,0 +1,21 @@
+name: ORXELIA Gemini connection smoke test
+on:
+  push:
+    paths:
+      - '.github/workflows/orxelia-gemini-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify Gemini can generate HTML
+        run: node scripts/gemini-smoke-test.mjs
