@@ -1393,6 +1393,7 @@ const sync = (() => {
   }
   let dailyReport = null;
   let approvalRecord = null;
+  let dailyApprovalConflict = null;
   let pipelineRecords = [];
   let developmentJob = null;
   function dailyReportView() {
@@ -1419,7 +1420,7 @@ const sync = (() => {
       pipeline?.phase === 'sales_review' ?
       '<p><button type="button" id="orxelia-approve-sales">販売開始を最終承認（公開・決済は実行しない）</button></p>' :
       pipeline?.phase === 'sales_approved' ? '<p>販売承認済み。公開・決済開始は未実行です。</p>' : '';
-    const approvalButton = !approvalRecord ? '<p><button type="button" id="orxelia-approve-development">この事業の開発を承認</button></p><p style="font-size:.85em">承認記録を保存します。承認後に開発要件とテスト項目を自動生成します。承認後に開発ジョブを登録し、GitHub Actionsが定期的に処理します。公開・販売・支出は行いません。</p>' : '<p>開発承認：記録済み（' + esc(approvalRecord.stage) + '）</p>';
+    const approvalButton = dailyApprovalConflict ? '<p style="color:#f1ba68">この日付には別事業「' + esc(dailyApprovalConflict.project) + '」の承認が保存されています。既存履歴を保護するため、この画面からの重複承認を停止しました。別の候補は「事業案・販売判断」から選択してください。</p>' : !approvalRecord ? '<p><button type="button" id="orxelia-approve-development">この事業の開発を承認</button></p><p style="font-size:.85em">承認記録を保存します。承認後に開発要件とテスト項目を自動生成します。承認後に開発ジョブを登録し、GitHub Actionsが定期的に処理します。公開・販売・支出は行いません。</p>' : '<p>開発承認：記録済み（' + esc(approvalRecord.stage) + '）</p>';
     return panel('<h3>AI選定事業｜' + esc(report_date) + '</h3>' +
       '<p><strong>' + esc(report?.project || '事業名未登録') + '</strong></p>' +
       '<p>進捗：' + esc(phase) + '</p>' + approvalButton + salesAction + jobStatus + deliverableView +
@@ -1449,7 +1450,8 @@ const sync = (() => {
         if (row) {
           const approvals = await request("/rest/v1/orxelia_approvals?select=report_date,project,stage&report_date=eq." + encodeURIComponent(row.report_date) + "&limit=1");
           approvalRecord = approvals.find(a => a.project === row.report?.project) || null;
-        } else approvalRecord = null;
+          dailyApprovalConflict = !approvalRecord && approvals.length ? approvals[0] : null;
+        } else { approvalRecord = null; dailyApprovalConflict = null; }
       } catch {
         dailyReport = {owner,failed:true};
       }
@@ -1587,6 +1589,7 @@ const sync = (() => {
     if (event.target.id !== "orxelia-approve-development") return;
     if (!session || !dailyReport?.row || approvalRecord || busy) return;
     const {report_date,report} = dailyReport.row;
+    if(dailyApprovalConflict){alert('同日に別事業の承認記録があります。事業案・販売判断から候補を選択してください。');return}
     if (!report?.project || !confirm("「" + report.project + "」の開発を承認しますか？\\n※承認後、開発ジョブが登録され、GitHub Actionsの定期実行対象になります。公開・販売は行われません。")) return;
     busy = true;
     try {
