@@ -18,6 +18,7 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.ORXELIA_SUPABASE_SERVICE_ROLE_KEY }}
       GITHUB_TOKEN: ${{ github.token }}
       ORXELIA_MODEL: openai/gpt-4.1-mini
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
