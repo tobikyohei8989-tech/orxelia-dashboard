@@ -1413,6 +1413,7 @@ const sync = (() => {
     if (busy) { status("同期処理中です。完了までお待ちください。"); return; }
     if (!window.ORXELIA_PUBLISHABLE_KEY || (!session && !credentials) || !readable || $("editor").open) { status("同期を開始できません。ログイン状態・設定・編集中の画面を確認してください。"); return; }
     status("クラウドに接続しています…");
+    let syncStep = "接続準備";
     busy = true;
     try {
       if (credentials) {
@@ -1420,6 +1421,7 @@ const sync = (() => {
         setSession(await request("/auth/v1/token?grant_type=password",{method:"POST",body:JSON.stringify(credentials)},false));
         render();
       }
+      syncStep = "認証情報の確認";
       const owner = session.user.id;
       try {
         const [row] = await request("/rest/v1/orxelia_daily_reports?select=report_date,report&order=report_date.desc&limit=1");
@@ -1432,6 +1434,7 @@ const sync = (() => {
         dailyReport = {owner,failed:true};
       }
       if (session?.user.id !== owner || $("editor").open) return;
+      syncStep = "開発レポートの取得";
       const pipelineRows = await request('/rest/v1/orxelia_pipeline?select=report_date,project,phase,deliverables&order=report_date.desc&limit=30');
       pipelineRecords = pipelineRows;
       if (dailyReport?.row) {
@@ -1439,6 +1442,7 @@ const sync = (() => {
         developmentJob = jobs.find(j => j.project === dailyReport.row.report?.project) || null;
       }
       render();
+      syncStep = "事業台帳の取得";
       const [remote] = await request(table + "?select=revision,snapshot&limit=1");
       if (remote) validate(remote.snapshot);
       if ($("editor").open) return;
@@ -1477,7 +1481,7 @@ const sync = (() => {
     } catch (error) {
       const detail = String(error?.message || "不明なエラー");
       const code = detail.match(/(?:HTTP|Supabase|status)\s*[: ]\s*(\d{3})/i)?.[1] || detail.match(/\b(400|401|403|404|409|422|429|500|502|503)\b/)?.[1];
-      status((credentials ? "ログイン・接続失敗" : "同期失敗") + (code ? "（HTTP " + code + "）" : "（通信・認証・権限を確認）") + "。端末データは保持しています。");
+      status((credentials ? "ログイン・接続失敗" : "同期失敗") + "［" + syncStep + "］" + (code ? " HTTP " + code : " " + (error instanceof TypeError ? "通信エラー" : "認証・処理エラー")) + "。端末データは保持しています。");
       console.warn("ORXELIA sync failed", code || "unknown");
     } finally {
       busy = false;
