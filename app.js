@@ -280,13 +280,13 @@ function portfolio(activities) {
   const rows=selected.map(project=>{
     const cloud=cloudByLegacy.get(project.id)||cloudByName.get(project.name);
     if(!cloud)return portfolioProgress(project,evidence,displayedBusinessStage(project,activities));
-    return '<article class="business-progress"><h3>'+esc(project.name)+'</h3><p><b>AI開発の最新状況：</b>'+esc(statuses[cloud.status]||cloud.status)+'</p><p>デザイン第'+(Number(cloud.revision_number)||1)+'版 ／ 試作品第'+(Number(cloud.prototype_revision_number)||1)+'版</p><p>以前の事業一覧データと判断履歴は保持しています。最新のAI開発状況を優先表示しています。</p><button type="button" data-tab="verification">デザイン・試作品を確認して修正する</button>'+details("以前の記録・編集",card(project))+'</article>';
+    return '<article class="business-progress portfolio-tile"><span class="portfolio-status">'+esc(statuses[cloud.status]||cloud.status)+'</span><h3>'+esc(project.name)+'</h3><p class="portfolio-next">'+esc(proposalNext(cloud.status))+'</p><button type="button" data-tab="verification">承認・詳細を見る</button>'+details("過去の記録・編集",card(project))+'</article>';
   });
   const linked = new Set(selected.map(p=>(cloudByLegacy.get(p.id)||cloudByName.get(p.name))?.id).filter(Boolean));
-  const extra = filter==="すべて"?orxeliaTrialProposals.filter(p=>!linked.has(p.id)).map(p=>'<article class="business-progress"><h3>'+esc(p.title)+'</h3><p><b>AI開発の最新状況：</b>'+esc(statuses[p.status]||p.status)+'</p><button type="button" data-tab="verification">デザイン・試作品を確認する</button></article>'):[];
+  const extra = filter==="すべて"?orxeliaTrialProposals.filter(p=>!linked.has(p.id)).map(p=>'<article class="business-progress portfolio-tile"><span class="portfolio-status">'+esc(statuses[p.status]||p.status)+'</span><h3>'+esc(p.title)+'</h3><p class="portfolio-next">'+esc(proposalNext(p.status))+'</p><button type="button" data-tab="verification">承認・詳細を見る</button></article>'):[];
   return heading("事業一覧",action("＋ 事業を登録","project","",true))+
-    '<p>従来の事業記録と新しいAI開発状況をまとめて表示しています。デザインの修正や試作品の操作は「事業案・販売判断」で行います。</p>'+
-    '<label>区分<select id="filter">'+filters+'</select></label>'+
+    '<p class="portfolio-guide">事業ごとの現在地と、次に必要な行動をまとめました。承認・修正は「承認・販売」で操作できます。</p>'+
+    '<label>表示する事業<select id="filter">'+filters+'</select></label>'+
     (rows.length||extra.length?grid([...rows,...extra]):panel('<p>この区分の登録は0件です。</p>'));
 }
 
