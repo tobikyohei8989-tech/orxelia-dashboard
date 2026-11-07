@@ -176,3 +176,36 @@ nav button{min-height:48px;font-size:11px;letter-spacing:-.045em;padding:7px 1px
 .home-links button{flex-basis:100%}
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+
+/* ORXELIA 2.3 — mobile-first decision workflow */
+body.is-home .hero .metrics{display:none}
+body.is-home .hero{padding-bottom:3px}
+body.is-home .hero h1{font-size:clamp(23px,4.5vw,31px);margin-bottom:4px}
+.home-intro{margin:20px 0 16px}
+.home-intro h2{font-size:clamp(23px,4vw,30px);margin:5px 0}
+.home-intro p{font-size:13px;margin:4px 0}
+.priority-section{margin:19px 0 24px}
+.priority-section>.head{margin:0 0 12px}
+.priority-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px}
+.priority-card{margin:0;border:1px solid #497a7b;background:linear-gradient(140deg,#193c48,#142b3d);padding:18px;border-radius:17px}
+.priority-card h3{font-size:18px;line-height:1.5;margin:10px 0 5px}
+.priority-card p{font-size:13px;margin:5px 0 14px}
+.priority-card button{width:100%;min-height:48px}
+.priority-top{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.priority-label{font-size:11px;font-weight:750;letter-spacing:.04em;color:#a5f8e8}
+.priority-state{font-size:11px;color:#e5f9f4;background:#275365;border:1px solid #3c7682;border-radius:999px;padding:4px 9px}
+.count-pill{font-size:12px;font-weight:700;border:1px solid #376c6c;border-radius:999px;color:#b0f3e7;padding:5px 11px}
+.empty-state{border:1px dashed #456577;border-radius:16px;padding:20px;background:#132537}
+.empty-state strong{color:#e7f5fa}
+.empty-state p{font-size:13px}
+.empty-state button{margin-top:4px}
+@media(max-width:640px){
+.home-intro{margin:12px 0 16px}
+.home-intro h2{font-size:23px}
+.priority-list{grid-template-columns:minmax(0,1fr)}
+.priority-card{padding:16px}
+.priority-card h3{font-size:17px}
+body.is-home .hero{padding-top:10px}
+body.is-home .work-now{margin:4px 0 6px}
+}
