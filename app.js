@@ -1074,6 +1074,25 @@ function home() {
     '<div class="home-links"><button type="button" data-tab="finance">収支の詳細を見る</button><button type="button" data-tab="verification">販売判断・承認へ</button></div>';
 }
 
+function expandedDetailPaths(root){
+ const all=[...root.querySelectorAll("details")];
+ return all.filter(d=>d.open).map(d=>{
+  const path=[];let node=d;
+  while(node&&node!==root){
+   const parent=node.parentElement;
+   if(!parent)break;
+   path.unshift([...parent.children].indexOf(node));
+   node=parent;
+  }
+  return path;
+ });
+}
+function restoreDetailPaths(root,paths){
+ for(const path of paths){let node=root;
+  for(const index of path){node=node?.children?.[index];if(!node)break;}
+  if(node?.tagName==="DETAILS")node.open=true;
+ }
+}
 function render() {
   // iOS Japanese IME: never replace a focused textarea while the user composes text.
   const activeRevision=document.activeElement;
@@ -1103,14 +1122,14 @@ function render() {
     if (button.dataset.tab === tab) button.setAttribute("aria-current","page");
     else button.removeAttribute("aria-current");
   });
-  const expanded = [...$("view").querySelectorAll("details[open]")].map(d => d.firstElementChild.textContent);
+  const expandedPaths = expandedDetailPaths($("view"));
   $("view").innerHTML = {
     home, portfolio:() => portfolio(activities) + details("日次候補",daily()),
     verification:() => heading("事業案・販売判断") + orxeliaTrialProposalPanel() + launchDecisions() + details("過去の経営判断",decisions()) + ideaReviewPanel() + existingResearchPanel() + details("検証記録・取り込み",verification()) + details("作業記録・タスク", (window.orxeliaSync?.dailyReportView()||"")+pendingDecisionSummary()+details("実行タスク",tasks())+details("作業進捗",progress())),
     finance:() => finance() + details("営業・販売の記録",sales()) + details("当月の事業別収支",businessRevenueOverview()),
     settings
   }[tab]();
-  expanded.forEach(openSection);
+  restoreDetailPaths($("view"),expandedPaths);
   showValidationStatus();
   refreshValidationStatus();
   if ($("offline")) $("offline").textContent = offlineStatus;
