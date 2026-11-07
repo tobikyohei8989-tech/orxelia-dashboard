@@ -1593,6 +1593,11 @@ const sync = (() => {
     if (!report?.project || !confirm("「" + report.project + "」の開発を承認しますか？\\n※承認後、開発ジョブが登録され、GitHub Actionsの定期実行対象になります。公開・販売は行われません。")) return;
     busy = true;
     try {
+      // Recheck on the server immediately before insert: stale UI state must never cause HTTP 409.
+      const existingApprovals = await request("/rest/v1/orxelia_approvals?select=report_date,project,stage&report_date=eq." + encodeURIComponent(report_date));
+      const already = existingApprovals.find(a=>a.project===report.project);
+      if(already){approvalRecord=already;status("この事業の承認はすでに保存されています。");render();return}
+      if(existingApprovals.length){dailyApprovalConflict=existingApprovals[0];status("同日付の別事業の承認が存在するため、登録を停止しました。");render();return}
       const [saved] = await request("/rest/v1/orxelia_approvals",{
         method:"POST",headers:{Prefer:"return=representation"},
         body:JSON.stringify({owner_id:session.user.id,report_date,project:report.project,stage:"development_requested"})
