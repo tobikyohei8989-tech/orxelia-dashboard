@@ -680,8 +680,11 @@
   function saveStorage() {
     try {
       localStorage.setItem('orx_estimates', JSON.stringify(records));
+      return true;
     } catch(e) {
       console.error("Storage save failed:", e);
+      alert('保存できませんでした。端末の空き容量・プライベートブラウズ設定をご確認ください。');
+      return false;
     }
   }
 
@@ -773,7 +776,7 @@
       card.innerHTML = `
         <div class="record-body">
           <div class="record-info">
-            <span class="status-badge ${statusClass}">${icon} ${badgeText}</span>
+            <span class="status-badge ${statusClass}">${icon} ${escapeHTML(badgeText)}</span>
             <div class="client-name">${escapeHTML(r.client)}</div>
             <div class="project-name">${escapeHTML(r.project)}</div>
           </div>
@@ -824,7 +827,7 @@
     };
     
     records.unshift(newRecord);
-    saveStorage();
+    if (!saveStorage()) { records.shift(); return; }
     closeAddModal();
     render();
   }
@@ -943,13 +946,18 @@
         r && typeof r.id === 'string' && typeof r.client === 'string' && typeof r.project === 'string' &&
         typeof r.staff === 'string' && Number.isFinite(r.amount) && r.amount >= 0 &&
         Number.isInteger(r.days) && r.days >= 0 && r.days <= 36500 &&
-        r.id.length <= 100 && r.client.length <= 200 && r.project.length <= 300 && r.staff.length <= 200
+        r.id.length <= 100 && r.client.length <= 200 && r.project.length <= 300 && r.staff.length <= 200 &&
+        (!r.status || ['waiting','hold','won','lost'].includes(r.status)) &&
+        (!r.submittedAt || /^\\d{4}-\\d{2}-\\d{2}$/.test(r.submittedAt)) &&
+        (!r.nextAt || /^\\d{4}-\\d{2}-\\d{2}$/.test(r.nextAt)) &&
+        (!r.history || (Array.isArray(r.history) && r.history.length <= 1000 && r.history.every(v=>typeof v==='string' && v.length<=300)))
       )) throw new Error('バックアップの形式が正しくありません');
       if (!confirm(data.length + '件のデータで現在の一覧を置き換えますか？事前にJSONバックアップを保存してください。')) return;
       const snapshot = records;
       try {
-        localStorage.setItem('orx_estimates', JSON.stringify(data));
-        records = data.map(normalize);
+        const normalized = data.map(normalize);
+        localStorage.setItem('orx_estimates', JSON.stringify(normalized));
+        records = normalized;
         render();
         alert('復元しました（' + data.length + '件）');
       } catch (e) {
