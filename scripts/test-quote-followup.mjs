@@ -2,7 +2,13 @@ import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},acceptDownloads:true});
-const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+const errors=[];page.on('pageerror',e=>errors.push(e.message));const pendingDialogs=new Set();
+page.on('dialog',dialog=>{
+ const pending=dialog.accept().catch(error=>{
+   if (!/Target page, context or browser has been closed/.test(error.message)) throw error;
+ }).finally(()=>pendingDialogs.delete(pending));
+ pendingDialogs.add(pending);
+});
 try{
  await page.goto('http://127.0.0.1:8765/prototypes/quote-followup-review.html');
  await page.locator('#kpi-total').waitFor();
@@ -57,4 +63,7 @@ try{
  assert.ok(csv.includes('提出日,次回確認日,状況'));
  assert.deepEqual(errors,[]);
  console.log('PASS: Chromium 390px create, persistence, contact, status, backup, reset, restore');
-}finally{await browser.close();}
+}finally{
+ await Promise.all([...pendingDialogs]);
+ await browser.close();
+}
