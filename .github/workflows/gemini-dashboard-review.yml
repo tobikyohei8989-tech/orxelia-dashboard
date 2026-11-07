@@ -1,0 +1,29 @@
+name: ORXELIA Gemini dashboard design review
+on:
+  push:
+    paths:
+      - 'scripts/review-dashboard.mjs'
+      - '.github/workflows/gemini-dashboard-review.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gemini-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate independent Gemini review
+        run: node scripts/review-dashboard.mjs
+      - name: Upload review document
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-dashboard-review
+          path: gemini-dashboard-review.md
+          retention-days: 30
