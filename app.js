@@ -270,11 +270,20 @@ function portfolio(activities) {
   const selected = data.projects.filter(p => filter === "すべて" || p.type === filter).sort((a,b) => ({"高":0,"中":1,"低":2,"未設定":3}[a.priority] - {"高":0,"中":1,"低":2,"未設定":3}[b.priority]));
   const filters = ["すべて",...types].map(t => '<option' + (t === filter ? ' selected' : '') + '>' + t + '</option>').join("");
   const evidence = loadEvidence();
-  const counts = stages.map(stage =>
-    metric(stage,selected.filter(p => displayedBusinessStage(p, activities) === stage).length,"件")).join("");
-  return heading("事業一覧", action("＋ 事業を登録","project","",true)) +
-    '<label>区分<select id="filter">' + filters + '</select></label>' +
-    (selected.length ? '<div class="metrics portfolio-counts" aria-label="進捗ステータス別の事業数">' + counts + '</div>' + grid(selected.map(project => portfolioProgress(project,evidence,displayedBusinessStage(project, activities)))) : panel('<p>この区分の登録は0件です。既存プロジェクトの名称や状況は確認できたものから登録してください。参照チャットの候補は「管理」で初期データを取り込むと表示されます。</p>'));
+  const cloudByLegacy = new Map(orxeliaTrialProposals.filter(p=>p.brief?.legacy_id).map(p=>[p.brief.legacy_id,p]));
+  const cloudByName = new Map(orxeliaTrialProposals.map(p=>[p.title,p]));
+  const statuses={awaiting_selection:"デザイン生成待ち",designing:"Geminiデザイン生成中",awaiting_first_approval:"デザイン確認・第1承認待ち",revision_requested:"デザイン修正依頼済み",revising:"デザイン修正中",approved_for_development:"試作品開発待ち",developing:"AI試作品開発中",development_ready:"動作試作品の確認・修正待ち",prototype_revision_requested:"試作品修正受付済み",prototype_revising:"試作品修正・テスト中",sales_review_requested:"販売審査中",awaiting_final_approval:"販売判断待ち",final_approved:"販売方針承認済み",failed:"AI処理エラー",on_hold:"保留"};
+  const rows=selected.map(project=>{
+    const cloud=cloudByLegacy.get(project.id)||cloudByName.get(project.name);
+    if(!cloud)return portfolioProgress(project,evidence,displayedBusinessStage(project,activities));
+    return '<article class="business-progress"><h3>'+esc(project.name)+'</h3><p><b>AI開発の最新状況：</b>'+esc(statuses[cloud.status]||cloud.status)+'</p><p>デザイン第'+(Number(cloud.revision_number)||1)+'版 ／ 試作品第'+(Number(cloud.prototype_revision_number)||1)+'版</p><p>以前の事業一覧データと判断履歴は保持しています。最新のAI開発状況を優先表示しています。</p><button type="button" data-tab="verification">デザイン・試作品を確認して修正する</button>'+details("以前の記録・編集",card(project))+'</article>';
+  });
+  const linked = new Set(selected.map(p=>(cloudByLegacy.get(p.id)||cloudByName.get(p.name))?.id).filter(Boolean));
+  const extra = filter==="すべて"?orxeliaTrialProposals.filter(p=>!linked.has(p.id)).map(p=>'<article class="business-progress"><h3>'+esc(p.title)+'</h3><p><b>AI開発の最新状況：</b>'+esc(statuses[p.status]||p.status)+'</p><button type="button" data-tab="verification">デザイン・試作品を確認する</button></article>'):[];
+  return heading("事業一覧",action("＋ 事業を登録","project","",true))+
+    '<p>従来の事業記録と新しいAI開発状況をまとめて表示しています。デザインの修正や試作品の操作は「事業案・販売判断」で行います。</p>'+
+    '<label>区分<select id="filter">'+filters+'</select></label>'+
+    (rows.length||extra.length?grid([...rows,...extra]):panel('<p>この区分の登録は0件です。</p>'));
 }
 
 function activeQueue() {
