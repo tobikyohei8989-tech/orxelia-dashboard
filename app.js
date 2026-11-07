@@ -1372,6 +1372,7 @@ const sync = (() => {
     if (!$("editor").open) render();
   }
   let dailyReport = null;
+  let approvalRecord = null;
   function dailyReportView() {
     if (!session || dailyReport?.owner !== session.user.id) return "";
     const {row, failed} = dailyReport;
@@ -1385,10 +1386,11 @@ const sync = (() => {
       (typeof f.source === 'string' && /^https:\/\/[^\s<>"]+$/.test(f.source) ?
         '<a href="' + esc(f.source) + '" target="_blank" rel="noopener noreferrer">一次資料を確認</a>' : '') +
       '</article>').join('');
-    const phase = report?.phase || report?.approval_status || '未承認・販売保留';
+    const phase = approvalRecord?.stage === 'development_requested' ? '開発承認済み・自動開発起動は未接続' : (report?.phase || report?.approval_status || '未承認・販売保留');
+    const approvalButton = !approvalRecord ? '<p><button type="button" id="orxelia-approve-development">この事業の開発を承認</button></p><p style="font-size:.85em">承認記録を保存します。開発エンジンの自動起動は別途接続が必要です。公開・販売・支出は行いません。</p>' : '<p>開発承認：記録済み（' + esc(approvalRecord.stage) + '）</p>';
     return panel('<h3>AI選定事業｜' + esc(report_date) + '</h3>' +
       '<p><strong>' + esc(report?.project || '事業名未登録') + '</strong></p>' +
-      '<p>進捗：' + esc(phase) + '</p>' +
+      '<p>進捗：' + esc(phase) + '</p>' + approvalButton +
       '<p style="white-space:pre-wrap">' + esc(report?.summary || '') + '</p>' +
       '<details><summary>市場・競合・動作検証の根拠（' + findings.length + '件）</summary>' +
       (evidence || '<p>詳細データはまだ登録されていません。</p>') + '</details>' +
@@ -1408,6 +1410,10 @@ const sync = (() => {
       try {
         const [row] = await request("/rest/v1/orxelia_daily_reports?select=report_date,report&order=report_date.desc&limit=1");
         dailyReport = {owner,row};
+        if (row) {
+          const approvals = await request("/rest/v1/orxelia_approvals?select=report_date,project,stage&report_date=eq." + encodeURIComponent(row.report_date) + "&limit=1");
+          approvalRecord = approvals.find(a => a.project === row.report?.project) || null;
+        } else approvalRecord = null;
       } catch {
         dailyReport = {owner,failed:true};
       }
@@ -1494,6 +1500,27 @@ const sync = (() => {
     values.email = values.email.trim();
     event.target.elements.password.value = "";
     run(values);
+  });
+  document.addEventListener("click", async event => {
+    if (event.target.id !== "orxelia-approve-development") return;
+    if (!session || !dailyReport?.row || approvalRecord || busy) return;
+    const {report_date,report} = dailyReport.row;
+    if (!report?.project || !confirm("「" + report.project + "」の開発を承認しますか？\\n※承認を記録します。開発の自動起動・公開・販売は行われません。")) return;
+    busy = true;
+    try {
+      const [saved] = await request("/rest/v1/orxelia_approvals",{
+        method:"POST",headers:{Prefer:"return=representation"},
+        body:JSON.stringify({owner_id:session.user.id,report_date,project:report.project,stage:"development_requested"})
+      });
+      if (!saved) throw Error("保存結果を確認できません");
+      const check = await request("/rest/v1/orxelia_approvals?select=report_date,project,stage&report_date=eq." + encodeURIComponent(report_date));
+      approvalRecord = check.find(a => a.project === report.project) || null;
+      if (!approvalRecord) throw Error("読み戻し失敗");
+      status("開発承認を保存しました。自動開発の起動は未接続です。");
+      render();
+    } catch(error) {
+      alert("開発承認を保存できませんでした。通信・ログイン状態を確認してください。");
+    } finally {busy=false;}
   });
   document.addEventListener("click", async event => {
     if (event.target.id === "sync-reset") {
