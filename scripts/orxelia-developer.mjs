@@ -26,13 +26,13 @@ const modelCall=async (messages) => {
  const providers=[];
  if(process.env.GEMINI_API_KEY){
   const token=process.env.GEMINI_API_KEY;
-  let names=['gemini-3.8-flash'];
+  let names=['gemini-flash-lite-latest','gemini-3.8-flash'];
   try{
    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=100',{headers:{'x-goog-api-key':token},signal:AbortSignal.timeout(15000)});
    if(r.ok){
     const j=await r.json();
     const available=(j.models||[]).filter(m=>m.supportedGenerationMethods?.includes('generateContent')).map(m=>m.name.replace(/^models\\//,''));
-    names=[...new Set([...['gemini-3.8-flash','gemini-3-flash','gemini-2.5-flash-lite'].filter(n=>available.includes(n)),...available.filter(n=>/flash/i.test(n)).slice(0,6)])].slice(0,7);
+    names=[...new Set([...['gemini-flash-lite-latest','gemini-3.5-flash-lite','gemini-3.8-flash','gemini-3-flash'].filter(n=>available.includes(n)),...available.filter(n=>/flash/i.test(n)&&!/tts|image|live|audio/i.test(n)).slice(0,6)])].slice(0,7);
    }
   }catch(e){console.log('Gemini model discovery unavailable:',e.name)}
   for(const name of names)providers.push({name:'Gemini '+name,url:'https://generativelanguage.googleapis.com/v1beta/models/'+name+':generateContent',token,body:{systemInstruction:{parts:[{text:messages.find(m=>m.role==='system')?.content||'Generate working HTML.'}]},contents:[{role:'user',parts:[{text:messages.filter(m=>m.role!=='system').map(m=>m.role+': '+m.content).join('\\n\\n')}]}],generationConfig:{temperature:0.2,maxOutputTokens:16384}}});
