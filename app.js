@@ -1052,7 +1052,7 @@ function executiveQuickMatrix() {
     const actual=byName.get(p.name);
     const state=statusLabel[p.status]||p.status||'未設定';
     const label=awaiting.has(p.status)?'<strong class="quick-attention">'+esc(state)+'</strong>':esc(state);
-    return '<tr><th scope="row">'+esc(p.name)+'</th><td>'+label+'</td><td>'+ (actual?yen(actual.revenue):'—')+'</td><td>'+(actual?yen(actual.revenue-actual.cost):'—')+'</td><td>—</td></tr>';
+    return '<tr><th scope="row">'+esc(p.name)+'</th><td data-label="進捗">'+label+'</td><td data-label="売上">'+ (actual?yen(actual.revenue):'—')+'</td><td data-label="差引収支">'+(actual?yen(actual.revenue-actual.cost):'—')+'</td><td data-label="契約数">—</td></tr>';
   }).join('');
   return '<section class="quick-overview" aria-label="事業別30秒サマリー"><div class="head"><h2>事業別の状況</h2><small>'+esc(period)+' 実績入力分</small></div>'+
     (rows?'<div class="quick-table-scroll" tabindex="0" role="region" aria-label="事業別ステータスと入力実績"><table class="quick-table"><thead><tr><th scope="col">事業</th><th scope="col">進捗・確認</th><th scope="col">売上</th><th scope="col">差引収支</th><th scope="col">契約数</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p>登録事業はまだありません。</p>')+
