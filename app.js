@@ -1065,16 +1065,23 @@ function executiveQuickMatrix() {
     '<p class="quick-note">※当月の手動入力分。売上−費用は営業利益・純利益ではありません。契約数は未連携です。</p><details><summary>数値の見方</summary><p>売上と売上−費用は当月の手動入力データです。売上−費用は営業利益・純利益ではありません。契約数は事業別の確定データと紐付いていないため「未連携」と表示しています。「—」は0円を意味しません。</p></details></section>';
 }
 function home() {
-  const waiting=orxeliaTrialProposals.filter(p=>["awaiting_first_approval","development_ready","awaiting_final_approval"].includes(p.status));
+  const requiresAction=p=>p.status==="awaiting_first_approval"||p.status==="development_ready"||(p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready_for_approval");
+  const owner=orxeliaTrialProposals.filter(requiresAction);
+  const research=orxeliaTrialProposals.filter(p=>p.status==="awaiting_final_approval"&&!requiresAction(p));
   const running=orxeliaTrialProposals.filter(p=>["awaiting_selection","designing","revision_requested","revising","approved_for_development","developing","prototype_revision_requested","prototype_revising","sales_review_requested"].includes(p.status));
-  const priorityOrder={awaiting_first_approval:0,development_ready:1,awaiting_final_approval:2};
-  waiting.sort((a,b)=>(priorityOrder[a.status]??9)-(priorityOrder[b.status]??9));
-  const waitingRows=waiting.slice(0,5).map(p=>'<article class="business-progress priority-card owner-action-card"><div class="priority-top"><span class="priority-label">あなたの確認が必要</span><span class="priority-state">'+esc(p.status==="awaiting_first_approval"?"デザイン承認":p.status==="development_ready"?"試作品確認":"販売根拠の確認")+'</span></div><h3>'+esc(p.title.replace(/（自動開発動作検証）/g,"").replace(/^【第2件・本番検証】/,""))+'</h3><p>'+esc(p.status==="awaiting_first_approval"?"デザインを確認して承認または修正":p.status==="development_ready"?"試作品を操作して次の判断へ":"需要・競合優位性・採算の証拠を確認（未確認なら販売保留）")+'</p><button class="primary" type="button" data-tab="verification">確認画面を開く →</button></article>').join("");
-  return '<div class="home-intro"><span class="eyebrow">EXECUTIVE OVERVIEW</span><h2>今日、判断すること</h2><p>承認が必要な案件を先に表示。販売根拠が不足する案件は保留します。</p></div>'+
-
-    '<section class="priority-section"><div class="head"><h2>次に確認する事業</h2><span class="count-pill">'+waiting.length+'件</span></div>'+(waitingRows?'<div class="priority-list">'+waitingRows+'</div>':'<div class="empty-state"><strong>現在、確認待ちはありません</strong><p>新しい候補や開発の進捗は「事業一覧」で確認できます。</p><button type="button" data-tab="portfolio">事業一覧を見る →</button></div>')+'</section>'+
-    '<details class="home-stats"><summary>全体の数字・事業別状況を見る</summary><div class="metrics">'+metric("あなたの確認待ち",waiting.length+"件","承認・試作品の修正")+metric("AI作業中・待機",running.length+"件","自動処理の進捗")+metric("販売判断待ち",orxeliaTrialProposals.filter(p=>p.status==="awaiting_final_approval").length+"件","最終判断が必要")+'</div>'+executiveQuickMatrix()+'</details>'+
-    '<div class="home-links"><button type="button" data-tab="finance">収支の詳細を見る</button><button type="button" data-tab="verification">販売判断・承認へ</button></div>';
+  const cleanTitle=p=>esc(p.title.replace(/（自動開発動作検証）/g,"").replace(/^【第2件・本番検証】/,""));
+  const ownerRows=owner.map(p=>{
+    const design=p.status==="awaiting_first_approval",prototype=p.status==="development_ready";
+    const task=design?"デザインを見て、開発承認か修正依頼を選ぶ":prototype?"試作品を操作して、修正か販売審査依頼を選ぶ":"販売審査の根拠を確認し、販売可否を判断する";
+    const label=design?"デザインを確認":prototype?"試作品を確認":"販売判断を確認";
+    return '<article class="business-progress priority-card owner-action-card"><div class="priority-top"><span class="priority-label">あなたの操作が必要</span><span class="priority-state">'+esc(label)+'</span></div><h3>'+cleanTitle(p)+'</h3><p><b>やること：</b>'+esc(task)+'</p><button class="primary" type="button" data-tab="verification">承認・販売画面で操作する →</button></article>';
+  }).join("");
+  const researchRows=research.map(p=>'<article class="business-progress priority-card ai-review-card"><div class="priority-top"><span class="priority-state">販売保留・根拠不足</span></div><h3>'+cleanTitle(p)+'</h3><p><b>あなたの操作：</b>今は不要。需要・競合優位性・採算の証拠がそろうまで販売判断しません。</p></article>').join("");
+  return '<div class="home-intro"><span class="eyebrow">EXECUTIVE OVERVIEW</span><h2>今、あなたがやること</h2><p>操作が必要な案件だけをオレンジ色で表示します。調査不足の案件は別にまとめています。</p></div>'+
+    '<section class="priority-section"><div class="head"><h2>あなたの操作待ち</h2><span class="count-pill">'+owner.length+'件</span></div>'+(ownerRows?'<div class="priority-list">'+ownerRows+'</div>':'<div class="empty-state"><strong>今すぐ必要な操作はありません</strong><p>販売根拠が不足している案件は、承認せず保留します。</p></div>')+'</section>'+
+    (researchRows?'<section class="priority-section"><div class="head"><h2>AI側の調査課題・販売保留</h2><span class="count-pill">'+research.length+'件</span></div><p>この欄はあなたへの承認依頼ではありません。調査が自動で完了することを保証する表示でもありません。</p><div class="priority-list">'+researchRows+'</div></section>':'')+
+    '<details class="home-stats"><summary>全体の数字・事業別状況を見る</summary><div class="metrics">'+metric("あなたの操作待ち",owner.length+"件","承認・試作品の判断")+metric("AI作業中・待機",running.length+"件","自動処理の進捗")+metric("販売根拠不足",research.length+"件","承認せず保留")+'</div>'+executiveQuickMatrix()+'</details>'+
+    '<div class="home-links"><button type="button" data-tab="portfolio">事業一覧を見る</button><button type="button" data-tab="verification">承認・販売画面へ</button></div>';
 }
 
 function expandedDetailPaths(root){
