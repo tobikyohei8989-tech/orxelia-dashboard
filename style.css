@@ -44,3 +44,18 @@ progress{width:100%;height:12px;accent-color:var(--gold)}
 .work-now .work-note { flex-basis: 100%; color: var(--dim); overflow-wrap: anywhere; }
 .hero .metrics { grid-template-columns: repeat(4,minmax(0,1fr)); }
 @media(max-width:640px) { .hero .metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+
+/* Executive quick overview: readable on narrow iPhone screens. */
+.quick-overview{margin:16px 0 22px}
+.quick-overview .head{margin-bottom:8px}
+.quick-overview .head small{color:var(--dim)}
+.quick-table-scroll{overflow-x:auto;overscroll-behavior-x:contain;border:1px solid var(--edge);border-radius:12px;background:var(--card)}
+.quick-table{width:100%;border-collapse:collapse;min-width:630px;font-variant-numeric:tabular-nums;font-size:13px}
+.quick-table th,.quick-table td{padding:12px 10px;border-bottom:1px solid var(--edge);text-align:right;white-space:nowrap}
+.quick-table th:first-child,.quick-table td:first-child{text-align:left}
+.quick-table tbody th{min-width:145px;max-width:210px;white-space:normal;overflow-wrap:anywhere;font-weight:600}
+.quick-table thead{background:#202b3d;color:var(--gold)}
+.quick-table tr:last-child th,.quick-table tr:last-child td{border-bottom:0}
+.quick-attention{color:var(--gold)}
+.quick-overview details p{font-size:12px}
+@media(max-width:640px){.hero{padding-top:14px}.hero .metrics{margin-top:12px}.quick-overview .head h2{font-size:18px}.metric{padding:12px}.metric b{font-size:24px}nav button{padding:8px 4px;font-size:12px;line-height:1.3}}
