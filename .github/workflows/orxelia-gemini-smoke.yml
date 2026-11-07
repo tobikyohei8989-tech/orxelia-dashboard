@@ -1,5 +1,5 @@
 name: ORXELIA Gemini connection smoke test
-# Re-run with timeout and 503 retry
+# Discover compatible models and fail over on 503
 on:
   push:
     paths:
