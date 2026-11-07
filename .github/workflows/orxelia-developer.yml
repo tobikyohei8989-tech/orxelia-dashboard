@@ -1,0 +1,35 @@
+name: ORXELIA private AI developer
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+permissions:
+  contents: read
+  models: read
+concurrency:
+  group: orxelia-private-development
+  cancel-in-progress: false
+jobs:
+  develop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: ${{ secrets.ORXELIA_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.ORXELIA_SUPABASE_SERVICE_ROLE_KEY }}
+      GITHUB_TOKEN: ${{ github.token }}
+      ORXELIA_MODEL: openai/gpt-4.1-mini
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify required secrets
+        run: |
+          test -n "$SUPABASE_URL" || { echo "Missing ORXELIA_SUPABASE_URL"; exit 1; }
+          test -n "$SUPABASE_SERVICE_ROLE_KEY" || { echo "Missing ORXELIA_SUPABASE_SERVICE_ROLE_KEY"; exit 1; }
+      - name: Install browser test dependencies
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Generate, test, retry and save privately
+        run: node scripts/orxelia-developer.mjs
