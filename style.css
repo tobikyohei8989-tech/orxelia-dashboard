@@ -342,3 +342,48 @@ article p,.panel p,.owner-next p,.proposal-intro p,.proposal-item p{color:#52657
 .ai-review-card h3{color:#17283d}
 .ai-review-card p{color:#52657a}
 .ai-review-card p b{color:#263d56}
+
+
+/* 2026-11-08 iPhone readability: override legacy high-specificity dark status cards */
+.quick-table tr.needs-action,
+.quick-table tbody tr.needs-action,
+.quick-table tbody tr.needs-action:hover {
+  background:#f0f7ff;
+  background-image:none;
+  color:#17283d;
+  border:1px solid #b8d1eb;
+  border-left:4px solid #1764bc;
+  box-shadow:none;
+}
+.quick-table tr.needs-action th,
+.quick-table tr.needs-action td,
+.quick-table tr.needs-action strong {
+  color:#173b68;
+  opacity:1;
+}
+.quick-table tr.needs-action td::before {color:#52657a}
+.quick-table tbody th {color:#17283d}
+.quick-table .quick-attention {color:#155a9e}
+@media(max-width:640px){
+ .quick-overview{margin:16px 0}
+ .quick-overview .head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+ .quick-table tbody{gap:9px}
+ .quick-table tr,.quick-table tr.needs-action{
+   padding:12px 14px;
+   gap:6px 12px;
+   border-radius:12px;
+ }
+ .quick-table tbody th{
+   font-size:15px;
+   line-height:1.45;
+   padding-bottom:7px;
+   overflow-wrap:anywhere;
+ }
+ .quick-table td{font-size:14px;gap:2px}
+ .quick-table td::before{font-size:11px}
+ .quick-table td:first-of-type{grid-column:1/-1}
+ .quick-table td:nth-of-type(n+2){min-height:36px}
+ .home-stats .metrics{gap:9px}
+ .home-stats .metric{min-height:0;padding:11px}
+ .home-stats .metric b{font-size:22px}
+}
