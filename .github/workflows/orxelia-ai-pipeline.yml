@@ -1,5 +1,9 @@
 name: ORXELIA AI proposal development
 on:
+  push:
+    paths:
+      - '.github/workflows/orxelia-ai-pipeline.yml'
+      - 'scripts/orxelia-proposal-pipeline.mjs'
   workflow_dispatch:
   schedule:
     - cron: '*/15 * * * *'
