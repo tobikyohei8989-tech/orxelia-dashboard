@@ -32,7 +32,12 @@ const modelCall=async (messages) => {
    const headers=p.name==='Gemini'?{'x-goog-api-key':p.token,'Content-Type':'application/json'}:{Authorization:'Bearer '+p.token,Accept:'application/vnd.github+json','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28'};
    let j;let status;
    for(let attempt=1;attempt<=4;attempt++){
-    const r=await fetch(p.url,{method:'POST',headers,body:JSON.stringify(p.body),signal:AbortSignal.timeout(90000)});
+    let r;
+    try{r=await fetch(p.url,{method:'POST',headers,body:JSON.stringify(p.body),signal:AbortSignal.timeout(45000)})}
+    catch(e){
+     if((e.name==='TimeoutError'||e.name==='AbortError'||e instanceof TypeError)&&attempt<4){console.log('Transient '+p.name+' network/timeout; retry '+attempt+'/3');await new Promise(resolve=>setTimeout(resolve,1500*2**(attempt-1)));continue}
+     throw e;
+    }
     status=r.status;
     const raw=await r.text();
     try{j=JSON.parse(raw)}catch{throw new Error('Non-JSON response (HTTP '+r.status+', type '+(r.headers.get('content-type')||'unknown')+', sample '+JSON.stringify(raw.slice(0,60))+')')}
