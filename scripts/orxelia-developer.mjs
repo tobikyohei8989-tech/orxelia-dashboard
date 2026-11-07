@@ -24,7 +24,7 @@ const rest = async (resource,options={}) => {
 const modelCall=async (messages) => {
  const attempts=[];
  const providers=[
-  ...(process.env.GEMINI_API_KEY?[{name:'Gemini',url:'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',token:process.env.GEMINI_API_KEY,body:{systemInstruction:{parts:[{text:messages.find(m=>m.role==='system')?.content||'Generate working HTML.'}]},contents:[{role:'user',parts:[{text:messages.filter(m=>m.role!=='system').map(m=>m.role+': '+m.content).join('\\n\\n')}]}],generationConfig:{temperature:0.2,maxOutputTokens:16384,thinkingConfig:{thinkingBudget:0}}}}]:[]),
+  ...(process.env.GEMINI_API_KEY?[{name:'Gemini',url:'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent',token:process.env.GEMINI_API_KEY,body:{systemInstruction:{parts:[{text:messages.find(m=>m.role==='system')?.content||'Generate working HTML.'}]},contents:[{role:'user',parts:[{text:messages.filter(m=>m.role!=='system').map(m=>m.role+': '+m.content).join('\\n\\n')}]}],generationConfig:{temperature:0.2,maxOutputTokens:16384,thinkingConfig:{thinkingBudget:0}}}}]:[]),
   {name:'GitHub Models',url:'https://models.github.ai/inference/chat/completions',token:gh,body:{model,messages,temperature:0.2,max_tokens:8000}}
  ];
  for(const p of providers){
