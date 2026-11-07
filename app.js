@@ -1399,7 +1399,7 @@ const sync = (() => {
       pipeline?.phase === 'sales_review' ?
       '<p><button type="button" id="orxelia-approve-sales">販売開始を最終承認（公開・決済は実行しない）</button></p>' :
       pipeline?.phase === 'sales_approved' ? '<p>販売承認済み。公開・決済開始は未実行です。</p>' : '';
-    const approvalButton = !approvalRecord ? '<p><button type="button" id="orxelia-approve-development">この事業の開発を承認</button></p><p style="font-size:.85em">承認記録を保存します。開発エンジンの自動起動は別途接続が必要です。公開・販売・支出は行いません。</p>' : '<p>開発承認：記録済み（' + esc(approvalRecord.stage) + '）</p>';
+    const approvalButton = !approvalRecord ? '<p><button type="button" id="orxelia-approve-development">この事業の開発を承認</button></p><p style="font-size:.85em">承認記録を保存します。承認後に開発要件とテスト項目を自動生成します。AIによるコード開発は未接続です。公開・販売・支出は行いません。</p>' : '<p>開発承認：記録済み（' + esc(approvalRecord.stage) + '）</p>';
     return panel('<h3>AI選定事業｜' + esc(report_date) + '</h3>' +
       '<p><strong>' + esc(report?.project || '事業名未登録') + '</strong></p>' +
       '<p>進捗：' + esc(phase) + '</p>' + approvalButton + salesAction + jobStatus + deliverableView +
@@ -1554,7 +1554,17 @@ const sync = (() => {
       const check = await request("/rest/v1/orxelia_approvals?select=report_date,project,stage&report_date=eq." + encodeURIComponent(report_date));
       approvalRecord = check.find(a => a.project === report.project) || null;
       if (!approvalRecord) throw Error("読み戻し失敗");
-      status("開発承認を保存しました。自動開発の起動は未接続です。");
+      try {
+        await request("/rest/v1/rpc/orxelia_prepare_development",{
+          method:"POST",body:JSON.stringify({p_report_date:report_date})
+        });
+        pipelineRecords = await request('/rest/v1/orxelia_pipeline?select=report_date,project,phase,deliverables&order=report_date.desc&limit=30');
+        const jobs = await request('/rest/v1/orxelia_development_jobs?select=report_date,project,status&report_date=eq.' + encodeURIComponent(report_date) + '&limit=1');
+        developmentJob = jobs.find(j => j.project === report.project) || null;
+      } catch (prepareError) {
+        status("承認は保存されましたが開発準備の初期化に失敗しました。");
+      }
+      status("開発承認を保存しました。開発要件の初期化を実行しました。AIコード生成は未接続です。");
       render();
     } catch(error) {
       alert("開発承認を保存できませんでした。通信・ログイン状態を確認してください。");
