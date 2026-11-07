@@ -33,7 +33,7 @@ jobs:
           const tabs=['home','portfolio','verification','finance','settings'];
           for(const tab of tabs){
             assert.match(html,new RegExp('data-tab="'+tab+'"'),'missing navigation '+tab);
-            assert.ok(tab==='home'?js.includes('home, portfolio:'):tab==='settings'?/\bsettings\s*\}\[tab\]\(\)/.test(js):js.includes(tab+':() =>'),'missing render handler '+tab);
+            assert.ok(tab==='home'?js.includes('home, portfolio:'):tab==='settings'?js.includes('settings\n  }[tab]()'):js.includes(tab+':() =>'),'missing render handler '+tab);
           }
           for(const asset of ['style.css','app.js','business-economics.js'])assert.ok(html.includes(asset),'missing asset '+asset);
           for(const token of ['function home()','function executiveQuickMatrix()','function orxeliaTrialProposalPanel()','function render()','data-tab="verification"','data-tab="finance"','taskSection.scrollIntoView'])assert.ok(js.includes(token),'missing workflow '+token);
