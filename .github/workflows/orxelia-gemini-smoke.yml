@@ -1,5 +1,5 @@
 name: ORXELIA Gemini connection smoke test
-# Discover compatible models and fail over on 503
+# Expand model discovery and report API rejection details
 on:
   push:
     paths:
