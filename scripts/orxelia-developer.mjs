@@ -21,7 +21,7 @@ const rest = async (resource,options={}) => {
  if(!r.ok) throw new Error('Supabase '+r.status+': '+(await r.text()).slice(0,400));
  return r.status===204?null:r.json();
 };
-const modelCall=async (messages) => {
+const modelCall=async (messages,{geminiOnly=false}={}) => {
  const attempts=[];
  const providers=[];
  if(process.env.GEMINI_API_KEY){
@@ -37,7 +37,7 @@ const modelCall=async (messages) => {
   }catch(e){console.log('Gemini model discovery unavailable:',e.name)}
   for(const name of names)providers.push({name:'Gemini '+name,url:'https://generativelanguage.googleapis.com/v1beta/models/'+name+':generateContent',token,body:{systemInstruction:{parts:[{text:messages.find(m=>m.role==='system')?.content||'Generate working HTML.'}]},contents:[{role:'user',parts:[{text:messages.filter(m=>m.role!=='system').map(m=>m.role+': '+m.content).join('\\n\\n')}]}],generationConfig:{temperature:0.2,maxOutputTokens:16384}}});
  }
- providers.push({name:'GitHub Models',url:'https://models.github.ai/inference/chat/completions',token:gh,body:{model,messages,temperature:0.2,max_tokens:8000}});
+ if(!geminiOnly)providers.push({name:'GitHub Models',url:'https://models.github.ai/inference/chat/completions',token:gh,body:{model,messages,temperature:0.2,max_tokens:8000}});
  for(const p of providers){
   try{
    const headers=p.name.startsWith('Gemini ')?{'x-goog-api-key':p.token,'Content-Type':'application/json'}:{Authorization:'Bearer '+p.token,Accept:'application/vnd.github+json','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28'};
@@ -70,7 +70,7 @@ const reviewDesign=async (html,brief)=>{
  if(!process.env.GEMINI_API_KEY)return {status:'skipped',reason:'Gemini API key unavailable'};
  const prompt='You are ORXELIA UI/UX design reviewer. Review the following Japanese mobile-first HTML prototype against this project brief. Give concise actionable feedback only; do not rewrite code. Check iPhone layout, hierarchy, legibility, accessible labels, touch targets, status clarity, empty state, and whether all core functions remain discoverable. Do not invent tests or claim features work. Reply in Japanese with at most 6 specific recommendations.\\nBRIEF:\\n'+brief+'\\nHTML:\\n'+html.slice(0,30000);
  try{
-  const feedback=(await modelCall([{role:'system',content:'You are a critical, independent UI/UX reviewer. Return plain Japanese review text, not HTML.'},{role:'user',content:prompt}])).trim().slice(0,2400);
+  const feedback=(await modelCall([{role:'system',content:'You are a critical, independent UI/UX reviewer. Return plain Japanese review text, not HTML.'},{role:'user',content:prompt}],{geminiOnly:true})).trim().slice(0,2400);
   return feedback?{status:'reviewed',feedback}:{status:'failed',reason:'Empty feedback'};
  }catch(e){console.error('Design review unavailable:',String(e).slice(0,180));return {status:'failed',reason:String(e).slice(0,180)}}
 };
