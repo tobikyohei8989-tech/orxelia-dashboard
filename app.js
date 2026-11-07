@@ -1393,7 +1393,7 @@ const sync = (() => {
     const phase = phaseLabels[pipeline?.phase] || report?.phase || report?.approval_status || '未承認・販売保留';
     const jobStatus = developmentJob?.status === 'queued' ? '<p>開発ジョブ：受付済み（実行エンジン未接続）</p>' : developmentJob ? '<p>開発ジョブ：' + esc(developmentJob.status) + '</p>' : '';
     const deliverables = Array.isArray(pipeline?.deliverables) ? pipeline.deliverables : [];
-    const deliverableView = deliverables.length ? '<details><summary>開発成果物（' + deliverables.length + '件）</summary>' + deliverables.map(d => '<p>' + esc(d.title || '成果物') + '：' + esc(d.status || '未検証') + '</p>').join('') + '</details>' : '<p>開発成果物：未登録</p>';
+    const deliverableView = deliverables.length ? '<details><summary>開発成果物（' + deliverables.length + '件）</summary>' + deliverables.map((d,i) => '<p>' + esc(d.title || '成果物') + '：' + esc(d.status || '未検証') + (d.type === 'prototype' && typeof d.html === 'string' ? ' <button type="button" data-orxelia-download="' + i + '">試作品HTMLを保存</button>' : '') + '</p>').join('') + '</details>' : '<p>開発成果物：未登録</p>';
     const salesAction = pipeline?.phase === 'development_ready' ?
       '<p><button type="button" id="orxelia-request-sales-review">販売審査を申請</button></p>' :
       pipeline?.phase === 'sales_review' ?
@@ -1518,6 +1518,19 @@ const sync = (() => {
     values.email = values.email.trim();
     event.target.elements.password.value = "";
     run(values);
+  });
+  document.addEventListener("click", event => {
+    const btn = event.target.closest('[data-orxelia-download]');
+    if (!btn || !session || !dailyReport?.row) return;
+    const pipeline = pipelineRecords.find(p => p.report_date === dailyReport.row.report_date);
+    const d = pipeline?.deliverables?.[Number(btn.dataset.orxeliaDownload)];
+    if (!d || d.type !== 'prototype' || typeof d.html !== 'string') return;
+    const blob = new Blob([d.html],{type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href=url;a.download='orxelia-prototype-'+dailyReport.row.report_date+'.html';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
   });
   document.addEventListener("click", async event => {
     const kind = event.target.id;
