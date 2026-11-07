@@ -382,8 +382,7 @@ def save_feed(new_report):
             feed,
             ensure_ascii=False,
             indent=2,
-        ) + "
-",
+        ) + "\n",
         encoding="utf-8",
     )
     temporary.replace(output)
