@@ -20,15 +20,15 @@ let data = empty();
 let orxeliaTrialProposals = [];
 function orxeliaTrialProposalPanel(){
  if(!orxeliaTrialProposals.length)return "";
- const names={awaiting_selection:"Geminiデザイン作成待ち",designing:"Geminiデザイン作成中",awaiting_first_approval:"第1承認待ち",approved_for_development:"開発待ち",developing:"開発・テスト中",development_ready:"開発試作完了・販売審査待ち",sales_review_requested:"販売審査中",awaiting_final_approval:"最終判断待ち（販売根拠不足）",final_approved:"販売方針承認済み（公開・決済未実行）",on_hold:"保留",failed:"処理失敗"};
- return `<section class="panel"><h3>事業ID別の新フロー</h3><p>Geminiデザイン → 第1承認 → 開発・自動テスト → 販売審査 → 最終承認。外部公開・販売・支出は自動実行しません。</p>${orxeliaTrialProposals.map(p=>`<article style="padding:16px;border:1px solid #34435a;border-radius:14px;margin:12px 0"><h4>${esc(p.title)}</h4><small>事業ID：${esc(p.id)}</small><p><b>進捗：</b>${esc(names[p.status]||p.status)}</p><p>${esc(p.brief?.problem||"")}</p><p><b>提案：</b>${esc(p.brief?.solution||"")}</p><p><b>差別化仮説：</b>${esc(p.brief?.competitive_position||"")}</p>
+ const names={awaiting_selection:"Geminiデザイン作成待ち",designing:"Geminiデザイン作成中",awaiting_first_approval:"第1承認待ち",revision_requested:"修正指示受付済み",revising:"Gemini再デザイン中",approved_for_development:"開発待ち",developing:"開発・テスト中",development_ready:"開発試作完了・販売審査待ち",sales_review_requested:"販売審査中",awaiting_final_approval:"最終判断待ち（販売根拠不足）",final_approved:"販売方針承認済み（公開・決済未実行）",on_hold:"保留",failed:"処理失敗"};
+ return `<section class="panel"><h3>事業ID別の新フロー</h3><p>Geminiデザイン → 第1承認 → 開発・自動テスト → 販売審査 → 最終承認。外部公開・販売・支出は自動実行しません。</p>${orxeliaTrialProposals.map(p=>`<article style="padding:16px;border:1px solid #34435a;border-radius:14px;margin:12px 0"><h4>${esc(p.title)}</h4><small>事業ID：${esc(p.id)}</small><p><b>進捗：</b>${esc(names[p.status]||p.status)} ／ デザイン第${Number(p.revision_number)||1}版</p><p>${esc(p.brief?.problem||"")}</p><p><b>提案：</b>${esc(p.brief?.solution||"")}</p><p><b>差別化仮説：</b>${esc(p.brief?.competitive_position||"")}</p>
  ${p.design_html?`<h4>Geminiデザイン案（操作不可）</h4><iframe title="Geminiデザインプレビュー" sandbox="" referrerpolicy="no-referrer" loading="lazy" style="width:100%;height:480px;border:1px solid #556579;border-radius:14px;background:white" srcdoc="${esc(p.design_html)}"></iframe><details><summary>Geminiのデザインレビュー</summary><p>${esc(p.design_review||"")}</p></details>`:"<p>デザインはまだ生成されていません。自動処理の完了をお待ちください。</p>"}
- ${p.status==="awaiting_first_approval"&&p.design_status==="ready"?`<button type="button" data-proposal-action="approve_development" data-proposal-id="${esc(p.id)}">第1承認：本格開発へ</button> <button type="button" data-proposal-action="hold" data-proposal-id="${esc(p.id)}">保留</button>`:""}
+ ${p.status==="awaiting_first_approval"&&p.design_status==="ready"?`<label for="revision-${esc(p.id)}">修正したい内容・機能・画面への指示</label><textarea id="revision-${esc(p.id)}" data-revision-input="${esc(p.id)}" maxlength="3000" rows="4" style="display:block;width:100%;margin:8px 0" placeholder="例：返品期限を最上部に表示。材料名は選択式にして、入力を簡単にしてください。"></textarea><button type="button" data-proposal-action="request_revision" data-proposal-id="${esc(p.id)}">Geminiへ修正依頼・再提出</button> <button type="button" data-proposal-action="approve_development" data-proposal-id="${esc(p.id)}">第1承認：本格開発へ</button> <button type="button" data-proposal-action="hold" data-proposal-id="${esc(p.id)}">保留</button>`:""}
  ${p.prototype_html?`<details><summary>非公開の動作試作品を確認</summary><iframe title="開発試作品（隔離プレビュー）" sandbox="allow-scripts" referrerpolicy="no-referrer" loading="lazy" style="width:100%;height:480px;border:1px solid #556579;border-radius:14px;background:white" srcdoc="${esc(p.prototype_html)}"></iframe></details><p>自動テスト：${p.test_report?.passed===true?"基本スモークテスト合格":"未合格／未確認"}（実機・機能網羅は未検証）</p>`:""}
  ${p.status==="development_ready"?`<button type="button" data-proposal-action="request_sales_review" data-proposal-id="${esc(p.id)}">販売審査へ進む</button>`:""}
  ${p.sales_review?`<details open><summary>販売審査結果</summary><p>${esc(p.sales_review.note||"")}</p><p>${esc((p.sales_review.items||[]).join(" ／ "))}</p></details>`:""}
  ${p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready"?`<button type="button" data-proposal-action="approve_sales" data-proposal-id="${esc(p.id)}">最終承認（公開・決済は別途）</button>`:""}
- ${p.error_message?`<p role="alert">エラー：${esc(p.error_message)}</p>`:""}
+ ${p.revision_summary?`<details><summary>前回の修正指示とレビュー</summary><p>${esc(p.revision_summary)}</p></details>`:""}${p.error_message?`<p role="alert">エラー：${esc(p.error_message)}</p>`:""}
  </article>`).join("")}</section>`;
 }
 
@@ -1379,11 +1379,14 @@ const sync = (() => {
     if(!btn)return;
     if(!session?.user?.id){alert("ログインして同期してください");return}
     const id=btn.dataset.proposalId,action=btn.dataset.proposalAction;
-    const messages={approve_development:"デザインを確認し、この事業の非公開開発を第1承認しますか？ 外部公開・販売・支出は行いません。",hold:"この事業を保留しますか？",request_sales_review:"販売審査を申請しますか？販売開始ではありません。",approve_sales:"販売方針を最終承認しますか？公開・決済開始は自動実行しません。"};
-    if(!messages[action]||!confirm(messages[action]))return;
+    const messages={request_revision:"入力した内容をGeminiへ送信し、デザインを修正・再提出させますか？ 第1承認は行いません。",approve_development:"デザインを確認し、この事業の非公開開発を第1承認しますか？ 外部公開・販売・支出は行いません。",hold:"この事業を保留しますか？",request_sales_review:"販売審査を申請しますか？販売開始ではありません。",approve_sales:"販売方針を最終承認しますか？公開・決済開始は自動実行しません。"};
+    if(!messages[action])return;
+    const feedback=action==="request_revision"?(document.querySelector(`[data-revision-input="${id}"]`)?.value||"").trim():null;
+    if(action==="request_revision"&&(feedback.length<3||feedback.length>3000)){alert("修正内容を3〜3000文字で入力してください。");return}
+    if(!confirm(messages[action]))return;
     btn.disabled=true;
     try{
-      const result=await request("/rest/v1/rpc/orxelia_proposal_transition",{method:"POST",body:JSON.stringify({p_id:id,p_action:action})});
+      const result=await request("/rest/v1/rpc/orxelia_proposal_transition",{method:"POST",body:JSON.stringify({p_id:id,p_action:action,p_feedback:feedback})});
       const item=orxeliaTrialProposals.find(p=>p.id===id);if(item)item.status=result.status;
       status("事業IDごとの判断をクラウドに保存しました。");render();
     }catch(e){alert("処理できませんでした: "+e.message+"。承認条件とログイン状態を確認してください。");btn.disabled=false}
@@ -1466,7 +1469,7 @@ const sync = (() => {
       }
       if (session?.user.id !== owner || $("editor").open) return;
       try{
-        orxeliaTrialProposals=await request("/rest/v1/orxelia_proposals?select=id,title,status,brief,created_at,design_status,design_html,design_review,prototype_html,test_report,sales_review,error_message&order=created_at.desc&limit=10");
+        orxeliaTrialProposals=await request("/rest/v1/orxelia_proposals?select=id,title,status,brief,created_at,design_status,design_html,design_review,prototype_html,test_report,sales_review,error_message,revision_number,revision_summary,revision_history&order=created_at.desc&limit=10");
       }catch(e){console.warn("Additional proposal sync failed:",e.message);orxeliaTrialProposals=[]}
       syncStep = "開発レポートの取得";
       const pipelineRows = await request('/rest/v1/orxelia_pipeline?select=report_date,project,phase,deliverables&order=report_date.desc&limit=30');
