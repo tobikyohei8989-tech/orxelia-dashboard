@@ -316,3 +316,8 @@ footer,footer span{color:#63758a}
 .quick-table td:before{color:#52657a}
 .quick-table td:last-child{color:#344d68}
 }
+
+/* Light-theme legibility fix: legacy dark-theme card headings */
+article h3,.panel h3,.metric h3,.owner-next h4,.proposal-intro h3,.proposal-item h3,.priority-card h3,.empty-state h3{color:#17283d!important;opacity:1}
+article h4,.panel h4,article strong,.panel strong{color:#243b55}
+article p,.panel p,.owner-next p,.proposal-intro p,.proposal-item p{color:#52657a}
