@@ -34,7 +34,7 @@ try{
  await page.locator('.bottom-nav .nav-item').last().click();
  const [download]=await Promise.all([page.waitForEvent('download'),page.getByText('📥 JSONバックアップ出力').click()]);
  const file=await download.path();assert.ok(file);
- const {readFileSync}=await import('node:fs');const data=JSON.parse(readFileSync(file,'utf8'));assert.equal(data[0].status,'won');assert.equal(data[0].history.length,1);
+ const {readFileSync}=await import('node:fs');const data=JSON.parse(readFileSync(file,'utf8'));console.log('Exported backup schema:',JSON.stringify(data.map(r=>Object.fromEntries(Object.entries(r).map(([k,v])=>[k,k==='client'||k==='project'?'[redacted]':v])))));assert.equal(data[0].status,'won');assert.equal(data[0].history.length,1);
  await page.getByText('🗑️ 全データ初期化（リセット）').click();
  assert.match(await page.locator('#kpi-total').innerText(),/0/);
  await page.locator('input[type=file]').setInputFiles(file);
