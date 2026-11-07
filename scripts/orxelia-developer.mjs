@@ -69,7 +69,7 @@ if(!['development_requested','development_running'].includes(pipelines[0]?.phase
 const patch=async(table,data)=>rest(table+'?'+match,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(data)});
 await patch('orxelia_development_jobs',{status:'running',updated_at:new Date().toISOString()});
 await patch('orxelia_pipeline',{phase:'development_running',updated_at:new Date().toISOString()});
-const dir=path.resolve('build/orxelia-job');let last={passed:false,errors:['Not run']};let html='';
+const dir=path.resolve('build/orxelia-job');let last={passed:false,errors:['Not run']};let html='';let generationMethod='ai_generated';
 try {
  const brief='Project: '+job.project+'\nSummary: '+pipelines[0].summary;
  let messages=[
@@ -77,17 +77,27 @@ try {
  {role:'user',content:brief+'\nImplement a minimal functional prototype with real working interactions. Do not invent external integration.'}
  ];
  for(let attempt=1;attempt<=3;attempt++){
-  html=parseHTML(await modelCall(messages));await safeFile(html,dir);last=await testHTML(dir);
+  try { html=parseHTML(await modelCall(messages)); }
+  catch(modelError) {
+   console.error('AI inference unavailable:',String(modelError).slice(0,450));
+   if(attempt!==1 || !/空調試運転メモ/.test(job.project)) throw modelError;
+   html=await fs.readFile(path.resolve('scripts/templates/hvac-trial.html'),'utf8');
+   generationMethod='verified_template_fallback';
+   console.log('Using explicit offline template fallback; this is NOT AI-generated.');
+  }
+  await safeFile(html,dir);last=await testHTML(dir);
   console.log('Attempt '+attempt,JSON.stringify(last));
   if(last.passed)break;
+  if(generationMethod==='verified_template_fallback')throw new Error('Offline template failed browser test: '+JSON.stringify(last.errors));
   messages=[...messages,{role:'assistant',content:html},{role:'user',content:'Fix these test failures, return entire corrected HTML: '+JSON.stringify(last.errors)}];
  }
  const deliverables=[
- {type:'prototype',title:'AI生成試作品（非公開HTML）',status:last.passed?'generated_tested':'generated_unverified',html,generatedAt:new Date().toISOString()},
+ {type:'prototype',title:generationMethod==='ai_generated'?'AI生成試作品（非公開HTML）':'既存テンプレートによる動作試作（AI生成ではありません）',generationMethod,status:last.passed?'generated_tested':'generated_unverified',html,generatedAt:new Date().toISOString()},
  {type:'functional_test',title:'ブラウザ自動スモークテスト',status:last.passed?'passed':'failed',results:last},
  {type:'sales_assets',title:'販売ページ・決済・解約・法務',status:'not_started'}
  ];
  await patch('orxelia_pipeline',{phase:last.passed?'development_ready':'development_running',deliverables,updated_at:new Date().toISOString()});
+ console.log('Prototype result:',generationMethod,last.passed?'browser_test_passed':'browser_test_failed');
  await patch('orxelia_development_jobs',{status:last.passed?'completed':'failed',updated_at:new Date().toISOString()});
  if(!last.passed)process.exitCode=1;
 }catch(e){
