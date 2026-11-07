@@ -23,13 +23,24 @@ const rest = async (resource,options={}) => {
 };
 const modelCall=async (messages) => {
  const attempts=[];
- const providers=[
-  ...(process.env.GEMINI_API_KEY?[{name:'Gemini',url:'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent',token:process.env.GEMINI_API_KEY,body:{systemInstruction:{parts:[{text:messages.find(m=>m.role==='system')?.content||'Generate working HTML.'}]},contents:[{role:'user',parts:[{text:messages.filter(m=>m.role!=='system').map(m=>m.role+': '+m.content).join('\\n\\n')}]}],generationConfig:{temperature:0.2,maxOutputTokens:16384,thinkingConfig:{thinkingBudget:0}}}}]:[]),
-  {name:'GitHub Models',url:'https://models.github.ai/inference/chat/completions',token:gh,body:{model,messages,temperature:0.2,max_tokens:8000}}
- ];
+ const providers=[];
+ if(process.env.GEMINI_API_KEY){
+  const token=process.env.GEMINI_API_KEY;
+  let names=['gemini-3.8-flash'];
+  try{
+   const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=100',{headers:{'x-goog-api-key':token},signal:AbortSignal.timeout(15000)});
+   if(r.ok){
+    const j=await r.json();
+    const available=(j.models||[]).filter(m=>m.supportedGenerationMethods?.includes('generateContent')).map(m=>m.name.replace(/^models\\//,''));
+    names=[...new Set([...['gemini-3.8-flash','gemini-3-flash','gemini-2.5-flash-lite'].filter(n=>available.includes(n)),...available.filter(n=>/flash/i.test(n)).slice(0,6)])].slice(0,7);
+   }
+  }catch(e){console.log('Gemini model discovery unavailable:',e.name)}
+  for(const name of names)providers.push({name:'Gemini '+name,url:'https://generativelanguage.googleapis.com/v1beta/models/'+name+':generateContent',token,body:{systemInstruction:{parts:[{text:messages.find(m=>m.role==='system')?.content||'Generate working HTML.'}]},contents:[{role:'user',parts:[{text:messages.filter(m=>m.role!=='system').map(m=>m.role+': '+m.content).join('\\n\\n')}]}],generationConfig:{temperature:0.2,maxOutputTokens:16384}}});
+ }
+ providers.push({name:'GitHub Models',url:'https://models.github.ai/inference/chat/completions',token:gh,body:{model,messages,temperature:0.2,max_tokens:8000}});
  for(const p of providers){
   try{
-   const headers=p.name==='Gemini'?{'x-goog-api-key':p.token,'Content-Type':'application/json'}:{Authorization:'Bearer '+p.token,Accept:'application/vnd.github+json','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28'};
+   const headers=p.name.startsWith('Gemini ')?{'x-goog-api-key':p.token,'Content-Type':'application/json'}:{Authorization:'Bearer '+p.token,Accept:'application/vnd.github+json','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28'};
    let j;let status;
    for(let attempt=1;attempt<=4;attempt++){
     let r;
@@ -45,9 +56,9 @@ const modelCall=async (messages) => {
     if([429,500,502,503,504].includes(r.status)&&attempt<4){console.log('Transient '+p.name+' HTTP '+r.status+'; retry '+attempt+'/3');await new Promise(resolve=>setTimeout(resolve,1500*2**(attempt-1)));continue}
     throw new Error('HTTP '+r.status+': '+JSON.stringify(j.error?.message||j).slice(0,200));
    }
-   const content=p.name==='Gemini'?j.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join(''):j.choices?.[0]?.message?.content;
+   const content=p.name.startsWith('Gemini ')?j.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join(''):j.choices?.[0]?.message?.content;
    if(typeof content!=='string'||!content.trim())throw new Error('No generated text in response');
-   if(p.name==='Gemini' && j.candidates?.[0]?.finishReason==='MAX_TOKENS')throw new Error('Output truncated by model token limit');
+   if(p.name.startsWith('Gemini ') && j.candidates?.[0]?.finishReason==='MAX_TOKENS')throw new Error('Output truncated by model token limit');
    console.log('AI provider succeeded:',p.name);return content;
   }catch(e){attempts.push(p.name+': '+String(e).slice(0,220));console.error('AI provider failed:',p.name,String(e).slice(0,220))}
  }
