@@ -11,7 +11,7 @@ const htmlFrom=(t,allowScripts=false)=>{const m=t.match(/<!doctype html[\s\S]*?<
 async function test(html,interactive=false){const browser=await chromium.launch({headless:true});try{const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const errors=[];page.on('pageerror',e=>errors.push(String(e)));await page.setContent(html,{waitUntil:'load'});const result=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:innerWidth,text:document.body.innerText.length,buttons:document.querySelectorAll('button').length,inputs:document.querySelectorAll('input,textarea,select').length}));return {passed:result.text>100&&result.width<=result.viewport+10&&(!interactive||result.inputs>=2&&result.buttons>=1)&&!errors.length,...result,errors}}finally{await browser.close()}}
 const brief=p=>JSON.stringify({title:p.title,problem:p.brief?.problem,solution:p.brief?.solution,target:p.brief?.target,competitive_position:p.brief?.competitive_position});
 // Trigger one controlled end-to-end stage test for the existing unapproved proposal.
-const proposal=(await api('orxelia_proposals?select=*&status=in.(awaiting_selection,approved_for_development,sales_review_requested)&order=created_at.asc&limit=10')).find(p=>p.status==='approved_for_development'||p.status==='sales_review_requested'||p.design_status==='pending');
+const proposal=(await api('orxelia_proposals?select=*&status=in.(awaiting_selection,revision_requested,approved_for_development,sales_review_requested)&order=created_at.asc&limit=10')).find(p=>p.status==='approved_for_development'||p.status==='sales_review_requested'||p.status==='revision_requested'||p.design_status==='pending');
 if(!proposal){console.log('No proposal stage work pending');process.exit(0)}
 console.log('Processing proposal',proposal.id,'stage',proposal.status);
 try{
@@ -23,6 +23,19 @@ try{
   const feedback=await model('You are an independent Gemini UX reviewer. In Japanese give up to 5 concrete improvements to this mobile design; prioritize clarity and accessibility. No claim of functional testing. HTML: '+h.slice(0,18000),1100);
   await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:h,design_review:feedback.slice(0,3000),test_report:{design_preview:t}},'designing');
   console.log('Design preview saved, awaiting first approval');
+ }else if(proposal.status==='revision_requested'){
+  const feedback=(proposal.revision_request||'').trim();
+  if(feedback.length<3)throw Error('Missing revision feedback');
+  await update(proposal.id,{status:'revising'},'revision_requested');
+  const revised=htmlFrom(await model('You are Gemini, revising a PRE-APPROVAL STATIC MOBILE DESIGN MOCKUP. Follow user feedback while preserving the original business purpose. Output ONLY complete standalone Japanese HTML/CSS; no JavaScript, URLs, or remote assets. Clearly label デザイン案（操作できません）. User feedback: '+feedback+' ORIGINAL DESIGN: '+(proposal.design_html||'').slice(0,21000)+' ORIGINAL BUSINESS: '+brief(proposal),10000));
+  const checked=await test(revised);
+  if(!checked.passed)throw Error('Revised design browser check failed '+JSON.stringify(checked));
+  const review=await model('You are an independent Gemini UX reviewer. In Japanese briefly evaluate whether the requested changes were reflected, identify unresolved items, and list concrete UX concerns. User request: '+feedback+' Revised design: '+revised.slice(0,18000),1600);
+  const history=Array.isArray(proposal.revision_history)?proposal.revision_history:[];
+  const revision=(proposal.revision_number||1)+1;
+  const summary='修正指示：'+feedback.slice(0,700)+' / Geminiレビュー：'+review.slice(0,1200);
+  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:revised,design_review:review,revision_number:revision,revision_summary:summary,revision_request:null,revision_history:[...history,{revision,feedback,review,at:new Date().toISOString()}].slice(-30),test_report:{design_preview:checked}},'revising');
+  console.log('Revised design submitted for approval',proposal.id,revision);
  }else if(proposal.status==='approved_for_development'){
   await update(proposal.id,{status:'developing'},'approved_for_development');
   const h=htmlFrom(await model('You are ORXELIA engineer implementing the user-approved business. Produce ONLY complete standalone functional Japanese HTML, CSS and inline JS (no external dependencies or network). Mobile-first clear design inspired by this Gemini-reviewed visual mockup, preserve its visual hierarchy and make buttons actually work. Use localStorage, validated forms, list, delete confirmation, JSON backup and CSV export. Clearly label prototype, no real approval/contract or payment claims. Business: '+brief(proposal)+' DESIGN REVIEW: '+(proposal.design_review||'')+' DESIGN HTML: '+(proposal.design_html||'').slice(0,12000),16000),true);
@@ -33,4 +46,4 @@ try{
   await update(proposal.id,{status:'awaiting_final_approval',sales_review:{recommendation:'needs_evidence',items:['iPhone real-device tests','end-to-end functional testing','customer demand and competitive advantage','legal and privacy review','payment, cancellation and support design','pricing and margin verification'],note:'Sales is NOT ready. Final approval button remains disabled until verified evidence exists.'}},'sales_review_requested');
   console.log('Sales review saved: evidence missing, not ready for final approval');
  }
-}catch(e){console.error('Proposal stage failed',String(e).slice(0,350));const state=(await api(idFilter(proposal.id)+'&select=status'))[0]?.status;if(['designing','developing'].includes(state))await update(proposal.id,{status:'failed',design_status:state==='designing'?'failed':proposal.design_status,error_message:String(e).slice(0,350)},state);process.exitCode=1}
+}catch(e){console.error('Proposal stage failed',String(e).slice(0,350));const state=(await api(idFilter(proposal.id)+'&select=status'))[0]?.status;if(['designing','revising','developing'].includes(state))await update(proposal.id,{status:'failed',design_status:state==='designing'||state==='revising'?'failed':proposal.design_status,error_message:String(e).slice(0,350)},state);process.exitCode=1}
