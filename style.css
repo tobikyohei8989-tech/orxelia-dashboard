@@ -211,3 +211,28 @@ body.is-home .work-now{margin:4px 0 6px}
 }
 
 .proposal-failure{border:1px solid #c9836a;background:#3c2930;color:#fff0e9;border-radius:13px;padding:15px;margin-top:14px}.proposal-failure strong{color:#ffd6b7}.proposal-failure p{font-size:13px;line-height:1.7;margin:8px 0}
+
+
+/* Mobile executive view: prioritize decisions over decorative KPIs */
+.home-stats{margin:16px 0 20px;border:1px solid #345367;border-radius:14px;padding:4px 14px;background:#132334}
+.home-stats>summary{color:#a6eee0;font-weight:700}
+.home-stats .metrics{margin:12px 0}
+@media(max-width:680px){
+ header .brand{min-height:62px}
+ header .brand img{width:40px;height:40px}
+ .brand strong{font-size:18px}
+ .hero{padding:10px 0 7px}
+ .hero h1{font-size:19px;margin:3px 0 7px}
+ .hero #metrics{display:none}
+ .hero #work-now{font-size:12px;line-height:1.5;margin:4px 0 8px}
+ .hero #work-now .work-note{display:none}
+ nav{position:sticky;top:0;z-index:20;grid-template-columns:repeat(5,minmax(0,1fr));padding:4px;gap:2px}
+ nav button{font-size:11px;min-height:46px;line-height:1.25;padding:4px 1px;white-space:normal}
+ .home-intro{margin:12px 0 8px}
+ .home-intro h2{font-size:22px}
+ .priority-section{margin:10px 0 15px}
+ .priority-card{padding:14px}
+ .home-stats .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .home-stats .metric{padding:12px}
+ .home-stats .metric b{font-size:23px}
+}
