@@ -121,10 +121,12 @@ await patch('orxelia_development_jobs',{status:'running',updated_at:new Date().t
 await patch('orxelia_pipeline',{phase:'development_running',updated_at:new Date().toISOString()});
 const dir=path.resolve('build/orxelia-job');let last={passed:false,errors:['Not run']};let html='';let generationMethod='ai_generated';
 try {
- const brief='Project: '+job.project+'\nSummary: '+pipelines[0].summary;
+ const brief='Project: '+job.project+'\\nSummary: '+pipelines[0].summary;
+ const designBrief='Design direction: ORXELIA clean Japanese iPhone UI. White/light gray background, clear blue gradient KPI summary, large legible totals, rounded white record cards, status pills, bottom navigation (Home, Records, Add), generous tap targets, high contrast, accessible labels. Prioritize clarity over decoration. Keep all data handling and legal disclaimers functional; never invent approval or payment status. Responsive and dependency-free.';
+ console.log('Design guidance enabled: ORXELIA mobile-first reference style.');
  let messages=[
  {role:'system',content:'Create a fully functional Japanese, mobile-first single-file HTML application. Output ONLY HTML. No network calls, external scripts, fonts, libraries, iframe, forms submitting to external URLs, credentials or paid APIs. Use browser localStorage for persistence. Include accessible controls, input validation, meaningful functionality, and on-page explanation that this is a prototype, not production.'},
- {role:'user',content:brief+'\nImplement a minimal functional prototype with real working interactions. Do not invent external integration.'}
+ {role:'user',content:brief+'\n'+designBrief+'\nImplement a minimal functional prototype with real working interactions. Do not invent external integration.'}
  ];
  for(let attempt=1;attempt<=3;attempt++){
   try { html=parseHTML(await modelCall(messages)); }
