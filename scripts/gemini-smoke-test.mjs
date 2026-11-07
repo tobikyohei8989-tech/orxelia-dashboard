@@ -21,7 +21,7 @@ let passed=false;
 for(const model of candidates){
  for(let attempt=1;attempt<=2;attempt++){
   try{
-   const {status,ok,j}=await request(root+'/models/'+model+':generateContent',{method:'POST',body:JSON.stringify({contents:[{role:'user',parts:[{text:'Return only a minimal valid HTML document containing a Japanese heading and one button.'}]}],generationConfig:{temperature:0,maxOutputTokens:2048}})},25000);
+   const {status,ok,j}=await request(root+'/models/'+model+':generateContent',{method:'POST',body:JSON.stringify({contents:[{role:'user',parts:[{text:'Build a complete Japanese mobile-first single-file HTML prototype for a solo contractor payment due-date tracker. Include an input for client name, an input for payment amount, a date input for due date, an Add button, a visible list of saved records, a total amount, delete buttons, and persistence with localStorage. No external network calls or dependencies. Return ONLY full HTML starting with <!doctype html>. This is a technical prototype; no claims of verified demand or competitive advantage.'}]}],generationConfig:{temperature:0,maxOutputTokens:2048}})},25000);
    if(ok){
     const out=j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
     if(/<html[\s>]|<!doctype html/i.test(out)){console.log('Gemini smoke test PASSED; model:',model,'HTML chars:',out.length);await fs.mkdir('build/gemini-smoke',{recursive:true});await fs.writeFile('build/gemini-smoke/index.html',out);passed=true;break}
@@ -44,6 +44,6 @@ try{
  await page.goto('file://'+process.cwd()+'/build/gemini-smoke/index.html');
  const body=await page.locator('body').innerText();
  const buttons=await page.locator('button').count();
- if(body.length<5||buttons<1||errors.length)throw Error('Generated HTML browser test failed: '+JSON.stringify({length:body.length,buttons,errors}));
- console.log('Generated HTML browser test PASSED; buttons:',buttons);
+ if(body.length<80||buttons<2||await page.locator('input').count()<3||errors.length)throw Error('Generated HTML browser test failed: '+JSON.stringify({length:body.length,buttons,errors}));
+ console.log('Generated business prototype browser test PASSED; buttons:',buttons,'inputs:',await page.locator('input').count());
 }finally{await browser.close()}
