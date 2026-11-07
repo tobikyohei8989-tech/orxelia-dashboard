@@ -1052,11 +1052,11 @@ function executiveQuickMatrix() {
     const actual=byName.get(p.name);
     const state=statusLabel[p.status]||p.status||'未設定';
     const label=awaiting.has(p.status)?'<strong class="quick-attention">'+esc(state)+'</strong>':esc(state);
-    return '<tr><th scope="row">'+esc(p.name)+'</th><td data-label="進捗">'+label+'</td><td data-label="売上">'+ (actual?yen(actual.revenue):'—')+'</td><td data-label="差引収支">'+(actual?yen(actual.revenue-actual.cost):'—')+'</td><td data-label="契約数">—</td></tr>';
+    return '<tr'+(awaiting.has(p.status)?' class="needs-action"':'')+'><th scope="row">'+esc(p.name)+'</th><td data-label="進捗">'+label+'</td><td data-label="売上">'+ (actual?yen(actual.revenue):'—')+'</td><td data-label="差引収支">'+(actual?yen(actual.revenue-actual.cost):'—')+'</td><td data-label="契約数">—</td></tr>';
   }).join('');
   return '<section class="quick-overview" aria-label="事業別30秒サマリー"><div class="head"><h2>事業別の状況</h2><small>'+esc(period)+' 実績入力分</small></div>'+
-    (rows?'<div class="quick-table-scroll" tabindex="0" role="region" aria-label="事業別ステータスと入力実績"><table class="quick-table"><thead><tr><th scope="col">事業</th><th scope="col">進捗・確認</th><th scope="col">売上</th><th scope="col">差引収支</th><th scope="col">契約数</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p>登録事業はまだありません。</p>')+
-    '<details><summary>数値の見方</summary><p>売上と差引収支は当月の手動入力データです。差引収支は税引前の売上−費用で、営業利益・純利益ではありません。契約数は事業別の確定データと紐付いていないため「—」と表示しています。「—」は0件・0円を意味しません。</p></details></section>';
+    (rows?'<div class="quick-table-scroll" tabindex="0" role="region" aria-label="事業別ステータスと入力実績"><table class="quick-table"><thead><tr><th scope="col">事業</th><th scope="col">進捗・確認</th><th scope="col">売上</th><th scope="col">売上−費用</th><th scope="col">契約数</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p>登録事業はまだありません。</p>')+
+    '<p class="quick-note">※当月の手動入力分。売上−費用は営業利益・純利益ではありません。契約数は未連携です。</p><details><summary>数値の見方</summary><p>売上と差引収支は当月の手動入力データです。差引収支は税引前の売上−費用で、営業利益・純利益ではありません。契約数は事業別の確定データと紐付いていないため「—」と表示しています。「—」は0件・0円を意味しません。</p></details></section>';
 }
 function home() {
   const waiting=orxeliaTrialProposals.filter(p=>["awaiting_first_approval","development_ready","awaiting_final_approval"].includes(p.status));
@@ -1065,11 +1065,10 @@ function home() {
   return heading("ORXELIA ホーム")+
     '<div class="metrics">'+metric("あなたの確認待ち",waiting.length+"件","承認・試作品の修正")+
     metric("AI作業中・待機",running.length+"件","自動処理の進捗")+
-    metric("事業総数",new Set([...data.projects.map(p=>p.name),...orxeliaTrialProposals.map(p=>p.title)]).size+"件","登録名ベース・重複の可能性あり")+'</div>'+
+    metric("販売判断待ち",orxeliaTrialProposals.filter(p=>p.status==="awaiting_final_approval").length+"件","最終判断が必要")+'</div>'+
     panel('<h3>次に確認する事業</h3>'+(waitingRows||'<p>現在、確認待ちの案件はありません。AIの作業状況は事業一覧で確認できます。</p>'))+
     executiveQuickMatrix()+
-    details("当月の収支詳細",businessRevenueOverview())+
-    details("以前の作業・検証記録", (window.orxeliaSync?.dailyReportView()||"")+ideaReviewPanel(1)+pendingDecisionSummary()+details("実行タスク",tasks())+details("作業進捗",progress()));
+    '<div class="home-links"><button type="button" data-tab="finance">収支の詳細を見る</button><button type="button" data-tab="verification">販売判断・承認へ</button></div>';
 }
 
 function render() {
@@ -1103,8 +1102,8 @@ function render() {
   const expanded = [...$("view").querySelectorAll("details[open]")].map(d => d.firstElementChild.textContent);
   $("view").innerHTML = {
     home, portfolio:() => portfolio(activities) + details("日次候補",daily()),
-    verification:() => heading("事業案・販売判断") + orxeliaTrialProposalPanel() + launchDecisions() + details("過去の経営判断",decisions()) + ideaReviewPanel() + existingResearchPanel() + details("検証記録・取り込み",verification()),
-    finance:() => finance() + details("営業・販売の記録",sales()),
+    verification:() => heading("事業案・販売判断") + orxeliaTrialProposalPanel() + launchDecisions() + details("過去の経営判断",decisions()) + ideaReviewPanel() + existingResearchPanel() + details("検証記録・取り込み",verification()) + details("作業記録・タスク", (window.orxeliaSync?.dailyReportView()||"")+pendingDecisionSummary()+details("実行タスク",tasks())+details("作業進捗",progress())),
+    finance:() => finance() + details("営業・販売の記録",sales()) + details("当月の事業別収支",businessRevenueOverview()),
     settings
   }[tab]();
   expanded.forEach(openSection);
