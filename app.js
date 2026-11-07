@@ -1394,10 +1394,15 @@ const sync = (() => {
     const jobStatus = developmentJob?.status === 'queued' ? '<p>開発ジョブ：受付済み（実行エンジン未接続）</p>' : developmentJob ? '<p>開発ジョブ：' + esc(developmentJob.status) + '</p>' : '';
     const deliverables = Array.isArray(pipeline?.deliverables) ? pipeline.deliverables : [];
     const deliverableView = deliverables.length ? '<details><summary>開発成果物（' + deliverables.length + '件）</summary>' + deliverables.map(d => '<p>' + esc(d.title || '成果物') + '：' + esc(d.status || '未検証') + '</p>').join('') + '</details>' : '<p>開発成果物：未登録</p>';
+    const salesAction = pipeline?.phase === 'development_ready' ?
+      '<p><button type="button" id="orxelia-request-sales-review">販売審査を申請</button></p>' :
+      pipeline?.phase === 'sales_review' ?
+      '<p><button type="button" id="orxelia-approve-sales">販売開始を最終承認（公開・決済は実行しない）</button></p>' :
+      pipeline?.phase === 'sales_approved' ? '<p>販売承認済み。公開・決済開始は未実行です。</p>' : '';
     const approvalButton = !approvalRecord ? '<p><button type="button" id="orxelia-approve-development">この事業の開発を承認</button></p><p style="font-size:.85em">承認記録を保存します。開発エンジンの自動起動は別途接続が必要です。公開・販売・支出は行いません。</p>' : '<p>開発承認：記録済み（' + esc(approvalRecord.stage) + '）</p>';
     return panel('<h3>AI選定事業｜' + esc(report_date) + '</h3>' +
       '<p><strong>' + esc(report?.project || '事業名未登録') + '</strong></p>' +
-      '<p>進捗：' + esc(phase) + '</p>' + approvalButton + jobStatus + deliverableView +
+      '<p>進捗：' + esc(phase) + '</p>' + approvalButton + salesAction + jobStatus + deliverableView +
       '<p style="white-space:pre-wrap">' + esc(report?.summary || '') + '</p>' +
       '<details><summary>市場・競合・動作検証の根拠（' + findings.length + '件）</summary>' +
       (evidence || '<p>詳細データはまだ登録されていません。</p>') + '</details>' +
@@ -1513,6 +1518,26 @@ const sync = (() => {
     values.email = values.email.trim();
     event.target.elements.password.value = "";
     run(values);
+  });
+  document.addEventListener("click", async event => {
+    const kind = event.target.id;
+    if (!['orxelia-request-sales-review','orxelia-approve-sales'].includes(kind)) return;
+    if (!session || !dailyReport?.row || busy) return;
+    const report_date = dailyReport.row.report_date;
+    const isFinal = kind === 'orxelia-approve-sales';
+    const msg = isFinal ? '販売開始の最終承認を記録しますか？\\n※公開・決済開始・契約は実行されません。' :
+      '販売審査を申請しますか？\\n※開発完了と機能テスト合格が必要です。';
+    if (!confirm(msg)) return;
+    busy = true;
+    try {
+      const rpc = isFinal ? 'orxelia_approve_sales' : 'orxelia_request_sales_approval';
+      await request('/rest/v1/rpc/' + rpc,{method:'POST',body:JSON.stringify({p_report_date:report_date})});
+      pipelineRecords = await request('/rest/v1/orxelia_pipeline?select=report_date,project,phase,deliverables&order=report_date.desc&limit=30');
+      status(isFinal ? '販売承認を記録しました。公開・決済は開始していません。' : '販売審査を受け付けました。');
+      render();
+    } catch(error) {
+      alert('処理できませんでした。開発完了・動作検証・ログイン状態を確認してください。');
+    } finally {busy=false;}
   });
   document.addEventListener("click", async event => {
     if (event.target.id !== "orxelia-approve-development") return;
