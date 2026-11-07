@@ -24,8 +24,8 @@ const rest = async (resource,options={}) => {
 const modelCall=async (messages) => {
  const attempts=[];
  const providers=[
-  {name:'GitHub Models',url:'https://models.github.ai/inference/chat/completions',token:gh,body:{model,messages,temperature:0.2,max_tokens:8000}},
-  ...(process.env.GEMINI_API_KEY?[{name:'Gemini',url:'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',token:process.env.GEMINI_API_KEY,body:{contents:[{role:'user',parts:[{text:messages.map(m=>m.role+': '+m.content).join('\\n\\n')}]}],generationConfig:{temperature:0.2,maxOutputTokens:8192}}}]:[])
+  ...(process.env.GEMINI_API_KEY?[{name:'Gemini',url:'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',token:process.env.GEMINI_API_KEY,body:{systemInstruction:{parts:[{text:messages.find(m=>m.role==='system')?.content||'Generate working HTML.'}]},contents:[{role:'user',parts:[{text:messages.filter(m=>m.role!=='system').map(m=>m.role+': '+m.content).join('\\n\\n')}]}],generationConfig:{temperature:0.2,maxOutputTokens:16384,thinkingConfig:{thinkingBudget:0}}}}]:[]),
+  {name:'GitHub Models',url:'https://models.github.ai/inference/chat/completions',token:gh,body:{model,messages,temperature:0.2,max_tokens:8000}}
  ];
  for(const p of providers){
   try{
@@ -36,6 +36,7 @@ const modelCall=async (messages) => {
    if(!r.ok)throw new Error('HTTP '+r.status+': '+JSON.stringify(j).slice(0,200));
    const content=p.name==='Gemini'?j.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join(''):j.choices?.[0]?.message?.content;
    if(typeof content!=='string'||!content.trim())throw new Error('No generated text in response');
+   if(p.name==='Gemini' && j.candidates?.[0]?.finishReason==='MAX_TOKENS')throw new Error('Output truncated by model token limit');
    console.log('AI provider succeeded:',p.name);return content;
   }catch(e){attempts.push(p.name+': '+String(e).slice(0,220));console.error('AI provider failed:',p.name,String(e).slice(0,220))}
  }
