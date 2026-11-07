@@ -1611,7 +1611,7 @@ const sync = (() => {
       status(developmentJob ? "開発承認済み。ジョブを登録しました。GitHub Actionsの実行を待っています。" : "開発承認は保存されましたが、ジョブ登録を確認できません。");
       render();
     } catch(error) {
-      alert("開発承認を保存できませんでした。通信・ログイン状態を確認してください。");
+      alert("開発承認を保存できませんでした。詳細: " + String(error?.message || error) + "。ログイン・同期を確認してください。");
     } finally {busy=false;}
   });
   document.addEventListener("click", async event => {
