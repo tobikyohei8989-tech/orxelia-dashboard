@@ -198,6 +198,7 @@ prompt = f"""
 3. 収益試算
 4. 低コスト・一人運営
 5. 法務・技術リスク
+6. 自然拡散・販売経路（新規事業案の必須評価。既存5件のfindings形式は変更しない）
 
 必須ルール：
 - Web検索は実行していないため、実際に
@@ -216,11 +217,11 @@ prompt = f"""
 既存事業の分析とは別に、初期投資5万円以内・原則1人で
 初売上を早く検証できる新規事業案を1件提案してください。
 顧客の課題、売る商品・仮の価格・集客経路、最初の販売検証を
-具体的に記述し、観測済みの需要や実績とは扱わないでください。
+具体的に記述し、観測済みの需要や実績とは扱わないでください。\n新規案は必ず「課題起点」と「配布・自然拡散起点」を両方検討し、より優位な1件を選択してください。\n配布起点では公開URL・共有成果物・招待・受信者の再利用を評価。\n人目に触れるだけでは不可。受信者が自ら作成者になる理由、継続課金理由、無料競合に勝つ条件、直接営業なしの流入経路を具体化。\n既出の見積追客、見積承認、予約ページ、招待状、施工事例、写真共有、家計、コーデ等は新規案として再提案しないこと。\n無料競合に勝てる根拠がなければ勝てると断言しない。販売可能性は未検証とする。
 
 JSON形式：
 {{
-  "idea": {{"name": "新規事業名", "customer": "顧客と課題", "offer": "商品・価格仮説・集客経路", "next": "社内での動作確認と公開後に測る購入件数・売上"}},
+  "idea": {{"name": "新規事業名", "customer": "顧客と課題", "offer": "商品・価格仮説・集客経路", "next": "社内での動作確認と公開後に測る購入件数・売上", "distribution": "共有される成果物と受信者の再利用理由。共有しない商品ならその旨", "advantage": "無料競合に勝つための仮説と検証すべき根拠", "recurring": "継続課金の理由と運用コスト", "selection": "課題起点と拡散起点を比較した選定理由"}},
   "findings": [
     {{
       "type": "公開市場データ",
@@ -295,7 +296,7 @@ def validate(result):
     ):
         return findings, None
 
-    return findings, {field: idea[field].strip() for field in limits}
+    extra = ("distribution", "advantage", "recurring", "selection")\n    if not all(isinstance(idea.get(field), str) and 0 < len(idea[field].strip()) <= 600 for field in extra):\n        return findings, None\n    return findings, {field: idea[field].strip() for field in (*limits, *extra)}
 
 
 def load_existing_reports(path):
