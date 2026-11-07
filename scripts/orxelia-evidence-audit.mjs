@@ -21,11 +21,11 @@ async function smoke(html){if(!html)return {passed:false,reason:'No prototype'};
 const candidates=await db('orxelia_proposals?select=*&status=eq.awaiting_final_approval&order=updated_at.asc&limit=30');
 const pending=candidates.filter(p=>p.sales_review?.recommendation==='needs_evidence'&&(!p.sales_review?.evidence_audit?.checked_at||p.sales_review?.evidence_audit?.research_error||!p.sales_review?.evidence_audit?.research?.sources?.length&&Date.now()-Date.parse(p.sales_review.evidence_audit.checked_at)>20*3600000));
 console.log('Pending evidence cases:',pending.length);
-let failed=0;
+let failed=0,quotaBlocked=false;
 for(const p of pending.slice(0,8)){
  try{
   let research=null,researchError=null;
-  try{research=await groundedResearch(p)}catch(e){researchError=String(e).slice(0,350);failed++}
+  if(quotaBlocked){researchError='Gemini quota blocked in this run; skipped to avoid repeated 429 requests'}else try{research=await groundedResearch(p)}catch(e){researchError=String(e).slice(0,350);if(/HTTP 429|quota|rate.limit/i.test(researchError))quotaBlocked=true;failed++}
   let test={passed:false,reason:'Not run'};
   try{test=await smoke(p.prototype_html)}catch(e){test={passed:false,reason:String(e).slice(0,300)};failed++}
   const price=Number(String(p.brief?.pricing_hypothesis||'').match(/[0-9][0-9,]*/)?.[0].replaceAll(',','')||0);
