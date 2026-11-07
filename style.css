@@ -209,3 +209,5 @@ body.is-home .hero h1{font-size:clamp(23px,4.5vw,31px);margin-bottom:4px}
 body.is-home .hero{padding-top:10px}
 body.is-home .work-now{margin:4px 0 6px}
 }
+
+.proposal-failure{border:1px solid #c9836a;background:#3c2930;color:#fff0e9;border-radius:13px;padding:15px;margin-top:14px}.proposal-failure strong{color:#ffd6b7}.proposal-failure p{font-size:13px;line-height:1.7;margin:8px 0}
