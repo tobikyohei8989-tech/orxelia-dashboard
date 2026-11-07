@@ -39,18 +39,18 @@ const testHTML=async dir=>{
  const controls=await page.locator('button,input,textarea,select').count();
  if(!controls)errors.push('No interactive controls');
  const inputs=page.locator('input:not([type=hidden]):not([type=file]),textarea');
- if(await inputs.count()) {await inputs.first().fill('ORXELIA テスト');}
+ if(await inputs.count()) {const first=inputs.first(); const type=await first.getAttribute('type'); await first.fill(type==='number'?'12':'ORXELIA テスト').catch(e=>errors.push('Input interaction: '+e.message.slice(0,130)));}
  if(await page.locator('button').count()) {await page.locator('button').first().click({timeout:3000}).catch(e=>errors.push('Button interaction: '+e.message.slice(0,130)));}
  await page.waitForTimeout(250);
  result={passed:errors.length===0,errors,controls,bodyLength:text.length,checks:['page load','mobile viewport','basic input','button click','javascript errors','external requests']};
  }finally{await browser.close();}
  return result;
 };
-const rows=await rest('orxelia_development_jobs?select=owner_id,report_date,project,status&status=eq.queued&order=created_at.asc&limit=1');
+const rows=await rest('orxelia_development_jobs?select=owner_id,report_date,project,status&status=in.(queued,running)&order=created_at.asc&limit=1');
 if(!rows.length){console.log('No queued jobs');process.exit(0)}
 const job=rows[0];const match='owner_id=eq.'+encodeURIComponent(job.owner_id)+'&report_date=eq.'+job.report_date;
 const pipelines=await rest('orxelia_pipeline?select=project,summary,phase&'+match);
-if(pipelines[0]?.phase!=='development_requested')throw new Error('Job not approved');
+if(!['development_requested','development_running'].includes(pipelines[0]?.phase))throw new Error('Job not approved');
 const patch=async(table,data)=>rest(table+'?'+match,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(data)});
 await patch('orxelia_development_jobs',{status:'running',updated_at:new Date().toISOString()});
 await patch('orxelia_pipeline',{phase:'development_running',updated_at:new Date().toISOString()});
