@@ -33,6 +33,28 @@ try{
  await page.locator('input[type=file]').setInputFiles(file);
  assert.match(await page.locator('#kpi-total').innerText(),/1/);
  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('orx_estimates'))),data);
+ // Invalid restore must preserve saved data.
+ const before=await page.evaluate(()=>localStorage.getItem('orx_estimates'));
+ await page.locator('input[type=file]').setInputFiles({name:'broken.json',mimeType:'application/json',buffer:Buffer.from('{broken')});
+ assert.equal(await page.evaluate(()=>localStorage.getItem('orx_estimates')),before);
+ await page.locator('input[type=file]').setInputFiles({name:'invalid.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify([{id:'bad'}]))});
+ assert.equal(await page.evaluate(()=>localStorage.getItem('orx_estimates')),before);
+ // XSS payloads must be displayed as text, never executed.
+ await page.locator('.bottom-nav .nav-item').first().click();
+ await page.getByText('＋ 新規見積りを登録').click();
+ await page.locator('#inputClient').fill('<img src=x onerror=alert(1)>');
+ await page.locator('#inputProject').fill('=SUM(1,2)');
+ await page.locator('#inputSubmitted').fill('2026-11-01');
+ await page.locator('#inputNext').fill('2026-11-07');
+ await page.getByText('登録する').click();
+ assert.equal(await page.locator('.record-card img').count(),0);
+ assert.match(await page.locator('.record-card').first().innerText(),/<img src=x onerror=alert\\(1\\)>/);
+ // CSV must escape spreadsheet formula strings.
+ await page.locator('.bottom-nav .nav-item').last().click();
+ const [csvDownload]=await Promise.all([page.waitForEvent('download'),page.getByText('📊 案件一覧CSVエクスポート').click()]);
+ const csv=readFileSync(await csvDownload.path(),'utf8');
+ assert.ok(csv.includes(\"'=SUM(1,2)\"));
+ assert.ok(csv.includes('提出日,次回確認日,状況'));
  assert.deepEqual(errors,[]);
  console.log('PASS: Chromium 390px create, persistence, contact, status, backup, reset, restore');
 }finally{await browser.close();}
