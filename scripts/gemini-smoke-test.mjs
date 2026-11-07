@@ -14,14 +14,14 @@ async function request(url,opts={},timeout=20000){
 const list=await request(root+'/models?pageSize=100');
 if(!list.ok)throw Error('Gemini models discovery HTTP '+list.status+': '+String(list.j.error?.message||'').slice(0,160));
 const available=(list.j.models||[]).filter(m=>m.supportedGenerationMethods?.includes('generateContent')).map(m=>m.name.replace(/^models\//,''));
-const candidates=[...new Set([...['gemini-3.8-flash','gemini-3-flash','gemini-2.5-flash-lite','gemini-2.0-flash-lite'].filter(m=>available.includes(m)),...available.filter(m=>/flash/i.test(m)).slice(0,6)])].slice(0,7);
+const candidates=[...new Set([...['gemini-flash-lite-latest','gemini-3.5-flash-lite','gemini-3.8-flash','gemini-3-flash'].filter(m=>available.includes(m)),...available.filter(m=>/flash/i.test(m)&&!/tts|image|live|audio/i.test(m)).slice(0,6)])].slice(0,7);
 console.log('Available compatible models:',candidates.join(', ')||'(none)');
 if(!candidates.length)throw Error('No supported preferred Gemini model returned by models discovery');
 let passed=false;
 for(const model of candidates){
  for(let attempt=1;attempt<=2;attempt++){
   try{
-   const {status,ok,j}=await request(root+'/models/'+model+':generateContent',{method:'POST',body:JSON.stringify({contents:[{role:'user',parts:[{text:'Build a complete Japanese mobile-first single-file HTML prototype for a solo contractor payment due-date tracker. Include an input for client name, an input for payment amount, a date input for due date, an Add button, a visible list of saved records, a total amount, delete buttons, and persistence with localStorage. No external network calls or dependencies. Return ONLY full HTML starting with <!doctype html>. This is a technical prototype; no claims of verified demand or competitive advantage.'}]}],generationConfig:{temperature:0,maxOutputTokens:2048}})},25000);
+   const {status,ok,j}=await request(root+'/models/'+model+':generateContent',{method:'POST',body:JSON.stringify({contents:[{role:'user',parts:[{text:'Build a complete Japanese mobile-first single-file HTML prototype for a solo contractor payment due-date tracker. Include an input for client name, an input for payment amount, a date input for due date, an Add button, a visible list of saved records, a total amount, delete buttons, and persistence with localStorage. No external network calls or dependencies. Return ONLY full HTML starting with <!doctype html>. This is a technical prototype; no claims of verified demand or competitive advantage.'}]}],generationConfig:{temperature:0,maxOutputTokens:8192}})},25000);
    if(ok){
     const out=j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
     if(/<html[\s>]|<!doctype html/i.test(out)){console.log('Gemini smoke test PASSED; model:',model,'HTML chars:',out.length);await fs.mkdir('build/gemini-smoke',{recursive:true});await fs.writeFile('build/gemini-smoke/index.html',out);passed=true;break}
