@@ -31,7 +31,7 @@ const modelCall=async (messages,{geminiOnly=false}={}) => {
    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=100',{headers:{'x-goog-api-key':token},signal:AbortSignal.timeout(15000)});
    if(r.ok){
     const j=await r.json();
-    const available=(j.models||[]).filter(m=>m.supportedGenerationMethods?.includes('generateContent')).map(m=>m.name.replace(/^models\\//,''));
+    const available=(j.models||[]).filter(m=>m.supportedGenerationMethods?.includes('generateContent')).map(m=>m.name.replace(/^models\\//,'')));
     names=[...new Set([...['gemini-flash-lite-latest','gemini-3.5-flash-lite','gemini-3.8-flash','gemini-3-flash'].filter(n=>available.includes(n)),...available.filter(n=>/flash/i.test(n)&&!/tts|image|live|audio/i.test(n)).slice(0,6)])].slice(0,7);
    }
   }catch(e){console.log('Gemini model discovery unavailable:',e.name)}
