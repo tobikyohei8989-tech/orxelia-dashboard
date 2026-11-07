@@ -602,15 +602,15 @@
       </div>
       <div class="form-group">
         <label>見積金額 (円)</label>
-        <input type="number" class="form-control" id="inputAmount" required placeholder="例: 450000" inputmode="numeric">
+        <input type="number" class="form-control" id="inputAmount" min="0" placeholder="例: 450000" inputmode="numeric">
       </div>
       <div class="form-group">
         <label>担当者名</label>
         <input type="text" class="form-control" id="inputStaff" placeholder="例: 佐藤" autocomplete="off">
       </div>
       <div class="form-group">
-        <label>提出からの経過日数</label>
-        <input type="number" class="form-control" id="inputDays" required min="0" value="1" placeholder="例: 5" inputmode="numeric">
+        <label>見積提出日（必須）</label><input type="date" class="form-control" id="inputSubmitted" required>
+      </div><div class="form-group"><label>次回確認日（必須）</label><input type="date" class="form-control" id="inputNext" required>
       </div>
       <div style="display: flex; gap: 8px; margin-top: 10px;">
         <button type="button" class="btn-secondary" style="flex:1;" onclick="closeAddModal()">キャンセル</button>
@@ -630,7 +630,7 @@
     </div>
     <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
       <button class="btn-primary" onclick="copyPromptMessage()">📋 催促メッセージをコピー</button>
-      <button class="btn-secondary" onclick="markAsResolved()">✅ 追客完了（リストから除外/日数リセット）</button>
+      <label style="font-size:12px">状況</label><select class="form-control" id="actionStatus"><option value="waiting">返事待ち</option><option value="hold">保留</option><option value="won">受注</option><option value="lost">失注</option></select><label style="font-size:12px">次回確認日</label><input class="form-control" id="actionNext" type="date"><button class="btn-secondary" onclick="markAsResolved()">✅ 状況・確認日を保存</button><button class="btn-secondary" onclick="recordContact()">📞 連絡したことを記録</button><p id="actionHistory" style="font-size:12px;color:var(--text-muted)"></p>
       <button class="btn-danger" onclick="confirmDeleteRecord()" style="background:none; color:var(--danger); border:1px solid var(--danger);">🗑️ この案件を削除</button>
       <button type="button" class="btn-secondary" onclick="closeActionModal()" style="margin-top: 4px;">閉じる</button>
     </div>
@@ -650,6 +650,10 @@
   let selectedRecordId = null;
   let isComposing = false; // IME入力中フラグ
 
+  const today = () => new Date().toLocaleDateString('sv-SE');
+  const dayOffset = n => { const d=new Date();d.setDate(d.getDate()+n);return d.toLocaleDateString('sv-SE'); };
+  const dueDays = date => { const d=new Date(date+'T00:00:00');const t=new Date(today()+'T00:00:00');return Math.round((t-d)/86400000); };
+  const normalize = r => ({...r,status:r.status||'waiting',submittedAt:r.submittedAt||dayOffset(-Math.max(0,Number(r.days)||0)),nextAt:r.nextAt||today(),history:Array.isArray(r.history)?r.history:[]});
   // 初期化
   function initApp() {
     try {
@@ -663,6 +667,7 @@
     } catch(e) {
       records = INITIAL_DATA;
     }
+    records = Array.isArray(records) ? records.map(normalize) : [];
     render();
     updateClock();
     setInterval(updateClock, 60000);
@@ -705,10 +710,10 @@
   function toggleFilter() {
     if(currentFilter === 'all') {
       currentFilter = 'urgent';
-      document.getElementById('filter-label').textContent = '表示: 要注意(4日以上) ▾';
+      document.getElementById('filter-label').textContent = '表示: 期限超過 ▾';
     } else if(currentFilter === 'urgent') {
       currentFilter = 'warning';
-      document.getElementById('filter-label').textContent = '表示: 注意(3日以内) ▾';
+      document.getElementById('filter-label').textContent = '表示: 本日確認 ▾';
     } else {
       currentFilter = 'all';
       document.getElementById('filter-label').textContent = '表示: すべて ▾';
@@ -725,9 +730,7 @@
     container.innerHTML = '';
 
     let urgentCount = 0;
-    records.forEach(r => {
-      if(r.days >= 4) urgentCount++;
-    });
+    records.forEach(r => { if(r.status==='waiting' && dueDays(r.nextAt)>=0) urgentCount++; });
     
     const kpiUrgent = document.getElementById('kpi-urgent');
     const kpiTotal = document.getElementById('kpi-total');
@@ -736,8 +739,8 @@
 
     // フィルタ適用
     let filtered = records.filter(r => {
-      if(currentFilter === 'urgent') return r.days >= 5;
-      if(currentFilter === 'warning') return r.days >= 3 && r.days < 5;
+      if(currentFilter === 'urgent') return r.status==='waiting' && dueDays(r.nextAt)>0;
+      if(currentFilter === 'warning') return r.status==='waiting' && dueDays(r.nextAt)===0;
       return true;
     });
 
@@ -748,15 +751,15 @@
 
     filtered.forEach(r => {
       let statusClass = 'normal';
-      let badgeText = `提出後 ${r.days}日経過`;
+      let badgeText = (r.status==='won'?'受注':r.status==='lost'?'失注':r.status==='hold'?'保留':dueDays(r.nextAt)>0?'確認期限超過':dueDays(r.nextAt)===0?'本日確認':'返事待ち') + ' / 次回 '+r.nextAt;
       let cardClass = 'normal';
       let icon = 'ℹ️';
 
-      if(r.days >= 5) {
+      if(r.status==='waiting' && dueDays(r.nextAt)>0) {
         statusClass = 'danger';
         cardClass = 'urgent';
         icon = '⚠️';
-      } else if(r.days >= 3) {
+      } else if(r.status==='waiting' && dueDays(r.nextAt)===0) {
         statusClass = 'warning';
         cardClass = 'warning';
         icon = '❗';
@@ -789,6 +792,7 @@
 
   // モーダル操作
   function openAddModal() {
+    document.getElementById('inputSubmitted').value=today();document.getElementById('inputNext').value=dayOffset(3);
     document.getElementById('addModal').classList.add('open');
   }
   function closeAddModal() {
@@ -802,9 +806,10 @@
     const projectInput = document.getElementById('inputProject').value.trim();
     const amountInput = document.getElementById('inputAmount').value;
     const staffInput = document.getElementById('inputStaff').value.trim();
-    const daysInput = document.getElementById('inputDays').value;
+    const submittedAt=document.getElementById('inputSubmitted').value;
+    const nextAt=document.getElementById('inputNext').value;
 
-    if (!clientInput || !projectInput || amountInput === '' || daysInput === '') {
+    if (!clientInput || !projectInput || !submittedAt || !nextAt || (amountInput!=='' && (!Number.isFinite(Number(amountInput)) || Number(amountInput)<0))) {
       alert('必須項目を正しく入力してください。');
       return;
     }
@@ -815,7 +820,7 @@
       project: projectInput,
       amount: Number(amountInput),
       staff: staffInput || '未設定',
-      days: Number(daysInput)
+      days: 0, submittedAt, nextAt, status:'waiting', history:[]
     };
     
     records.unshift(newRecord);
@@ -830,7 +835,10 @@
     if(!r) return;
 
     document.getElementById('actionModalTitle').textContent = r.client;
-    document.getElementById('actionModalDesc').textContent = `${r.project} (提出後 ${r.days}日経過)`;
+    document.getElementById('actionModalDesc').textContent = `${r.project} / 提出日 ${r.submittedAt}`;
+    document.getElementById('actionStatus').value=r.status;
+    document.getElementById('actionNext').value=r.nextAt;
+    document.getElementById('actionHistory').textContent='連絡履歴: '+(r.history.length?r.history.join(' / '):'なし');
     document.getElementById('actionModalTemplate').innerHTML = `
       <strong>【催促メール文面案】</strong><br>
       いつも大変お世話になっております。<br>
@@ -878,14 +886,16 @@
   }
 
   function markAsResolved() {
-    const r = records.find(item => item.id === selectedRecordId);
-    if(r) {
-      r.days = 0;
-      saveStorage();
-      render();
-      closeActionModal();
-      alert('【プロトタイプ】経過日数をリセットし対応済みに更新しました。');
-    }
+    const r=records.find(item=>item.id===selectedRecordId);if(!r)return;
+    const date=document.getElementById('actionNext').value;
+    if(!date){alert('次回確認日を指定してください');return;}
+    r.status=document.getElementById('actionStatus').value;r.nextAt=date;
+    saveStorage();render();closeActionModal();
+  }
+  function recordContact() {
+    const r=records.find(item=>item.id===selectedRecordId);if(!r)return;
+    r.history.push(new Date().toLocaleString('ja-JP')+' 連絡済み');
+    saveStorage();document.getElementById('actionHistory').textContent='連絡履歴: '+r.history.join(' / ');
   }
 
   function confirmDeleteRecord() {
@@ -939,7 +949,7 @@
       const snapshot = records;
       try {
         localStorage.setItem('orx_estimates', JSON.stringify(data));
-        records = data;
+        records = data.map(normalize);
         render();
         alert('復元しました（' + data.length + '件）');
       } catch (e) {
