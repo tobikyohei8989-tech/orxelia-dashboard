@@ -30,10 +30,16 @@ const modelCall=async (messages) => {
  for(const p of providers){
   try{
    const headers=p.name==='Gemini'?{'x-goog-api-key':p.token,'Content-Type':'application/json'}:{Authorization:'Bearer '+p.token,Accept:'application/vnd.github+json','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28'};
-   const r=await fetch(p.url,{method:'POST',headers,body:JSON.stringify(p.body),signal:AbortSignal.timeout(90000)});
-   const raw=await r.text();let j;
-   try{j=JSON.parse(raw)}catch{throw new Error('Non-JSON response (HTTP '+r.status+', type '+(r.headers.get('content-type')||'unknown')+', sample '+JSON.stringify(raw.slice(0,60))+')')}
-   if(!r.ok)throw new Error('HTTP '+r.status+': '+JSON.stringify(j).slice(0,200));
+   let j;let status;
+   for(let attempt=1;attempt<=4;attempt++){
+    const r=await fetch(p.url,{method:'POST',headers,body:JSON.stringify(p.body),signal:AbortSignal.timeout(90000)});
+    status=r.status;
+    const raw=await r.text();
+    try{j=JSON.parse(raw)}catch{throw new Error('Non-JSON response (HTTP '+r.status+', type '+(r.headers.get('content-type')||'unknown')+', sample '+JSON.stringify(raw.slice(0,60))+')')}
+    if(r.ok)break;
+    if([429,500,502,503,504].includes(r.status)&&attempt<4){console.log('Transient '+p.name+' HTTP '+r.status+'; retry '+attempt+'/3');await new Promise(resolve=>setTimeout(resolve,1500*2**(attempt-1)));continue}
+    throw new Error('HTTP '+r.status+': '+JSON.stringify(j.error?.message||j).slice(0,200));
+   }
    const content=p.name==='Gemini'?j.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join(''):j.choices?.[0]?.message?.content;
    if(typeof content!=='string'||!content.trim())throw new Error('No generated text in response');
    if(p.name==='Gemini' && j.candidates?.[0]?.finishReason==='MAX_TOKENS')throw new Error('Output truncated by model token limit');
