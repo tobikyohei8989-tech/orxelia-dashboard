@@ -59,8 +59,10 @@ const testHTML=async dir=>{
  }finally{await browser.close();}
  return result;
 };
-const rows=await rest('orxelia_development_jobs?select=owner_id,report_date,project,status&status=in.(queued,running)&order=created_at.asc&limit=1');
-if(!rows.length){console.log('No queued jobs returned by REST. If Supabase SQL shows queued rows, check key permissions/RLS and verify GitHub secret value.');process.exit(0)}
+const visibleJobs=await rest('orxelia_development_jobs?select=owner_id,report_date,project,status,created_at&order=created_at.asc&limit=100');
+console.log('Development jobs visible via REST:',visibleJobs.length,'status counts:',JSON.stringify(visibleJobs.reduce((a,j)=>(a[j.status]=(a[j.status]||0)+1,a),{})));
+const rows=visibleJobs.filter(j=>j.status==='queued'||j.status==='running').slice(0,1);
+if(!rows.length){console.log('No queued jobs currently visible via REST; no development attempted.');process.exit(0)}
 const job=rows[0];const match='owner_id=eq.'+encodeURIComponent(job.owner_id)+'&report_date=eq.'+job.report_date;
 const pipelines=await rest('orxelia_pipeline?select=project,summary,phase&'+match);
 if(!['development_requested','development_running'].includes(pipelines[0]?.phase))throw new Error('Job not approved');
