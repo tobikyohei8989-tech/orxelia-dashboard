@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},acceptDownloads:true});
-const errors=[];page.on('pageerror',e=>errors.push(e.message));const pendingDialogs=new Set();
+const errors=[];const dialogs=[];page.on('pageerror',e=>errors.push(e.message));const pendingDialogs=new Set();
 page.on('dialog',dialog=>{
+ dialogs.push({type:dialog.type(),message:dialog.message()});
  const pending=dialog.accept().catch(error=>{
    if (!/Target page, context or browser has been closed/.test(error.message)) throw error;
  }).finally(()=>pendingDialogs.delete(pending));
@@ -37,7 +38,7 @@ try{
  await page.getByText('🗑️ 全データ初期化（リセット）').click();
  assert.match(await page.locator('#kpi-total').innerText(),/0/);
  await page.locator('input[type=file]').setInputFiles(file);
- await page.waitForFunction(()=>JSON.parse(localStorage.getItem('orx_estimates')||'[]').length===1);
+ await page.waitForFunction(()=>JSON.parse(localStorage.getItem('orx_estimates')||'[]').length===1,{},{timeout:5000}).catch(async e=>{throw new Error('Restore failed; dialogs='+JSON.stringify(dialogs)+' data='+JSON.stringify(await page.evaluate(()=>localStorage.getItem('orx_estimates')))+' reason='+e.message)});
  assert.match(await page.locator('#kpi-total').innerText(),/1/);
  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('orx_estimates'))),data);
  // Invalid restore must preserve saved data.
