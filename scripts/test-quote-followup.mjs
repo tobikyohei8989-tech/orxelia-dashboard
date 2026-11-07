@@ -37,6 +37,7 @@ try{
  await page.getByText('🗑️ 全データ初期化（リセット）').click();
  assert.match(await page.locator('#kpi-total').innerText(),/0/);
  await page.locator('input[type=file]').setInputFiles(file);
+ await page.waitForFunction(()=>JSON.parse(localStorage.getItem('orx_estimates')||'[]').length===1);
  assert.match(await page.locator('#kpi-total').innerText(),/1/);
  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('orx_estimates'))),data);
  // Invalid restore must preserve saved data.
