@@ -55,7 +55,7 @@ function orxeliaTrialProposalPanel(){
  ${p.status==="development_ready"?`<button type="button" data-proposal-action="request_sales_review" data-proposal-id="${esc(p.id)}">販売審査へ進む</button>`:""}
  ${p.sales_review?`<details open><summary>販売審査結果</summary><p>${esc(p.sales_review.note||"")}</p><p>${esc((p.sales_review.items||[]).join(" ／ "))}</p></details>`:""}
  ${p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready"?`<button type="button" data-proposal-action="approve_sales" data-proposal-id="${esc(p.id)}">最終承認（公開・決済は別途）</button>`:""}
- ${p.revision_summary?`<details><summary>前回の修正指示とレビュー</summary><p>${esc(p.revision_summary)}</p></details>`:""}${p.error_message?`<p role="alert">エラー：${esc(p.error_message)}</p>`:""}
+ ${p.revision_summary?`<details><summary>前回の修正指示とレビュー</summary><p>${esc(p.revision_summary)}</p></details>`:""}${p.error_message?`<div role="alert" class="proposal-failure"><strong>デザイン生成を停止しました</strong><p>${esc(p.error_message)}</p><p>${String(p.error_message).includes("Design preview must be static and offline")?"外部スクリプト・通信・CDN等を含むデザインが安全検査で拒否されました。表示や承認の操作では復旧できません。生成側の修正と再実行が必要です。":"処理履歴を確認し、原因を解消してから再実行してください。"}</p><p>この案件は販売・公開されていません。競合優位性が確認できるまで開発再開は保留してください。</p></div>`:""}
  </article>`).join("")}</section>`;
 }
 
