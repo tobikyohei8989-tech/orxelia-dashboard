@@ -17,6 +17,12 @@ const priorities = ["未設定", "高", "中", "低"];
 const activityStates = ["準備中", "調査中", "試作中", "検証中", "判断待ち", "完了", "停止"];
 const empty = () => ({version:1, projects:[], ledger:[], decisions:[]});
 let data = empty();
+let orxeliaTrialProposals = [];
+function orxeliaTrialProposalPanel(){
+ if(!orxeliaTrialProposals.length)return "";
+ return `<section class="panel"><h3>追加の事業選定候補（クラウド）</h3><p>既存の日次案件とは別に保存した検証候補です。第1承認は開発着手の意思表示であり、公開・販売・支出の承認ではありません。</p>${orxeliaTrialProposals.map(p=>`<article style="padding:16px;border:1px solid #34435a;border-radius:14px;margin:12px 0"><h4>${esc(p.title)}</h4><p>${esc(p.brief?.problem||"")}</p><p><b>提案：</b>${esc(p.brief?.solution||"")}</p><p><b>差別化仮説：</b>${esc(p.brief?.competitive_position||"")}</p><p><b>継続条件：</b>${esc(p.brief?.hypothesis_win_condition||"")}</p><p><b>競合：</b>${(p.brief?.competitors||[]).map(c=>esc(c.name)+"（"+esc(c.pricing||"価格未確認")+"）").join(" / ")}</p><p><b>状態：</b>${esc(p.status)}</p>${p.status==="awaiting_selection"?`<button type="button" data-trial-approve="${esc(p.id)}">第1承認：非公開開発へ</button> <button type="button" data-trial-hold="${esc(p.id)}">保留</button>`:"<p>判断を記録済み。開発ジョブへの連携は別途検証が必要です。</p>"}</article>`).join("")}</section>`;
+}
+
 let readable = true;
 try {
   const saved = localStorage.getItem(key);
@@ -994,7 +1000,7 @@ function render() {
   const expanded = [...$("view").querySelectorAll("details[open]")].map(d => d.firstElementChild.textContent);
   $("view").innerHTML = {
     home, portfolio:() => portfolio(activities) + details("日次候補",daily()),
-    verification:() => heading("事業案・販売判断") + launchDecisions() + details("過去の経営判断",decisions()) + ideaReviewPanel() + existingResearchPanel() + details("検証記録・取り込み",verification()),
+    verification:() => heading("事業案・販売判断") + orxeliaTrialProposalPanel() + launchDecisions() + details("過去の経営判断",decisions()) + ideaReviewPanel() + existingResearchPanel() + details("検証記録・取り込み",verification()),
     finance:() => finance() + details("営業・販売の記録",sales()),
     settings
   }[tab]();
@@ -1359,6 +1365,20 @@ const sync = (() => {
     if (!response.ok) throw Error("HTTP " + response.status);
     return response.status === 204 ? null : response.json();
   }
+  document.addEventListener("click",async event=>{
+    const btn=event.target.closest("[data-trial-approve],[data-trial-hold]");
+    if(!btn)return;
+    const id=btn.dataset.trialApprove||btn.dataset.trialHold;
+    const next=btn.dataset.trialApprove?"approved_for_development":"on_hold";
+    if(!session?.user?.id){alert("ログインして同期してください");return}
+    if(!confirm(next==="approved_for_development"?"この候補を第1承認しますか？ 外部公開・販売・支出は行いません。":"この候補を保留にしますか？"))return;
+    btn.disabled=true;
+    try{
+      await request("/rest/v1/orxelia_proposals?id=eq."+encodeURIComponent(id),{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({status:next,updated_at:new Date().toISOString()})});
+      const item=orxeliaTrialProposals.find(x=>x.id===id);if(item)item.status=next;
+      render();
+    }catch(e){alert("判断の保存に失敗しました: "+e.message);btn.disabled=false}
+  });
   function remember(revision, snapshot) {
     baseline = {owner:session.user.id,revision,snapshot:signature(snapshot)};
     localStorage.setItem(markerKey,JSON.stringify(baseline));
@@ -1434,6 +1454,9 @@ const sync = (() => {
         dailyReport = {owner,failed:true};
       }
       if (session?.user.id !== owner || $("editor").open) return;
+      try{
+        orxeliaTrialProposals=await request("/rest/v1/orxelia_proposals?select=id,title,status,brief,created_at&order=created_at.desc&limit=10");
+      }catch(e){console.warn("Additional proposal sync failed:",e.message);orxeliaTrialProposals=[]}
       syncStep = "開発レポートの取得";
       const pipelineRows = await request('/rest/v1/orxelia_pipeline?select=report_date,project,phase,deliverables&order=report_date.desc&limit=30');
       pipelineRecords = pipelineRows;
