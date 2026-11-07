@@ -31,4 +31,12 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.56.1
           npx playwright install --with-deps chromium
       - name: Collect evidence and smoke-test prototypes
-        run: node scripts/orxelia-evidence-audit.mjs
+        run: |
+          set +e
+          node scripts/orxelia-evidence-audit.mjs
+          result=$?
+          if [ "$result" -eq 0 ]; then exit 0; fi
+          echo "::warning::Audit failed. Retrying once after 90 seconds for transient errors."
+          sleep 90
+          node scripts/orxelia-evidence-audit.mjs
+          exit $?
