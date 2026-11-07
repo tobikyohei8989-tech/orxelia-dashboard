@@ -1422,7 +1422,7 @@ const sync = (() => {
       const result=await request("/rest/v1/rpc/orxelia_proposal_transition",{method:"POST",body:JSON.stringify({p_id:id,p_action:action,p_feedback:feedback})});
       const item=orxeliaTrialProposals.find(p=>p.id===id);if(item)item.status=result.status;
       if(["request_revision","request_prototype_revision"].includes(action)){delete orxeliaRevisionDrafts[id];try{localStorage.setItem(orxeliaDraftKey,JSON.stringify(orxeliaRevisionDrafts))}catch{}}
-      status("事業IDごとの判断をクラウドに保存しました。");render();
+      status("事業IDごとの判断をクラウドに保存しました。");document.querySelectorAll("details[data-prototype-preview][open]").forEach(d=>d.open=false);render();
     }catch(e){alert("処理できませんでした: "+e.message+"。承認条件とログイン状態を確認してください。");btn.disabled=false}
   });
   function remember(revision, snapshot) {
