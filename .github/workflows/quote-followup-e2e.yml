@@ -1,5 +1,8 @@
 name: Quote follow-up isolated E2E
 on:
+  push:
+    branches:
+      - 'review/quote-followup-backup-20261107'
   pull_request:
     paths:
       - 'prototypes/quote-followup-review.html'
