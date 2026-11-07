@@ -236,3 +236,41 @@ body.is-home .work-now{margin:4px 0 6px}
  .home-stats .metric{padding:12px}
  .home-stats .metric b{font-size:23px}
 }
+
+
+/* Venture list and approval workspace — decision-first */
+.portfolio-guide{font-size:13px;max-width:66ch}
+.portfolio-tile{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.portfolio-tile h3{font-size:18px;line-height:1.45}
+.portfolio-tile p{margin:0}
+.portfolio-status,.proposal-item-status{display:inline-flex;background:#21434b;color:#9cf1de;border:1px solid #386c71;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700}
+.portfolio-next{font-size:13px;color:#d4e2e9}
+.portfolio-tile>button{width:100%;margin-top:auto;background:#59d8c5;color:#10242b;font-weight:700;border:0}
+.proposal-workspace{display:grid;gap:12px}
+.proposal-intro{padding:16px;border:1px solid #365567;border-radius:16px;background:#152a39}
+.proposal-intro h3{font-size:19px}
+.proposal-intro p{font-size:13px;margin:7px 0}
+.proposal-summary{display:flex;gap:10px;flex-wrap:wrap}
+.proposal-summary span{font-size:12px;border:1px solid #426273;padding:6px 11px;border-radius:999px}
+.proposal-item{margin:0;border:1px solid #3c5869;border-radius:15px;background:#152536;overflow:hidden}
+.proposal-item>summary{list-style:none;display:flex;align-items:center;gap:10px;justify-content:space-between;padding:16px;min-height:72px;color:#f5f9fa}
+.proposal-item>summary::-webkit-details-marker{display:none}
+.proposal-item>summary:after{content:"⌄";color:#7ae1d1;font-size:20px;flex:none}
+.proposal-item[open]>summary:after{content:"⌃"}
+.proposal-item-title{font-size:16px;font-weight:750;min-width:0;overflow-wrap:anywhere}
+.proposal-item-status{flex:none;max-width:43%;text-align:center}
+.proposal-item-body{padding:0 15px 17px}
+.proposal-item-body>p{font-size:13px}
+.proposal-next{border-left:3px solid #6de3cf;background:#1b3945;padding:11px;border-radius:5px}
+.proposal-meta{border:1px solid #344d5d;border-radius:10px;padding:0 12px;margin:12px 0}
+.proposal-meta>summary{font-size:13px}
+.proposal-version{font-size:12px;color:#9db4c3}
+.proposal-item-body>button{margin:5px 6px 5px 0}
+@media(max-width:680px){
+ .proposal-item>summary{align-items:flex-start;flex-direction:column;gap:8px;padding:14px}
+ .proposal-item-status{max-width:100%}
+ .proposal-item>summary:after{position:absolute;right:16px}
+ .proposal-item{position:relative}
+ .proposal-item-body>button{width:100%;margin:6px 0;min-height:48px}
+ .proposal-item-body iframe{max-height:390px}
+}
