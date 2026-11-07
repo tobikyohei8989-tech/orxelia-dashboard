@@ -1,5 +1,5 @@
 name: ORXELIA Gemini connection smoke test
-# Re-run with bounded 503 retry
+# Re-run with timeout and 503 retry
 on:
   push:
     paths:
