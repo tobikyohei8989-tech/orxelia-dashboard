@@ -14,7 +14,7 @@ const sources=files.map(f=>{
  }
  return '### '+f+'\\n'+(f==='style.css'?content.slice(0,6000)+'\\n/* FINAL OVERRIDES */\\n'+content.slice(-12500):content.slice(0,12000));
 }).join('\\n\\n');
-const prompt=`あなたはORXELIAと独立した日本語UI/UX監査担当のGeminiです。対象はGitHub Pages上の経営ダッシュボード。次の実装コードだけを根拠にレビューしてください。CSS末尾の上書きとホーム画面の最新コードを必ず確認してください。実際の画面・iPhone実機・操作テストを見ていない場合は必ず明記してください。事業ごとのAI生成デザインのレビューと混同しないこと。次の順番でMarkdownで返してください：1. 総評（100点満点、採点根拠） 2. iPhone 390pxの視認性とナビゲーション 3. 経営者が30秒で承認待ち、事業別売上、利益、契約数を把握できるか 4. 情報過多と削るべき項目 5. 重要度順の具体的改善提案5つ（対象ファイル・要素・変更内容・期待効果） 6. 確認できないことと追加テスト。事実と推測を区別し、Stripe連携済みや売上確定などと断定しない。\n\n${sources}`;
+const prompt=`あなたはORXELIAと独立した日本語UI/UX監査担当のGeminiです。対象はGitHub Pages上の経営ダッシュボード。次の実装コードだけを根拠にレビューしてください。CSS末尾の上書きとホーム画面の最新コードを必ず確認してください。実際の画面・iPhone実機・操作テストを見ていない場合は必ず明記してください。事業ごとのAI生成デザインのレビューと混同しないこと。特に今回改修した「事業一覧」と「承認・販売」のタブを最優先で評価してください。事業一覧の次の行動の明確さ、承認案件の優先順位、折りたたみ式プレビュー、iPhoneでの操作性、誤承認防止を確認し、改善が必要なら具体的に指摘してください。次の順番でMarkdownで返してください：1. 総評（100点満点、採点根拠） 2. iPhone 390pxの視認性とナビゲーション 3. 経営者が30秒で承認待ち、事業別売上、利益、契約数を把握できるか 4. 情報過多と削るべき項目 5. 重要度順の具体的改善提案5つ（対象ファイル・要素・変更内容・期待効果） 6. 確認できないことと追加テスト。事実と推測を区別し、Stripe連携済みや売上確定などと断定しない。\n\n${sources}`;
 const api='https://generativelanguage.googleapis.com/v1beta/';
 async function request(url,options={}){
  const response=await fetch(url,{...options,headers:{'x-goog-api-key':key,...options.headers},signal:AbortSignal.timeout(90000)});
