@@ -7,6 +7,7 @@ on:
       - 'style.css'
       - 'business-economics.js'
       - 'scripts/check-business-flow.mjs'
+      - 'scripts/browser-smoke.mjs'
       - '.github/workflows/integration-smoke.yml'
   workflow_dispatch:
 permissions:
@@ -44,3 +45,23 @@ jobs:
           assert.ok(!js.includes('tab = "home"; render(); $("view").querySelector("details").open = true;'),'stale task shortcut');
           console.log('PASS: syntax, 5 destinations, assets, approval/finance/task wiring, visual selectors');
           NODE
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned browser test dependency
+        run: npm install --no-save --no-package-lock playwright@1.58.2
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start isolated local web server
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/orxelia-http.log 2>&1 &
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:8765/ >/dev/null && exit 0; sleep 1; done
+          exit 1
+      - name: Test desktop and iPhone-sized navigation without cloud writes
+        run: node scripts/browser-smoke.mjs
