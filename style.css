@@ -274,3 +274,27 @@ body.is-home .work-now{margin:4px 0 6px}
  .proposal-item-body>button{width:100%;margin:6px 0;min-height:48px}
  .proposal-item-body iframe{max-height:390px}
 }
+
+
+/* ORXELIA 2.4 — accessible contrast and restrained accent hierarchy */
+:root{--base:#0b1220;--navy:#142235;--card:#1b2d42;--edge:#53677c;--gold:#80ead9;--text:#f8fafc;--dim:#d0dbe5}
+body{background:linear-gradient(180deg,#101b2d 0%,#0b1220 70%)}
+header{background:#101b2d;border-bottom-color:#465b71}
+.metric,article,.panel{background:#1b2d42;border-color:#4d6378;box-shadow:none}
+p,label,.metric small,.metric span,.work-note{color:#d0dbe5}
+.priority-card{background:#20364d;border:1px solid #698197;box-shadow:none}
+.priority-card h3,.portfolio-tile h3,.proposal-item-title{color:#ffffff}
+.priority-card p,.portfolio-tile p,.proposal-item-body>p{color:#d8e3ec}
+.priority-label{color:#c3f6ec}
+.priority-state,.portfolio-status,.proposal-item-status{background:#30475c;color:#f2fafc;border-color:#71899b}
+.count-pill{background:#243b51;color:#e8f6f4;border-color:#6e8497}
+nav{background:#1a2b40;border-color:#5b7083;box-shadow:none}
+nav button{color:#e4ecf4}
+nav button[aria-current]{background:#80ead9;color:#08242a}
+button,.file{background:#2a4056;border-color:#70869a;color:#f7fbff}
+button.primary,.primary,.portfolio-tile>button,.home-links button:last-child{background:#80ead9;color:#08242a;border-color:#80ead9}
+button:hover{border-color:#a1f4e6}
+.home-stats,.proposal-intro,.proposal-item,.proposal-next,.owner-next{background:#1c3045;border-color:#5c7286}
+.home-stats>summary,summary,.eyebrow{color:#a8f3e7}
+input:not([type=file]),select,textarea{background:#15283c;border-color:#74899b;color:#fff}
+@media(max-width:640px){.quick-table tr{background:#20364d;border-color:#698197}.quick-table td:before{color:#d3e1eb}}
