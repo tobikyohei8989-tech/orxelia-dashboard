@@ -46,6 +46,11 @@ try{
  assert.equal(await page.evaluate(()=>localStorage.getItem('orx_estimates')),before);
  await page.locator('input[type=file]').setInputFiles({name:'invalid.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify([{id:'bad'}]))});
  assert.equal(await page.evaluate(()=>localStorage.getItem('orx_estimates')),before);
+ // Backup date field is untrusted and must not create DOM nodes.
+ const malicious=structuredClone(data);
+ malicious[0].nextAt='<img src=x onerror=alert(1)>';
+ await page.locator('input[type=file]').setInputFiles({name:'malicious.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(malicious))});
+ assert.equal(await page.evaluate(()=>localStorage.getItem('orx_estimates')),before);
  // XSS payloads must be displayed as text, never executed.
  await page.locator('.bottom-nav .nav-item').first().click();
  await page.getByText('＋ 新規見積りを登録').click();
