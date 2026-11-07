@@ -197,7 +197,7 @@ function card(p) {
     (p.passCriteria ? '<p>判断基準　' + esc(p.passCriteria) + '</p>' : '') +
     '<p>次の行動　' + esc(p.next || "未設定") + '</p><details><summary>進捗履歴・出典</summary><p>' +
     esc(p.source) + '</p>' + (history ? '<ol>' + history + '</ol>' : '<p>履歴は未登録です。</p>') + '</details>' +
-    action("編集・進捗を記録","project",p.id) + '</article>';
+    action("編集・進捗を記録","project",p.id) + action("この事業を削除","projectDelete",p.id) + '</article>';
 }
 
 
@@ -1152,6 +1152,27 @@ function editor(title,fields,onSubmit) {
   submit = onSubmit;
   $("editor").showModal();
 }
+function deleteSingleProject(id){
+ const target=data.projects.find(p=>p.id===id);
+ if(!target)throw Error("削除対象の事業が見つかりません。");
+ const ledger=data.ledger.filter(r=>r.project===id);
+ const decisions=data.decisions.filter(r=>r.project===id || r.projectId===id);
+ const tasks=loadTasks();
+ const evidence=loadEvidence();
+ if(tasks===null || evidence===null)throw Error("関連データを確認できないため削除を中止しました。");
+ const relatedTasks=tasks.filter(t=>t.project===id || t.projectId===id);
+ const relatedEvidence=evidence.filter(e=>e.project===id || e.projectId===id);
+ if(ledger.length||decisions.length||relatedTasks.length||relatedEvidence.length){
+  alert("この事業には収支・判断・タスク・検証記録が関連しています。安全のため個別削除を中止しました。");return;
+ }
+ if(!confirm("次の事業1件だけを削除します。\\n\\n"+target.name+"\\n\\nほかの事業は削除しません。続けますか？"))return;
+ if(prompt("誤削除防止のため、削除する事業名を正確に入力してください。", "")!==target.name){alert("事業名が一致しないため削除しませんでした。");return;}
+ exportBundle();
+ if(!confirm("バックアップのダウンロードを確認しましたか？\\n確認できた場合のみOKを押してください。"))return;
+ save({...data,projects:data.projects.filter(p=>p.id!==id)});
+ render();
+ $("notice").textContent="「"+target.name+"」を削除しました。設定から「今すぐ同期」を押してください。";
+}
 function editProject(id, isDaily) {
   const old = data.projects.find(p => p.id === id);
   const p = old || {name:"",type:isDaily ? types[0] : types[2],stage:isDaily ? "未検証" : "未確認",priority:"未設定",date:"",rank:0,price:null,history:[]};
@@ -1246,6 +1267,7 @@ document.addEventListener("click", event => {
     if (kind === "taskDelete") { const rows=loadTasks(); if(rows===null) throw Error("タスクを読み込めません。"); if(confirm("このタスクを削除しますか？")) {saveTasks(rows.filter(t=>t.id!==value));render();} }
     if (kind === "safetyExport") exportSafetyCopy();
     else if (kind === "project" || kind === "dailyProject") editProject(value,kind === "dailyProject");
+    if (kind === "projectDelete") deleteSingleProject(value);
     if (kind === "ledger") editLedger(value);
     if (kind === "decision") editDecision(value);
     if (kind === "reviewApprove") decisionReview(Number(value),"決定済み");
