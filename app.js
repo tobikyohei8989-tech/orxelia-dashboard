@@ -128,6 +128,7 @@ function save(next) {
   keepSafetyCopy("事業・収支・判断の変更前");
   localStorage.setItem(key, JSON.stringify(next));
   data = next;
+  window.dispatchEvent(new Event("orxelia-local-change"));
 }
 function validate(value) {
   const str = v => typeof v === "string";
@@ -1655,7 +1656,14 @@ const sync = (() => {
         status("端末とクラウドの両方に異なる記録があります。上書きを止めました。「JSONを書き出す」で端末の記録を保存できます。");
         return;
       }
-      status("自動同期中 ／ " + new Date().toLocaleTimeString("ja-JP") + " に確認");
+      syncStep = "保存結果の再検証";
+      const [verified] = await request(table + "?select=revision,snapshot&limit=1");
+      if (!verified || signature(verified.snapshot) !== signature(data)) {
+        status("同期未完了：クラウドの内容が端末と一致しません。端末データは保持しています。");
+        return;
+      }
+      remember(verified.revision,verified.snapshot);
+      status("クラウド保存確認済み（事業 " + verified.snapshot.projects.length + "件／版 " + verified.revision + "） ／ " + new Date().toLocaleTimeString("ja-JP"));
     } catch (error) {
       const detail = String(error?.message || "不明なエラー");
       const code = detail.match(/(?:HTTP|Supabase|status)\s*[: ]\s*(\d{3})/i)?.[1] || detail.match(/\b(400|401|403|404|409|422|429|500|502|503)\b/)?.[1];
@@ -1792,6 +1800,7 @@ const sync = (() => {
     if (event.target.id === "sync-now") run();
   });
   document.addEventListener("visibilitychange", () => { if (!document.hidden) run(); });
+  window.addEventListener("orxelia-local-change",() => { status("端末の変更を保存しました。クラウド同期を確認中…"); run(); });
   window.addEventListener("online",() => run());
   setInterval(() => { if (!document.hidden) run(); },15000);
   setInterval(() => { if (!document.hidden && tab === "home" && !$("editor").open && !$("view").contains(document.activeElement)) render(); },60000);
