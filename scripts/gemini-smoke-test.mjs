@@ -12,7 +12,7 @@ async function request(url,opts={},timeout=20000){
 const list=await request(root+'/models?pageSize=100');
 if(!list.ok)throw Error('Gemini models discovery HTTP '+list.status+': '+String(list.j.error?.message||'').slice(0,160));
 const available=(list.j.models||[]).filter(m=>m.supportedGenerationMethods?.includes('generateContent')).map(m=>m.name.replace(/^models\//,''));
-const candidates=['gemini-3.8-flash','gemini-3-flash','gemini-2.5-flash-lite','gemini-2.0-flash-lite'].filter(m=>available.includes(m));
+const candidates=[...new Set([...['gemini-3.8-flash','gemini-3-flash','gemini-2.5-flash-lite','gemini-2.0-flash-lite'].filter(m=>available.includes(m)),...available.filter(m=>/flash/i.test(m)).slice(0,6)])].slice(0,7);
 console.log('Available compatible models:',candidates.join(', ')||'(none)');
 if(!candidates.length)throw Error('No supported preferred Gemini model returned by models discovery');
 let passed=false;
@@ -26,7 +26,7 @@ for(const model of candidates){
     console.log('Model returned no valid HTML:',model,'finishReason:',j.candidates?.[0]?.finishReason);
     break;
    }
-   console.log('Gemini model',model,'HTTP',status,'attempt',attempt);
+   console.log('Gemini model',model,'HTTP',status,'attempt',attempt,'reason:',String(j.error?.message||'').slice(0,180));
    if(![429,500,502,503,504].includes(status))break;
   }catch(e){console.log('Gemini model',model,'request error:',e.name)}
   if(attempt<2)await sleep(1500);
