@@ -4,7 +4,13 @@ const url='https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-fl
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 let j;
 for(let attempt=1;attempt<=4;attempt++){
- const r=await fetch(url,{method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:'Return only a minimal valid HTML document containing a Japanese heading and one button.'}]}],generationConfig:{temperature:0,maxOutputTokens:2048,thinkingConfig:{thinkingBudget:0}}}),signal:AbortSignal.timeout(60000)});
+ let r;
+ try{
+  r=await fetch(url,{method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:'Return only a minimal valid HTML document containing a Japanese heading and one button.'}]}],generationConfig:{temperature:0,maxOutputTokens:2048,thinkingConfig:{thinkingBudget:0}}}),signal:AbortSignal.timeout(30000)});
+ }catch(e){
+  if((e.name==='TimeoutError'||e.name==='AbortError'||e instanceof TypeError)&&attempt<4){console.log('Temporary Gemini network/timeout error; retry '+attempt+'/3');await sleep(1500*2**(attempt-1));continue}
+  throw e;
+ }
  const raw=await r.text();try{j=JSON.parse(raw)}catch{throw Error('Gemini returned non-JSON HTTP '+r.status+' content-type '+r.headers.get('content-type'))}
  if(r.ok)break;
  if([429,500,502,503,504].includes(r.status)&&attempt<4){console.log('Temporary Gemini HTTP '+r.status+'; retry '+attempt+'/3');await sleep(1500*2**(attempt-1));continue}
