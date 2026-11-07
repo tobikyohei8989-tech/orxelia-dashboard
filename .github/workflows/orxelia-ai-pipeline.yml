@@ -1,12 +1,6 @@
-name: ORXELIA AI proposal development
+name: ORXELIA AI proposal development (manual fallback)
 on:
-  push:
-    paths:
-      - '.github/workflows/orxelia-ai-pipeline.yml'
-      - 'scripts/orxelia-proposal-pipeline.mjs'
   workflow_dispatch:
-  schedule:
-    - cron: '*/15 * * * *'
 permissions:
   contents: read
 concurrency:
