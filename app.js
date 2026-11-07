@@ -1410,7 +1410,9 @@ const sync = (() => {
   }
   async function run(credentials) {
     if (recoveryToken) return;
-    if (busy || !window.ORXELIA_PUBLISHABLE_KEY || (!session && !credentials) || !readable || $("editor").open) return;
+    if (busy) { status("同期処理中です。完了までお待ちください。"); return; }
+    if (!window.ORXELIA_PUBLISHABLE_KEY || (!session && !credentials) || !readable || $("editor").open) { status("同期を開始できません。ログイン状態・設定・編集中の画面を確認してください。"); return; }
+    status("クラウドに接続しています…");
     busy = true;
     try {
       if (credentials) {
@@ -1472,9 +1474,11 @@ const sync = (() => {
         return;
       }
       status("自動同期中 ／ " + new Date().toLocaleTimeString("ja-JP") + " に確認");
-    } catch {
-      status(credentials ? "ログインまたは接続に失敗しました。入力と通信を確認してください。" :
-        "同期できませんでした。端末データは保持し、接続後に再試行します。");
+    } catch (error) {
+      const detail = String(error?.message || "不明なエラー");
+      const code = detail.match(/(?:HTTP|Supabase|status)\s*[: ]\s*(\d{3})/i)?.[1] || detail.match(/\b(400|401|403|404|409|422|429|500|502|503)\b/)?.[1];
+      status((credentials ? "ログイン・接続失敗" : "同期失敗") + (code ? "（HTTP " + code + "）" : "（通信・認証・権限を確認）") + "。端末データは保持しています。");
+      console.warn("ORXELIA sync failed", code || "unknown");
     } finally {
       busy = false;
     }
