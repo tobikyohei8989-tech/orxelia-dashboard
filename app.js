@@ -1003,23 +1003,43 @@ function existingResearchPanel() {
     }).join("") : '<p>事業一覧に一致する公開レポートはありません。</p>')));
 }
 
+function businessRevenueOverview() {
+  const period=today().slice(0,7);
+  const ledger=data.ledger.filter(r=>r.month===period);
+  const byProject=new Map(data.projects.map(p=>[p.id,p]));
+  const salesRows=loadSales();
+  const contractCount=salesRows===null?null:salesRows.filter(r=>r.stage==="契約").length;
+  const revenue=ledger.reduce((sum,r)=>sum+r.revenue,0);
+  const cost=ledger.reduce((sum,r)=>sum+r.cost,0);
+  const rows=ledger.map(r=>{
+    const project=byProject.get(r.project);
+    return '<article class="business-progress"><h3>'+esc(project?.name||"登録事業")+'</h3><div class="metrics">'+
+      metric("契約数","未連携","事業別契約台帳は未接続")+
+      metric("売上",yen(r.revenue),"当月入力実績")+
+      metric("差引収支",yen(r.revenue-r.cost),"売上−費用・税引前")+
+      '</div></article>';
+  }).join("");
+  return panel('<h3>事業別の契約・売上・利益</h3><p>対象：'+esc(period)+' ／ 実績登録ベース。未登録を0円とは扱いません。</p>'+
+    '<div class="metrics">'+
+    metric("契約件数",contractCount===null?"確認不可":contractCount+"件","営業記録の契約段階・事業別未連携")+
+    metric("売上合計",ledger.length?yen(revenue):"未登録","当月実績")+
+    metric("差引収支",ledger.length?yen(revenue-cost):"未登録","税引前・営業利益ではありません")+
+    '</div>'+
+    (rows||'<p>事業別の売上・費用はまだ登録されていません。販売開始後、実績を登録するとここに表示されます。</p>')+
+    '<p>※契約数は現在の営業記録に基づく件数で、事業別の正確な契約数や有効契約数ではありません。今後の契約・決済連携が必要です。</p>'+
+    '<button type="button" data-tab="finance">売上・費用を登録する</button>');
+}
 function home() {
-  const focus = activeQueue()[0] || data.projects.find(p => ["販売中","収益化済み"].includes(p.stage));
-  const taskRows = loadTasks();
-  const nextTasks = (taskRows || []).filter(t => t.state !== "完了")
-    .sort((a,b) => (a.due || "9999").localeCompare(b.due || "9999")).slice(0,3);
-  const rows = data.ledger.filter(r => r.month === today().slice(0,7));
-  const revenue = rows.reduce((total,r) => total + r.revenue,0);
-  const balance = rows.reduce((total,r) => total + r.revenue-r.cost,0);
-  return heading("今日の収益化アクション") + (window.orxeliaSync?.dailyReportView() || "") +
-    panel('<h3>次の一手</h3>' + (focus ?
-      '<p>' + esc(focus.name) + ' ／ ' + esc(focus.next || "次の販売検証を登録") + '</p>' +
-      action("事業を編集","project",focus.id) : '<p>事業案・販売判断で、最初に販売検証する事業を選びます。</p>') +
-      (taskRows === null ? '<p>タスクを読み込めません。</p>' :
-        nextTasks.map(t => '<p>' + esc(t.title) + ' ／ ' + esc(t.due || "期限未設定") + '</p>').join(""))) +
-    '<div class="metrics">' + metric("今月の売上",rows.length ? yen(revenue) : "未登録","登録済み " + rows.length + "事業") +
-    metric("今月の差引収支",rows.length ? yen(balance) : "未登録","売上 − 費用・税引前") + '</div>' +
-    ideaReviewPanel(1) + pendingDecisionSummary() + details("実行タスク",tasks()) + details("作業進捗",progress());
+  const waiting=orxeliaTrialProposals.filter(p=>["awaiting_first_approval","development_ready","awaiting_final_approval"].includes(p.status));
+  const running=orxeliaTrialProposals.filter(p=>["awaiting_selection","designing","revision_requested","revising","approved_for_development","developing","prototype_revision_requested","prototype_revising","sales_review_requested"].includes(p.status));
+  const waitingRows=waiting.slice(0,5).map(p=>'<article class="business-progress"><h3>'+esc(p.title)+'</h3><p>'+esc(p.status==="awaiting_first_approval"?"デザインの確認・承認":p.status==="development_ready"?"動作試作品の確認・修正":"販売判断の確認")+'</p><button type="button" data-tab="verification">確認する</button></article>').join("");
+  return heading("ORXELIA ホーム")+
+    '<div class="metrics">'+metric("あなたの確認待ち",waiting.length+"件","承認・試作品の修正")+
+    metric("AI作業中・待機",running.length+"件","自動処理の進捗")+
+    metric("事業総数",new Set([...data.projects.map(p=>p.name),...orxeliaTrialProposals.map(p=>p.title)]).size+"件","登録名ベース・重複の可能性あり")+'</div>'+
+    panel('<h3>次に確認する事業</h3>'+(waitingRows||'<p>現在、確認待ちの案件はありません。AIの作業状況は事業一覧で確認できます。</p>'))+
+    businessRevenueOverview()+
+    details("以前の作業・検証記録", (window.orxeliaSync?.dailyReportView()||"")+ideaReviewPanel(1)+pendingDecisionSummary()+details("実行タスク",tasks())+details("作業進捗",progress()));
 }
 
 function render() {
