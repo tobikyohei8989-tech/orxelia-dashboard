@@ -327,3 +327,11 @@ article p,.panel p,.owner-next p,.proposal-intro p,.proposal-item p{color:#52657
 #month[type="month"]::-webkit-date-and-time-value{text-align:left;min-height:1.3em}
 #month[type="month"]::-webkit-calendar-picker-indicator{opacity:.75;cursor:pointer}
 @media(max-width:640px){#month[type="month"]{width:min(100%,260px);max-width:260px}}
+
+/* Owner decision/action highlight: amber is reserved for required human review */
+.owner-action-card{border:2px solid #e59a28;background:#fffaf0;box-shadow:0 2px 10px rgba(156,93,13,.09)}
+.owner-action-card .priority-label{display:inline-flex;align-items:center;gap:6px;background:#fff0cc;border:1px solid #e7b457;border-radius:7px;padding:5px 9px;color:#854600;font-size:12px;font-weight:800}
+.owner-action-card .priority-label:before{content:"!";display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;background:#a95800;color:white;font-size:12px}
+.owner-action-card .priority-state{background:#fff0cc;border-color:#e7b457;color:#854600}
+.owner-action-card>button.primary{background:#a95800;border-color:#a95800;color:#fff}
+.owner-action-card>button.primary:hover{background:#874600}
