@@ -7,6 +7,14 @@ const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const gh = process.env.GITHUB_TOKEN;
 const model = process.env.ORXELIA_MODEL || 'openai/gpt-4.1-mini';
 if (!base || !key || !gh) throw new Error('Missing SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY or GITHUB_TOKEN');
+const expectedProject = 'yzlxcfncdtojajlhihap';
+let actualProject;
+try { actualProject = new URL(base).hostname.split('.')[0]; }
+catch { throw new Error('SUPABASE_URL is not a valid URL'); }
+if (actualProject !== expectedProject) throw new Error('Supabase project mismatch: expected '+expectedProject+', configured '+actualProject+'. Check ORXELIA_SUPABASE_URL in GitHub Actions secrets.');
+const keyKind = key.startsWith('sb_secret_') ? 'secret' : key.startsWith('eyJ') ? 'legacy-jwt' : key.startsWith('sb_publishable_') ? 'publishable' : 'unknown';
+console.log('Supabase target verified:',actualProject,'key type:',keyKind);
+if (keyKind === 'publishable') throw new Error('ORXELIA_SUPABASE_SERVICE_ROLE_KEY is a publishable key, not a server-side secret key');
 const headers = {apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'};
 const rest = async (resource,options={}) => {
  const r=await fetch(base.replace(/\/$/,'')+'/rest/v1/'+resource,{...options,headers:{...headers,...options.headers}});
@@ -52,7 +60,7 @@ const testHTML=async dir=>{
  return result;
 };
 const rows=await rest('orxelia_development_jobs?select=owner_id,report_date,project,status&status=in.(queued,running)&order=created_at.asc&limit=1');
-if(!rows.length){console.log('No queued jobs');process.exit(0)}
+if(!rows.length){console.log('No queued jobs returned by REST. If Supabase SQL shows queued rows, check key permissions/RLS and verify GitHub secret value.');process.exit(0)}
 const job=rows[0];const match='owner_id=eq.'+encodeURIComponent(job.owner_id)+'&report_date=eq.'+job.report_date;
 const pipelines=await rest('orxelia_pipeline?select=project,summary,phase&'+match);
 if(!['development_requested','development_running'].includes(pipelines[0]?.phase))throw new Error('Job not approved');
