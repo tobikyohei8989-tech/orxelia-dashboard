@@ -1,0 +1,43 @@
+name: ORXELIA integration smoke checks
+on:
+  push:
+    paths:
+      - 'app.js'
+      - 'index.html'
+      - 'style.css'
+      - 'business-economics.js'
+      - '.github/workflows/integration-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax checks
+        run: |
+          node --check app.js
+          node --check business-economics.js
+      - name: Navigation, workflow and asset wiring checks
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFileSync} from 'node:fs';
+          import assert from 'node:assert/strict';
+          const html=readFileSync('index.html','utf8');
+          const js=readFileSync('app.js','utf8');
+          const css=readFileSync('style.css','utf8');
+          const tabs=['home','portfolio','verification','finance','settings'];
+          for(const tab of tabs){
+            assert.match(html,new RegExp('data-tab="'+tab+'"'),'missing navigation '+tab);
+            assert.match(js,new RegExp(tab+':\\s*\\('),'missing render handler '+tab);
+          }
+          for(const asset of ['style.css','app.js','business-economics.js'])assert.ok(html.includes(asset),'missing asset '+asset);
+          for(const token of ['function home()','function executiveQuickMatrix()','function orxeliaTrialProposalPanel()','function render()','data-tab="verification"','data-tab="finance"','taskSection.scrollIntoView'])assert.ok(js.includes(token),'missing workflow '+token);
+          for(const token of ['.priority-card','.quick-table','.home-links','nav button'])assert.ok(css.includes(token),'missing visual '+token);
+          assert.ok(!js.includes('tab = "home"; render(); $("view").querySelector("details").open = true;'),'stale task shortcut');
+          console.log('PASS: syntax, 5 destinations, assets, approval/finance/task wiring, visual selectors');
+          NODE
