@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>見積もり催促・追客管理 - ORXELIA Prototype</title>
+<style>
+  :root {
+    --primary: #0284c7;
+    --primary-light: #e0f2fe;
+    --warning: #b45309;
+    --warning-light: #fef3c7;
+    --danger: #b91c1c;
+    --danger-light: #fee2e2;
+    --success: #15803d;
+    --success-light: #dcfce7;
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --text: #0f172a;
+    --text-muted: #475569;
+    --border: #cbd5e1;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  body {
+    background-color: #334155;
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  /* モバイルフレーム */
+  .mobile-frame {
+    width: 100%;
+    max-width: 390px;
+    height: 844px;
+    background-color: var(--bg);
+    border-radius: 40px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    border: 8px solid #1e293b;
+  }
+
+  /* ステータスバー・モック */
+  .status-bar {
+    background-color: var(--surface);
+    padding: 12px 24px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* プロトタイプ明示バナー（ラベル） */
+  .prototype-banner {
+    background-color: #fef08a;
+    color: #854d0e;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    padding: 6px;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #fde047;
+  }
+
+  /* ヘッダー */
+  .header {
+    background-color: var(--surface);
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-title h1 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .header-title p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .badge-position {
+    background-color: var(--primary-light);
+    color: var(--primary);
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: 650;
+  }
+
+  /* スクロール領域 */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-bottom: 90px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .view-section {
+    display: none;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .view-section.active {
+    display: flex;
+  }
+
+  /* KPIカード */
+  .kpi-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .kpi-card {
+    background-color: var(--surface);
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  }
+
+  .kpi-title {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+
+  .kpi-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .kpi-value span {
+    font-size: 12px;
+    font-weight: normal;
+    color: var(--text-muted);
+    margin-left: 2px;
+  }
+
+  .kpi-alert {
+    color: var(--danger);
+  }
+
+  /* セクション見出し */
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+  }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .section-filter {
+    font-size: 12px;
+    color: var(--primary);
+    font-weight: 600;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  /* レコードカード */
+  .record-card {
+    background-color: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: background-color 0.1s;
+  }
+
+  .record-card:active {
+    background-color: #f1f5f9;
+  }
+
+  .record-card.urgent::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background-color: var(--danger);
+  }
+
+  .record-card.warning::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background-color: var(--warning);
+  }
+
+  .record-card.normal::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background-color: var(--primary);
+  }
+
+  .record-body {
+    padding: 14px 14px 10px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .record-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .client-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .project-name {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .amount-area {
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .amount {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .status-badge {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 650;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .status-badge.danger {
+    background-color: var(--danger-light);
+    color: var(--danger);
+  }
+
+  .status-badge.warning {
+    background-color: var(--warning-light);
+    color: var(--warning);
+  }
+
+  .status-badge.normal {
+    background-color: var(--primary-light);
+    color: var(--primary);
+  }
+
+  .record-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    padding: 10px 14px 10px 18px;
+    font-size: 12px;
+    color: var(--text-muted);
+    background-color: #fafafa;
+  }
+
+  .action-hint {
+    font-weight: 700;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  /* ボタン・フォーム要素 */
+  .btn-primary {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    width: 100%;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(2,132,199,0.2);
+    min-height: 44px;
+  }
+  .btn-primary:active {
+    opacity: 0.9;
+  }
+
+  .btn-danger {
+    background-color: var(--danger);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    min-height: 44px;
+  }
+
+  .btn-secondary {
+    background-color: #e2e8f0;
+    color: var(--text);
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    min-height: 44px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .form-group label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .form-control {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 16px; /* iOS zoom防止のため16px以上に指定 */
+    background-color: var(--surface);
+    color: var(--text);
+    width: 100%;
+    min-height: 44px;
+    -webkit-appearance: none;
+  }
+  .form-control:focus {
+    outline: 2px solid var(--primary);
+  }
+
+  .card-box {
+    background-color: var(--surface);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 30px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* ボトムナビゲーション */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background-color: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding-bottom: 10px;
+    z-index: 10;
+  }
+
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--text-muted);
+    font-size: 11px;
+    text-decoration: none;
+    background: none;
+    border: none;
+    flex: 1;
+    height: 100%;
+    cursor: pointer;
+  }
+
+  .nav-item.active {
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  .nav-icon {
+    font-size: 18px;
+  }
+
+  /* モーダルダイアログ */
+  .modal-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(15, 23, 42, 0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    padding: 16px;
+  }
+  .modal-overlay.open {
+    display: flex;
+  }
+  .modal-content {
+    background-color: var(--surface);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 340px;
+    padding: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
+</style>
+</head>
+<body>
+
+<div class="mobile-frame">
+  <!-- ステータスバー -->
+  <div class="status-bar">
+    <span id="clock">9:41</span>
+    <span>5G 🔋</span>
+  </div>
+
+  <!-- プロトタイプ明示バナー -->
+  <div class="prototype-banner">
+    ⚠️ プロトタイプ（契約・決済・外部送信なし）
+  </div>
+
+  <!-- ヘッダー -->
+  <div class="header">
+    <div class="header-title">
+      <h1>見積もり催促・追客管理</h1>
+      <p>対象：工事・修理業（追客漏れ防止）</p>
+    </div>
+    <div class="badge-position">検証プロト</div>
+  </div>
+
+  <!-- メインコンテンツ -->
+  <div class="content">
+    
+    <!-- ビュー1: 追客一覧 -->
+    <div id="view-list" class="view-section active">
+      
+      <!-- KPIカード領域 -->
+      <div class="kpi-container">
+        <div class="kpi-card">
+          <div class="kpi-title">要追客案件</div>
+          <div class="kpi-value kpi-alert" id="kpi-urgent">0<span>件</span></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">登録総件数</div>
+          <div class="kpi-value" id="kpi-total">0<span>件</span></div>
+        </div>
+      </div>
+
+      <!-- アクション・検索バー -->
+      <div style="display: flex; gap: 8px;">
+        <button class="btn-primary" onclick="openAddModal()">＋ 新規見積りを登録</button>
+      </div>
+
+      <!-- セクションタイトル -->
+      <div class="section-header">
+        <span class="section-title">追客対応リスト</span>
+        <button class="section-filter" onclick="toggleFilter()" id="filter-label">表示: すべて ▾</button>
+      </div>
+
+      <!-- レコードリスト表示エリア -->
+      <div id="record-list-container" style="display: flex; flex-direction: column; gap: 12px;">
+        <!-- 動的描画 -->
+      </div>
+
+    </div><!-- /view-list -->
+
+    <!-- ビュー2: データ管理・バックアップ -->
+    <div id="view-settings" class="view-section">
+      <div class="card-box">
+        <h3 class="section-title" style="margin-bottom: 8px;">データバックアップ & 連携</h3>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
+          LocalStorageに保存されているデータをJSON形式でバックアップ、またはCSV出力できます。
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <button class="btn-secondary" onclick="exportJSON()">📥 JSONバックアップ出力</button>
+          <button class="btn-secondary" onclick="exportCSV()">📊 案件一覧CSVエクスポート</button>
+          <label class="btn-secondary" style="display:block;text-align:center">📤 JSONバックアップを復元<input type="file" accept=".json,application/json" onchange="importJSON(event)" style="display:none"></label>
+          <button class="btn-danger" onclick="confirmResetData()" style="margin-top: 10px;">🗑️ 全データ初期化（リセット）</button>
+        </div>
+      </div>
+
+      <div class="card-box">
+        <h3 class="section-title" style="margin-bottom: 8px;">ソリューション仮説について</h3>
+        <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+          工事・修理業における「見積提出後の追客漏れによる機会損失」を防ぐための軽量管理ツール。無料代替や競合との差別化条件を検証中です。
+        </p>
+      </div>
+    </div><!-- /view-settings -->
+
+  </div><!-- /content -->
+
+  <!-- ボトムナビゲーション -->
+  <div class="bottom-nav">
+    <button class="nav-item active" onclick="switchView('list', this)">
+      <span class="nav-icon">📋</span>
+      <span>追客一覧</span>
+    </button>
+    <button class="nav-item" onclick="switchView('settings', this)">
+      <span class="nav-icon">⚙️</span>
+      <span>データ・設定</span>
+    </button>
+  </div>
+
+</div><!-- /mobile-frame -->
+
+<!-- 新規登録モーダル -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal-content">
+    <div class="modal-title">新規見積り案件の登録</div>
+    <form id="addForm" onsubmit="handleSaveRecord(event)">
+      <div class="form-group">
+        <label>顧客名（必須）</label>
+        <input type="text" class="form-control" id="inputClient" required placeholder="例: 株式会社 山田工務店" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>案件名（必須）</label>
+        <input type="text" class="form-control" id="inputProject" required placeholder="例: 店舗改修工事 見積もり" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>見積金額 (円)</label>
+        <input type="number" class="form-control" id="inputAmount" required placeholder="例: 450000" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>担当者名</label>
+        <input type="text" class="form-control" id="inputStaff" placeholder="例: 佐藤" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>提出からの経過日数</label>
+        <input type="number" class="form-control" id="inputDays" required min="0" value="1" placeholder="例: 5" inputmode="numeric">
+      </div>
+      <div style="display: flex; gap: 8px; margin-top: 10px;">
+        <button type="button" class="btn-secondary" style="flex:1;" onclick="closeAddModal()">キャンセル</button>
+        <button type="submit" class="btn-primary" style="flex:1;">登録する</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 詳細・アクションモーダル -->
+<div class="modal-overlay" id="actionModal">
+  <div class="modal-content">
+    <div class="modal-title" id="actionModalTitle">案件アクション</div>
+    <p id="actionModalDesc" style="font-size: 13px; color: var(--text-muted);"></p>
+    <div style="background-color: var(--bg); padding: 10px; border-radius: 8px; font-size: 13px; border: 1px solid var(--border);" id="actionModalTemplate">
+      <!-- テンプレート文章 -->
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+      <button class="btn-primary" onclick="copyPromptMessage()">📋 催促メッセージをコピー</button>
+      <button class="btn-secondary" onclick="markAsResolved()">✅ 追客完了（リストから除外/日数リセット）</button>
+      <button class="btn-danger" onclick="confirmDeleteRecord()" style="background:none; color:var(--danger); border:1px solid var(--danger);">🗑️ この案件を削除</button>
+      <button type="button" class="btn-secondary" onclick="closeActionModal()" style="margin-top: 4px;">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 初期データ（LocalStorage未設定時）
+  const INITIAL_DATA = [
+    { id: '1', client: '株式会社 山田工務店', project: '店舗改修工事 見積もり送付', amount: 450000, staff: '佐藤', days: 7 },
+    { id: '2', client: '鈴木テナント様', project: '給排水管修理 見積もり送付', amount: 180000, staff: '高橋', days: 4 },
+    { id: '3', client: '中央ビル管理 各位', project: '定期点検および補修工事', amount: 920000, staff: '佐藤', days: 2 }
+  ];
+
+  let records = [];
+  let currentFilter = 'all'; // all, urgent, warning
+  let selectedRecordId = null;
+  let isComposing = false; // IME入力中フラグ
+
+  // 初期化
+  function initApp() {
+    try {
+      const saved = localStorage.getItem('orx_estimates');
+      if (saved) {
+        records = JSON.parse(saved);
+      } else {
+        records = INITIAL_DATA;
+        saveStorage();
+      }
+    } catch(e) {
+      records = INITIAL_DATA;
+    }
+    render();
+    updateClock();
+    setInterval(updateClock, 60000);
+
+    // IME変換中のフォーム再描画抑止
+    document.addEventListener('compositionstart', () => { isComposing = true; });
+    document.addEventListener('compositionend', () => { isComposing = false; });
+  }
+
+  function saveStorage() {
+    try {
+      localStorage.setItem('orx_estimates', JSON.stringify(records));
+    } catch(e) {
+      console.error("Storage save failed:", e);
+    }
+  }
+
+  function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const clockEl = document.getElementById('clock');
+    if (clockEl) clockEl.textContent = `${h}:${m}`;
+  }
+
+  // ビュー切り替え
+  function switchView(viewName, btnEl) {
+    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.bottom-nav .nav-item').forEach(el => el.classList.remove('active'));
+    
+    if(viewName === 'list') {
+      document.getElementById('view-list').classList.add('active');
+    } else if(viewName === 'settings') {
+      document.getElementById('view-settings').classList.add('active');
+    }
+    btnEl.classList.add('active');
+  }
+
+  // フィルタ切り替え
+  function toggleFilter() {
+    if(currentFilter === 'all') {
+      currentFilter = 'urgent';
+      document.getElementById('filter-label').textContent = '表示: 要注意(4日以上) ▾';
+    } else if(currentFilter === 'urgent') {
+      currentFilter = 'warning';
+      document.getElementById('filter-label').textContent = '表示: 注意(3日以内) ▾';
+    } else {
+      currentFilter = 'all';
+      document.getElementById('filter-label').textContent = '表示: すべて ▾';
+    }
+    render();
+  }
+
+  // 描画メイン
+  function render() {
+    if (isComposing) return; // IME変換中の誤った再描画を防ぐ
+
+    const container = document.getElementById('record-list-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    let urgentCount = 0;
+    records.forEach(r => {
+      if(r.days >= 4) urgentCount++;
+    });
+    
+    const kpiUrgent = document.getElementById('kpi-urgent');
+    const kpiTotal = document.getElementById('kpi-total');
+    if(kpiUrgent) kpiUrgent.innerHTML = `${urgentCount}<span>件</span>`;
+    if(kpiTotal) kpiTotal.innerHTML = `${records.length}<span>件</span>`;
+
+    // フィルタ適用
+    let filtered = records.filter(r => {
+      if(currentFilter === 'urgent') return r.days >= 5;
+      if(currentFilter === 'warning') return r.days >= 3 && r.days < 5;
+      return true;
+    });
+
+    if(filtered.length === 0) {
+      container.innerHTML = `<div class="empty-state">該当する見積案件はありません</div>`;
+      return;
+    }
+
+    filtered.forEach(r => {
+      let statusClass = 'normal';
+      let badgeText = `提出後 ${r.days}日経過`;
+      let cardClass = 'normal';
+      let icon = 'ℹ️';
+
+      if(r.days >= 5) {
+        statusClass = 'danger';
+        cardClass = 'urgent';
+        icon = '⚠️';
+      } else if(r.days >= 3) {
+        statusClass = 'warning';
+        cardClass = 'warning';
+        icon = '❗';
+      }
+
+      const formattedAmount = Number(r.amount).toLocaleString();
+
+      const card = document.createElement('div');
+      card.className = `record-card ${cardClass}`;
+      card.onclick = () => openActionModal(r.id);
+      card.innerHTML = `
+        <div class="record-body">
+          <div class="record-info">
+            <span class="status-badge ${statusClass}">${icon} ${badgeText}</span>
+            <div class="client-name">${escapeHTML(r.client)}</div>
+            <div class="project-name">${escapeHTML(r.project)}</div>
+          </div>
+          <div class="amount-area">
+            <div class="amount">¥${formattedAmount}</div>
+          </div>
+        </div>
+        <div class="record-footer">
+          <span>担当：${escapeHTML(r.staff || '未設定')}</span>
+          <span class="action-hint">催促・確認 ➔</span>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  // モーダル操作
+  function openAddModal() {
+    document.getElementById('addModal').classList.add('open');
+  }
+  function closeAddModal() {
+    document.getElementById('addModal').classList.remove('open');
+    document.getElementById('addForm').reset();
+  }
+
+  function handleSaveRecord(e) {
+    e.preventDefault();
+    const clientInput = document.getElementById('inputClient').value.trim();
+    const projectInput = document.getElementById('inputProject').value.trim();
+    const amountInput = document.getElementById('inputAmount').value;
+    const staffInput = document.getElementById('inputStaff').value.trim();
+    const daysInput = document.getElementById('inputDays').value;
+
+    if (!clientInput || !projectInput || amountInput === '' || daysInput === '') {
+      alert('必須項目を正しく入力してください。');
+      return;
+    }
+
+    const newRecord = {
+      id: Date.now().toString(),
+      client: clientInput,
+      project: projectInput,
+      amount: Number(amountInput),
+      staff: staffInput || '未設定',
+      days: Number(daysInput)
+    };
+    
+    records.unshift(newRecord);
+    saveStorage();
+    closeAddModal();
+    render();
+  }
+
+  function openActionModal(id) {
+    selectedRecordId = id;
+    const r = records.find(item => item.id === id);
+    if(!r) return;
+
+    document.getElementById('actionModalTitle').textContent = r.client;
+    document.getElementById('actionModalDesc').textContent = `${r.project} (提出後 ${r.days}日経過)`;
+    document.getElementById('actionModalTemplate').innerHTML = `
+      <strong>【催促メール文面案】</strong><br>
+      いつも大変お世話になっております。<br>
+      先にお送りしておりました「${escapeHTML(r.project)}」の見積書につきまして、ご検討状況はいかがでしょうか？ご不明点等ございましたらお気軽にお申し付けください。
+    `;
+    document.getElementById('actionModal').classList.add('open');
+  }
+
+  function closeActionModal() {
+    document.getElementById('actionModal').classList.remove('open');
+    selectedRecordId = null;
+  }
+
+  function copyPromptMessage() {
+    const r = records.find(item => item.id === selectedRecordId);
+    if (!r) return;
+    const text = `いつも大変お世話になっております。\n先にお送りしておりました「${r.project}」の見積書につきまして、ご検討状況はいかがでしょうか？ご不明点等ございましたらお気軽にお申し付けください。`;
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('【プロトタイプ】架空の催促メールをクリップボードにコピーしました！');
+      }).catch(() => {
+        fallbackCopyText(text);
+      });
+    } else {
+      fallbackCopyText(text);
+    }
+    closeActionModal();
+  }
+
+  function fallbackCopyText(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      alert('【プロトタイプ】架空の催促メールをクリップボードにコピーしました！');
+    } catch (err) {
+      alert('コピーに失敗しました。');
+    }
+    document.body.removeChild(textArea);
+  }
+
+  function markAsResolved() {
+    const r = records.find(item => item.id === selectedRecordId);
+    if(r) {
+      r.days = 0;
+      saveStorage();
+      render();
+      closeActionModal();
+      alert('【プロトタイプ】経過日数をリセットし対応済みに更新しました。');
+    }
+  }
+
+  function confirmDeleteRecord() {
+    if(confirm('本当にこの案件を削除しますか？')) {
+      records = records.filter(item => item.id !== selectedRecordId);
+      saveStorage();
+      render();
+      closeActionModal();
+    }
+  }
+
+  function confirmResetData() {
+    if(confirm('すべてのデータを初期状態に戻しますか？この操作は元に戻せません。')) {
+      records = [...INITIAL_DATA];
+      saveStorage();
+      render();
+      alert('データを初期化しました。');
+    }
+  }
+
+  // バックアップ・エクスポート
+  function exportJSON() {
+    try {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
+      const dlAnchor = document.createElement('a');
+      dlAnchor.setAttribute("href", dataStr);
+      dlAnchor.setAttribute("download", "orx_estimate_backup.json");
+      document.body.appendChild(dlAnchor);
+      dlAnchor.click();
+      dlAnchor.remove();
+    } catch(e) {
+      alert('エクスポートに失敗しました。');
+    }
+  }
+
+  // バックアップを検証してから復元する。読み込みに失敗しても既存データは維持する。
+  async function importJSON(event) {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    if (!file) return;
+    try {
+      if (file.size > 2 * 1024 * 1024) throw new Error('2MBを超えるファイルは読み込めません');
+      const data = JSON.parse(await file.text());
+      if (!Array.isArray(data) || data.length > 5000 || !data.every(r =>
+        r && typeof r.id === 'string' && typeof r.client === 'string' && typeof r.project === 'string' &&
+        typeof r.staff === 'string' && Number.isFinite(r.amount) && r.amount >= 0 &&
+        Number.isInteger(r.days) && r.days >= 0 && r.days <= 36500 &&
+        r.id.length <= 100 && r.client.length <= 200 && r.project.length <= 300 && r.staff.length <= 200
+      )) throw new Error('バックアップの形式が正しくありません');
+      if (!confirm(data.length + '件のデータで現在の一覧を置き換えますか？事前にJSONバックアップを保存してください。')) return;
+      const snapshot = records;
+      try {
+        localStorage.setItem('orx_estimates', JSON.stringify(data));
+        records = data;
+        render();
+        alert('復元しました（' + data.length + '件）');
+      } catch (e) {
+        records = snapshot;
+        throw new Error('保存に失敗しました。元の一覧を維持しました');
+      }
+    } catch(e) { alert('復元できません: ' + e.message); }
+    finally { input.value = ''; }
+  }
+
+  function exportCSV() {
+    try {
+      const safeCell = value => {
+        let s = String(value ?? '');
+        if (/^[=+@\\-]/.test(s)) s = "'" + s; // Spreadsheet formula injection mitigation
+        return '"' + s.replace(/"/g, '""') + '"';
+      };
+      let csv = '\\uFEFFID,顧客名,案件名,金額,担当者,経過日数\\n';
+      records.forEach(r => {
+        csv += [r.id, r.client, r.project, r.amount, r.staff, r.days].map(safeCell).join(',') + '\\n';
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const dlAnchor = document.createElement('a');
+      dlAnchor.setAttribute("href", url);
+      dlAnchor.setAttribute("download", "orx_estimate_export.csv");
+      document.body.appendChild(dlAnchor);
+      dlAnchor.click();
+      dlAnchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch(e) {
+      alert('CSVエクスポートに失敗しました。');
+    }
+  }
+
+  function escapeHTML(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>'"]/g, 
+      tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+    );
+  }
+
+  // アプリ起動
+  window.addEventListener('DOMContentLoaded', initApp);
+</script>
+
+</body>
+</html>
