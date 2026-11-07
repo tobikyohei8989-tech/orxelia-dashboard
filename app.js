@@ -30,6 +30,14 @@ document.addEventListener("input",event=>{
  const field=event.target.closest?.("[data-revision-input]");
  if(field)saveOrxeliaDraft(field.dataset.revisionInput,field.value);
 });
+document.addEventListener("compositionend",event=>{
+ const field=event.target.closest?.("[data-revision-input]");
+ if(field)saveOrxeliaDraft(field.dataset.revisionInput,field.value);
+});
+document.addEventListener("focusout",event=>{
+ const field=event.target.closest?.("[data-revision-input]");
+ if(field)saveOrxeliaDraft(field.dataset.revisionInput,field.value);
+});
 
 function orxeliaTrialProposalPanel(){
  if(!orxeliaTrialProposals.length)return "";
@@ -1000,6 +1008,12 @@ function home() {
 }
 
 function render() {
+  // iOS Japanese IME: never replace a focused textarea while the user composes text.
+  const activeRevision=document.activeElement;
+  if(activeRevision?.matches?.('textarea[data-revision-input]')){
+    saveOrxeliaDraft(activeRevision.dataset.revisionInput,activeRevision.value);
+    return;
+  }
   const projects = data.projects;
   const activities = latestProjectActivities();
   const active = projects.filter(project => !["保留","終了"].includes(project.stage));
