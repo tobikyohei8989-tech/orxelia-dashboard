@@ -100,3 +100,19 @@ button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visi
 nav{top:env(safe-area-inset-top);gap:4px;padding:5px}
 nav button{font-size:12px;overflow-wrap:anywhere}
 }
+
+/* Audit fixes: consistent five-screen navigation and clear action hierarchy */
+nav{grid-template-columns:repeat(5,minmax(0,1fr))}
+.home-links{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 22px}
+.home-links button{flex:1 1 170px;font-weight:650}
+.home-links button:last-child{background:var(--gold);color:#09262c;border-color:var(--gold)}
+.quick-note{font-size:12px;color:#b9d5de;margin:8px 0}
+.quick-table .needs-action{background:rgba(60,145,141,.11)}
+.quick-table .needs-action th:first-child{border-left:4px solid #71e0cf;padding-left:10px}
+.quick-attention{color:#a8fff0}
+@media(max-width:640px){
+nav{grid-template-columns:repeat(5,minmax(0,1fr));gap:2px}
+nav button{font-size:11px;min-height:48px;padding:7px 1px;letter-spacing:-.04em}
+.quick-table tr.needs-action{border-left:5px solid #71e0cf;background:linear-gradient(145deg,#1b3c48,#122a3c)}
+.quick-table .needs-action th:first-child{border-left:0;padding-left:0}
+}
