@@ -48,7 +48,7 @@ try{
  await page.locator('#inputNext').fill('2026-11-07');
  await page.getByText('登録する').click();
  assert.equal(await page.locator('.record-card img').count(),0);
- assert.match(await page.locator('.record-card').first().innerText(),/<img src=x onerror=alert\\(1\\)>/);
+ assert.match(await page.locator('.record-card').first().innerText(),/<img src=x onerror=alert\(1\)>/);
  // CSV must escape spreadsheet formula strings.
  await page.locator('.bottom-nav .nav-item').last().click();
  const [csvDownload]=await Promise.all([page.waitForEvent('download'),page.getByText('📊 案件一覧CSVエクスポート').click()]);
