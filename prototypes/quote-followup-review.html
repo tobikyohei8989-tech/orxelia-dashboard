@@ -892,19 +892,23 @@
     const r=records.find(item=>item.id===selectedRecordId);if(!r)return;
     const date=document.getElementById('actionNext').value;
     if(!date){alert('次回確認日を指定してください');return;}
+    const previous={status:r.status,nextAt:r.nextAt};
     r.status=document.getElementById('actionStatus').value;r.nextAt=date;
-    saveStorage();render();closeActionModal();
+    if(!saveStorage()){Object.assign(r,previous);return;}
+    render();closeActionModal();
   }
   function recordContact() {
     const r=records.find(item=>item.id===selectedRecordId);if(!r)return;
     r.history.push(new Date().toLocaleString('ja-JP')+' 連絡済み');
-    saveStorage();document.getElementById('actionHistory').textContent='連絡履歴: '+r.history.join(' / ');
+    if(!saveStorage()){r.history.pop();return;}
+    document.getElementById('actionHistory').textContent='連絡履歴: '+r.history.join(' / ');
   }
 
   function confirmDeleteRecord() {
     if(confirm('本当にこの案件を削除しますか？')) {
+      const previous=records;
       records = records.filter(item => item.id !== selectedRecordId);
-      saveStorage();
+      if(!saveStorage()){records=previous;return;}
       render();
       closeActionModal();
     }
@@ -912,8 +916,9 @@
 
   function confirmResetData() {
     if(confirm('すべてのデータを初期状態に戻しますか？この操作は元に戻せません。')) {
+      const previous=records;
       records = [];
-      saveStorage();
+      if(!saveStorage()){records=previous;return;}
       render();
       alert('データを初期化しました。');
     }
