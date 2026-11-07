@@ -19,24 +19,32 @@ do{
  discovered.push(...(page.models||[]).filter(m=>m.supportedGenerationMethods?.includes('generateContent')));
  nextPageToken=page.nextPageToken;
 }while(nextPageToken&&discovered.length<500);
-const candidates=discovered.filter(m=>/gemini/i.test(m.name)&&!/embedding|imagen|tts|audio|live|robotics|computer-use/i.test(m.name)).sort((a,b)=>{
- const score=m=>(/flash/i.test(m.name)?100:0)+(/stable/i.test(m.name)?20:0)-(/preview|exp/i.test(m.name)?30:0)-(/lite/i.test(m.name)?10:0);
- return score(b)-score(a);
-});
-if(!candidates.length)throw Error('No generateContent Gemini models available to this API key; check API key project and model access');
+const candidates=discovered.filter(m=>/gemini/i.test(m.name)&&!/image|embedding|imagen|tts|audio|live|robotics|computer-use|omni/i.test(m.name));
+const preferred=['models/gemini-3.8-flash','models/gemini-3.5-flash','models/gemini-flash-latest'];
+const selected=preferred.filter(n=>candidates.some(m=>m.name===n));
+if(!selected.length)throw Error('No supported text Gemini model found among preferred models. Available: '+candidates.map(m=>m.name).join(', '));
 const failures=[];
-for(const model of candidates.slice(0,8)){
- const name=model.name;
- try{
-  console.log('Trying Gemini model',name);
-  const data=await request(api+name+':generateContent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:6000}})});
-  const result=data.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('').trim();
-  if(!result||data.candidates?.[0]?.finishReason==='MAX_TOKENS')throw Error('Empty or truncated review');
-  const output='# ORXELIA 経営ダッシュボード Geminiデザインレビュー\\n\\n実施日時（UTC）: '+new Date().toISOString()+'\\n対象コミット: '+(process.env.GITHUB_SHA||'unknown')+'\\nモデル: '+name+'\\n評価範囲: ソースコードレビュー（実機画面検証ではありません）\\n\\n'+result+'\\n';
-  writeFileSync('gemini-dashboard-review.md',output);
-  if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,output);
-  console.log('Gemini dashboard review completed with',name);
-  process.exit(0);
- }catch(error){failures.push(name+': '+String(error).slice(0,350));}
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+for(const name of selected){
+ for(let attempt=1;attempt<=2;attempt++){
+  try{
+   console.log('Trying Gemini model',name,'attempt',attempt);
+   const data=await request(api+name+':generateContent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:6000}})});
+   const result=data.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('').trim();
+   if(!result||data.candidates?.[0]?.finishReason==='MAX_TOKENS')throw Error('Empty or truncated review');
+   const output='# ORXELIA 経営ダッシュボード Geminiデザインレビュー\\n\\n実施日時（UTC）: '+new Date().toISOString()+'\\n対象コミット: '+(process.env.GITHUB_SHA||'unknown')+'\\nモデル: '+name+'\\n評価範囲: ソースコードレビュー（実機画面検証ではありません）\\n\\n'+result+'\\n';
+   writeFileSync('gemini-dashboard-review.md',output);
+   if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,output);
+   console.log('Gemini dashboard review completed with',name);
+   process.exit(0);
+  }catch(error){
+   const msg=String(error);
+   failures.push(name+' attempt '+attempt+': '+msg.slice(0,280));
+   if(/HTTP 429|quota|rate.limit/i.test(msg))throw Error('Gemini quota exceeded. Stop immediately to avoid consuming more quota. '+msg.slice(0,350));
+   if(/HTTP 404|no longer available/i.test(msg))break;
+   if(/HTTP 503|HTTP 502|HTTP 500|TimeoutError|aborted due to timeout/i.test(msg)&&attempt===1){await sleep(12000);continue;}
+   break;
+  }
+ }
 }
 throw Error('Gemini dashboard review failed: '+failures.join('; '));
