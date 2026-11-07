@@ -2,8 +2,19 @@ import {readFileSync,writeFileSync,appendFileSync} from 'node:fs';
 const key=process.env.GEMINI_API_KEY;
 if(!key)throw Error('GEMINI_API_KEY is not configured in GitHub Actions secrets');
 const files=['index.html','style.css','app.js'];
-const sources=files.map(f=>'### '+f+'\n'+readFileSync(f,'utf8').slice(0,f==='app.js'?43000:12000)).join('\n\n');
-const prompt=`あなたはORXELIAと独立した日本語UI/UX監査担当のGeminiです。対象はGitHub Pages上の経営ダッシュボード。次の実装コードだけを根拠にレビューしてください。実際の画面・iPhone実機・操作テストを見ていない場合は必ず明記してください。事業ごとのAI生成デザインのレビューと混同しないこと。次の順番でMarkdownで返してください：1. 総評（100点満点、採点根拠） 2. iPhone 390pxの視認性とナビゲーション 3. 経営者が30秒で承認待ち、事業別売上、利益、契約数を把握できるか 4. 情報過多と削るべき項目 5. 重要度順の具体的改善提案5つ（対象ファイル・要素・変更内容・期待効果） 6. 確認できないことと追加テスト。事実と推測を区別し、Stripe連携済みや売上確定などと断定しない。\n\n${sources}`;
+const sources=files.map(f=>{
+ const content=readFileSync(f,'utf8');
+ if(f==='app.js'){
+  const targets=['function executiveQuickMatrix()','function home()','function render()','function businessRevenueOverview()','function portfolio(','function orxeliaTrialProposalPanel()','document.addEventListener("click"'];
+  const excerpts=targets.map(name=>{
+   const i=content.indexOf(name);
+   return i<0?'### NOT FOUND '+name:'### '+name+'\\n'+content.slice(i,i+name.includes('orxeliaTrial')?6500:3800);
+  });
+  return '### '+f+'\\n'+content.slice(0,10000)+'\\n\\n'+excerpts.join('\\n\\n');
+ }
+ return '### '+f+'\\n'+(f==='style.css'?content.slice(0,6000)+'\\n/* FINAL OVERRIDES */\\n'+content.slice(-12500):content.slice(0,12000));
+}).join('\\n\\n');
+const prompt=`あなたはORXELIAと独立した日本語UI/UX監査担当のGeminiです。対象はGitHub Pages上の経営ダッシュボード。次の実装コードだけを根拠にレビューしてください。CSS末尾の上書きとホーム画面の最新コードを必ず確認してください。実際の画面・iPhone実機・操作テストを見ていない場合は必ず明記してください。事業ごとのAI生成デザインのレビューと混同しないこと。次の順番でMarkdownで返してください：1. 総評（100点満点、採点根拠） 2. iPhone 390pxの視認性とナビゲーション 3. 経営者が30秒で承認待ち、事業別売上、利益、契約数を把握できるか 4. 情報過多と削るべき項目 5. 重要度順の具体的改善提案5つ（対象ファイル・要素・変更内容・期待効果） 6. 確認できないことと追加テスト。事実と推測を区別し、Stripe連携済みや売上確定などと断定しない。\n\n${sources}`;
 const api='https://generativelanguage.googleapis.com/v1beta/';
 async function request(url,options={}){
  const response=await fetch(url,{...options,headers:{'x-goog-api-key':key,...options.headers},signal:AbortSignal.timeout(90000)});
