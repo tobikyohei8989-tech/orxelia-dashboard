@@ -335,3 +335,10 @@ article p,.panel p,.owner-next p,.proposal-intro p,.proposal-item p{color:#52657
 .owner-action-card .priority-state{background:#fff0cc;border-color:#e7b457;color:#854600}
 .owner-action-card>button.primary{background:#a95800;border-color:#a95800;color:#fff}
 .owner-action-card>button.primary:hover{background:#874600}
+
+/* Separate owner actions from research backlog */
+.ai-review-card{background:#fff;border:1px solid #d5dee9;box-shadow:none}
+.ai-review-card .priority-state{background:#edf1f5;border-color:#cbd5e1;color:#43566b}
+.ai-review-card h3{color:#17283d}
+.ai-review-card p{color:#52657a}
+.ai-review-card p b{color:#263d56}
