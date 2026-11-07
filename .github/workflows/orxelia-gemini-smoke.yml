@@ -1,5 +1,5 @@
 name: ORXELIA Gemini connection smoke test
-# Re-run after Gemini model migration
+# Re-run with bounded 503 retry
 on:
   push:
     paths:
