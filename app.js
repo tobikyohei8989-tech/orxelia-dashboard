@@ -1063,11 +1063,9 @@ function home() {
   const running=orxeliaTrialProposals.filter(p=>["awaiting_selection","designing","revision_requested","revising","approved_for_development","developing","prototype_revision_requested","prototype_revising","sales_review_requested"].includes(p.status));
   const waitingRows=waiting.slice(0,5).map(p=>'<article class="business-progress priority-card"><div class="priority-top"><span class="priority-label">確認が必要</span><span class="priority-state">'+esc(p.status==="awaiting_first_approval"?"デザイン承認":p.status==="development_ready"?"試作品確認":"販売判断")+'</span></div><h3>'+esc(p.title)+'</h3><p>'+esc(p.status==="awaiting_first_approval"?"デザインを確認して承認または修正":p.status==="development_ready"?"試作品を操作して次の判断へ":"販売開始の条件を確認して判断")+'</p><button class="primary" type="button" data-tab="verification">確認画面を開く →</button></article>').join("");
   return '<div class="home-intro"><span class="eyebrow">EXECUTIVE OVERVIEW</span><h2>今日、判断すること</h2><p>確認が必要な案件を優先して表示しています。</p></div>'+
-    '<div class="metrics">'+metric("あなたの確認待ち",waiting.length+"件","承認・試作品の修正")+
-    metric("AI作業中・待機",running.length+"件","自動処理の進捗")+
-    metric("販売判断待ち",orxeliaTrialProposals.filter(p=>p.status==="awaiting_final_approval").length+"件","最終判断が必要")+'</div>'+
+
     '<section class="priority-section"><div class="head"><h2>次に確認する事業</h2><span class="count-pill">'+waiting.length+'件</span></div>'+(waitingRows?'<div class="priority-list">'+waitingRows+'</div>':'<div class="empty-state"><strong>現在、確認待ちはありません</strong><p>新しい候補や開発の進捗は「事業一覧」で確認できます。</p><button type="button" data-tab="portfolio">事業一覧を見る →</button></div>')+'</section>'+
-    executiveQuickMatrix()+
+    '<details class="home-stats"><summary>全体の数字・事業別状況を見る</summary><div class="metrics">'+metric("あなたの確認待ち",waiting.length+"件","承認・試作品の修正")+metric("AI作業中・待機",running.length+"件","自動処理の進捗")+metric("販売判断待ち",orxeliaTrialProposals.filter(p=>p.status==="awaiting_final_approval").length+"件","最終判断が必要")+'</div>'+executiveQuickMatrix()+'</details>'+
     '<div class="home-links"><button type="button" data-tab="finance">収支の詳細を見る</button><button type="button" data-tab="verification">販売判断・承認へ</button></div>';
 }
 
