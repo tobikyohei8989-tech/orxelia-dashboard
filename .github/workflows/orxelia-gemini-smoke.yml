@@ -1,4 +1,5 @@
 name: ORXELIA Gemini connection smoke test
+# Re-run after Gemini model migration
 on:
   push:
     paths:
