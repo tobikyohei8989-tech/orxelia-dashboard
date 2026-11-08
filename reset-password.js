@@ -65,7 +65,7 @@
       const redirect = new URL("reset-password.html",location.href).href;
       await auth("/recover?redirect_to="+encodeURIComponent(redirect),{email:emailForm.elements.email.value.trim()});
       status.textContent = "再設定メールをリクエストしました。受信箱と迷惑メールを確認し、最新のメール内のリンクを開いてください。";
-    } catch { status.textContent = "メールを送れませんでした。時間をおいてもう一度お試しください。"; }
+    } catch (error) { status.textContent = error.status === 429 ? "Supabaseのメール送信上限に達しています。時間をおいて再送してください。すでに届いている最新のメールも確認してください。" : "メールを送れませんでした。時間をおいてもう一度お試しください。"; }
     finally { button.disabled = false; }
   });
 })();
