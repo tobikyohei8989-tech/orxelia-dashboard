@@ -66,7 +66,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 #workers .person>button{grid-area:action;min-height:44px;padding:7px 11px;font-size:14px;white-space:nowrap}
 @media(max-width:640px){#workers{grid-template-columns:1fr;gap:7px}#workers .person{padding:9px 10px;border-radius:10px}#workers .person>strong{font-size:16px}#workers .person>button{font-size:14px}}
 #attendancePanel[hidden]{display:none!important}#workerView .row>button{flex:1 1 calc(50% - 8px)}@media(max-width:640px){#workerView .row>button{font-size:15px;min-height:48px;padding:7px 5px}} .worker-selected{outline:3px solid #1769c2!important;outline-offset:-3px;background:#dbeafe!important}.worker-selected .cal-date{color:#073c7a;font-weight:900}#workerSelectionCount{font-weight:700;color:#14549b;margin:8px 0} #calDaysGrid .available-worker{display:block;width:100%;min-height:18px;text-align:left;cursor:pointer;border:0;border-radius:3px;font-weight:700;padding:2px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#calDaysGrid .cal-status-dots{gap:2px}#calDaysGrid .available-worker:focus-visible{outline:2px solid #1769c2}@media(max-width:640px){#calDaysGrid .available-worker{min-height:16px;font-size:9px;padding:1px 2px}} .cal-dot.pending{background:#fff0b8;color:#7c4a00;font-weight:800}.cal-dot.accepted{background:#dbeafe;color:#164a90;font-weight:800}.cal-dot.matched{background:#14532d;color:#fff;font-weight:800}.worker-phone-note{background:#fff5e8;color:#8a400a;border-radius:8px;padding:8px 10px;font-size:14px;font-weight:700} .calendar-quick-request{margin-top:9px;padding:10px;border:2px solid #1769c2;border-radius:10px;background:#f0f7ff}.calendar-quick-request[hidden]{display:none}.calendar-quick-options{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.calendar-quick-options button{font-size:15px;min-height:46px}.cal-cell{cursor:pointer}@media(max-width:640px){.calendar-quick-options button{flex:1 1 100%;font-size:15px}} #calDaysGrid .admin-status{display:block;width:100%;font-size:9px;line-height:1.25;padding:2px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#calDaysGrid .admin-status.pending{background:#fff0b8;color:#7c4a00}#calDaysGrid .admin-status.accepted{background:#dbeafe;color:#164a90}#calDaysGrid .admin-status.matched{background:#14532d;color:#fff}#calDaysGrid .admin-selected{outline:3px solid #1d4ed8;outline-offset:-2px;background:#bfdbfe;color:#1e3a8a;font-weight:900}@media(max-width:640px){#calDaysGrid .admin-status{font-size:8px;padding:1px 2px}} .job-request-form{margin:12px 0;padding:14px;border:2px solid #2563eb;border-radius:12px;background:#f3f8ff;display:grid;gap:10px}.job-request-form[hidden]{display:none}.job-request-form label{font-weight:700}.job-request-form input,.job-request-form select{width:100%;min-height:48px;font-size:17px}.job-request-form button{min-height:46px} #workers[hidden],#jobRequestForm[hidden],#calendarQuickRequest[hidden]{display:none!important}
-</style></head><body><header><small>TOBITA PARTNER SCHEDULE / 非公開運用前の試取り組</small><h1>協力業者 空き日程・手配ボード</h1></header><main class="wrap">
+.matched-schedule-item{padding:12px;border:1px solid #b8d8c0;border-left:5px solid #166534;border-radius:10px;background:#f1faf3;display:grid;gap:5px}.matched-schedule-date{font-weight:800;font-size:17px}.matched-schedule-tag{background:#166534;color:#fff;font-size:12px;vertical-align:middle} </style></head><body><header><small>TOBITA PARTNER SCHEDULE / 非公開運用前の試取り組</small><h1>協力業者 空き日程・手配ボード</h1></header><main class="wrap">
 <div class="panel">
   <details class="notice demo-guide"><summary>デモの注意事項・使い方を見る</summary><div class="guide-body">これは<strong>サンプルデータだけ</strong>を使うローカル動作デモです。認証・共有・実通知はありません。この端末のブラウザ内だけに保存されます。実名・現場情報を入力しないでください。<br><br><strong>【ご案内：仕事の打診と承認フローについて】</strong><br>1. 職人さんは空いている日・時間帯だけ登録します。登録がない時間帯は打診できません。<br>2. 管理者側で「空き」の職人に対して「仕事を打診」します（ステータス：<strong>打診中</strong>）。<br>3. 職人側（体験画面）の「届いた仕事の打診」に通知が届きます。内容を確認し、<strong>[承諾]</strong>または[辞退]ボタンを押してください。<br>4. また、管理画面・職人画面それぞれ専用のカレンダー及び確定情報一覧でスケジュールを1ヶ月単位で直感的に確認できます。</div></details>
   <div class="row between" style="margin-top:12px">
@@ -154,6 +154,11 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   <p class="muted" id="workerState" style="margin-top:8px"></p>
 </div>
 
+<div class="panel">
+  <h2>マッチング成立した仕事の日程一覧</h2>
+  <p class="muted">確定した仕事を日付順に表示します。都合が悪くなった場合は管理者へ電話してください。</p>
+  <div id="workerMatchedSchedule" class="stack" aria-live="polite"></div>
+</div>
 <div class="panel">
   <h2>職人さん専用：届いた仕事の打診・マッチ確定一覧</h2>
   <div class="muted" style="margin-bottom:12px">あなた宛ての打診、および確定した案件の一覧です。</div>
@@ -520,6 +525,11 @@ function render(){
   const worker=sel.value,wd=document.getElementById('workerDate').value;
   document.getElementById('workerState').textContent=wd?'登録状況（'+wd+'）：午前 '+(statusFor(worker,wd,'am')==='free'?'空き':'登録なし')+' / 午後 '+(statusFor(worker,wd,'pm')==='free'?'空き':'登録なし'):'日付を選んでください';
   
+  const matched=data.requests.filter(r=>r.workerId===worker&&r.status==='confirmed').slice().sort((a,b)=>a.date.localeCompare(b.date));
+  document.getElementById('workerMatchedSchedule').innerHTML=matched.length?matched.map(r=>{
+    const time={all:'終日（1日）',am:'午前',pm:'午後'}[r.slot]||'';
+    return '<div class="matched-schedule-item"><div class="matched-schedule-date">'+escapeHTML(r.date)+' <span class="tag matched-schedule-tag">マッチング成立</span></div><strong>'+escapeHTML(r.job)+'</strong><div class="muted">'+time+'</div></div>';
+  }).join(''):'<p class="muted">現在、マッチング成立した仕事はありません。</p>';
   const own=data.requests.filter(r=>r.workerId===worker).slice().reverse();
   document.getElementById('workerRequests').innerHTML=own.length?own.map(r=>requestCard(r,false)).join(''):'<p class="muted">届いている打診はありません。</p>';
   document.getElementById('history').innerHTML=data.history.map(h=>'<tr><td>'+escapeHTML(h.at)+'</td><td>'+escapeHTML(h.action)+'</td></tr>').join('')||'<tr><td colspan="2">履歴なし</td></tr>';
