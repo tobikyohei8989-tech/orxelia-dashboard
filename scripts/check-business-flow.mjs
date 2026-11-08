@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const js=readFileSync('app.js','utf8');
-const html=readFileSync('index.html','utf8');
+const html=readFileSync('dashboard/index.html','utf8');
 const css=readFileSync('style.css','utf8');
 const requiredRoutes=['home','portfolio','verification','finance','settings'];
 for(const route of requiredRoutes)assert.ok(html.includes('data-tab="'+route+'"'),'navigation missing: '+route);
