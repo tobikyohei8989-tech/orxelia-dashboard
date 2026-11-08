@@ -1129,6 +1129,31 @@ function checkDashboardUpdates(){
   try{localStorage.setItem(orxeliaNoticeKey,JSON.stringify(current))}catch{}
 }
 
+
+const orxeliaPush = (() => {
+ const endpoint="https://yzlxcfncdtojajlhihap.supabase.co";
+ const sessionKey="orxelia-sync-session";
+ function auth(){try{const s=JSON.parse(localStorage.getItem(sessionKey)||"null");return s?.access_token&&s?.user?.id?s:null}catch{return null}}
+ function decode(base64){const binary=atob(base64.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-base64.length%4)%4));return Uint8Array.from(binary,c=>c.charCodeAt(0))}
+ async function enable(){
+  if(!("serviceWorker" in navigator)||!("PushManager" in window))throw Error("このブラウザはWebプッシュ通知に対応していません。iPhoneではSafariからホーム画面に追加してください。");
+  if(!window.matchMedia("(display-mode: standalone)").matches)throw Error("Safariの共有メニューからホーム画面に追加し、ホーム画面のORXELIAを開いてください。");
+  const s=auth();if(!s)throw Error("設定画面でクラウドにログインしてください。");
+  const permission=await Notification.requestPermission();if(permission!=="granted")throw Error("通知が許可されていません。iPhoneの通知設定を確認してください。");
+  const registration=await navigator.serviceWorker.register("./push-sw.js");
+  const response=await fetch(endpoint+"/functions/v1/orxelia-push?action=public-key",{headers:{apikey:window.ORXELIA_PUBLISHABLE_KEY,Authorization:"Bearer "+s.access_token}});
+  if(!response.ok)throw Error("通知サーバーの準備が完了していません（HTTP "+response.status+"）。");
+  const {publicKey}=await response.json();if(!publicKey)throw Error("通知配信鍵が未設定です。");
+  const sub=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:decode(publicKey)});
+  const payload={owner_id:s.user.id,endpoint:sub.endpoint,p256dh:btoa(String.fromCharCode(...new Uint8Array(sub.getKey("p256dh")))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""),auth_secret:btoa(String.fromCharCode(...new Uint8Array(sub.getKey("auth")))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")};
+  const saved=await fetch(endpoint+"/rest/v1/orxelia_push_subscriptions",{method:"POST",headers:{apikey:window.ORXELIA_PUBLISHABLE_KEY,Authorization:"Bearer "+s.access_token,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates"},body:JSON.stringify(payload)});
+  if(!saved.ok)throw Error("端末登録に失敗しました（HTTP "+saved.status+"）。");
+  return "iPhoneの通知登録が完了しました。";
+ }
+ document.addEventListener("click",async e=>{const button=e.target.closest("#orxelia-enable-push");if(!button)return;button.disabled=true;try{alert(await enable())}catch(err){alert(err.message)}finally{button.disabled=false}});
+ return {enable};
+})();
+
 function render() {
   checkDashboardUpdates();
   // iOS Japanese IME: never replace a focused textarea while the user composes text.
