@@ -676,7 +676,7 @@ function settings() {
     panel('<h3>事業の一括削除</h3><p>見積もり催促・追客管理だけを残します。削除対象とバックアップを確認してから確定できます。</p>' + action("削除対象を確認","retainQuoteProject")) +
     importLogPanel() +
     panel('<h3>初期データ・バックアップ</h3><p>初回は同梱の「初期データ.json」を読み込んでください。読み込みは現在の内容を全件置き換えます。</p>' +
-      '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + action("端末内の復旧用データを書き出す","recoveryExport") + action("直近3世代の安全コピーを書き出す","safetyExport") + action("全データをまとめてJSON出力","bundleExport") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
+      '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + action("端末内の復旧用データを書き出す","recoveryExport") + action("直近3世代の安全コピーを書き出す","safetyExport") + action("全データをまとめてJSON出力","bundleExport") + action("iPhone用：復旧データを画面に表示","recoveryView") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
     '<div class="head"><h3>運用条件</h3></div>' + panel('<p>初期予算上限 ¥3,000 ／ 新規固定費 ¥0。配布構成でのアプリ費用は初期・月額ともに ¥0。</p><p>ログインすると同じアカウントの端末間で同期します。毎朝7:30の定期作業は、このPCとCodexアプリの起動、ログイン済みブラウザーが必要です。工程ごとの報告はホームの「作業進捗」で確認できます。会計サービスは未連携です。</p><p id="offline">オフラインの状態を確認中…</p>');
 }
 
@@ -1339,6 +1339,30 @@ document.addEventListener("click", event => {
     if (kind === "salesDelete") {
       const rows=loadSales(); if (rows === null) throw Error("営業データを読み込めません。");
       if (confirm("この営業記録を削除しますか？")) { saveSales(rows.filter(r=>r.id!==value)); render(); }
+    }
+    if (kind === "recoveryView") {
+      const payload = {
+        format:"orxelia-device-recovery-view-v1",
+        exportedAt:new Date().toISOString(),
+        portfolio:JSON.parse(localStorage.getItem(key)||"null"),
+        recovery:JSON.parse(localStorage.getItem(recoveryKey)||"null"),
+        safetyHistory:JSON.parse(localStorage.getItem(backupKey)||"null"),
+        sales:JSON.parse(localStorage.getItem(salesKey)||"null"),
+        tasks:JSON.parse(localStorage.getItem(tasksKey)||"null"),
+        evidence:JSON.parse(localStorage.getItem(evidenceKey)||"null")
+      };
+      const json=JSON.stringify(payload,null,2);
+      const area=document.createElement("textarea");
+      area.readOnly=true;area.value=json;area.rows=12;
+      area.style.cssText="display:block;width:100%;min-height:230px;font:13px/1.5 monospace;overflow:auto;margin-top:12px";
+      const box=document.createElement("div");
+      box.style.cssText="padding:14px;margin:12px 0;border:2px solid #1b65a8;border-radius:12px;background:#fff";
+      const label=document.createElement("p");
+      label.textContent="復旧データ（読み取り専用）です。下の内容を長押し→すべて選択→コピーしてください。共有前に個人情報の有無をご確認ください。";
+      box.append(label,area);
+      button.insertAdjacentElement("afterend",box);
+      area.focus();area.select();
+      box.scrollIntoView({block:"center",behavior:"smooth"});
     }
     if (kind === "recoveryExport") downloadRecoverySnapshot();
     if (kind === "bundleExport") exportBundle();
