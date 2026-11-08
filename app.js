@@ -1107,7 +1107,30 @@ function restoreDetailPaths(root,paths){
   if(node?.tagName==="DETAILS")node.open=true;
  }
 }
+
+// Local-only dashboard update notifications. No external push or personal data transmission.
+const orxeliaNoticeKey="orxelia-notification-snapshot-v1";
+function checkDashboardUpdates(){
+  const items=orxeliaTrialProposals.map(p=>({id:p.id,title:p.title,status:p.status,version:p.prototype_revision_number||1,updated:p.updated_at||""}));
+  if(!items.length)return;
+  const current=Object.fromEntries(items.map(p=>[p.id,p]));
+  let previous=null;
+  try{previous=JSON.parse(localStorage.getItem(orxeliaNoticeKey)||"null")}catch{}
+  if(previous&&typeof previous==="object"){
+    const changes=items.filter(p=>!previous[p.id]||JSON.stringify(previous[p.id])!==JSON.stringify(p));
+    if(changes.length){
+      const banner=document.getElementById("dashboard-update-notice");
+      if(banner){
+        banner.hidden=false;
+        banner.textContent="🔔 更新 "+changes.length+"件： "+changes.slice(0,2).map(p=>p.title+"（第"+p.version+"版）").join("、")+(changes.length>2?" ほか":"");
+      }
+    }
+  }
+  try{localStorage.setItem(orxeliaNoticeKey,JSON.stringify(current))}catch{}
+}
+
 function render() {
+  checkDashboardUpdates();
   // iOS Japanese IME: never replace a focused textarea while the user composes text.
   const activeRevision=document.activeElement;
   // Keep the iframe mounted during use: replacing srcdoc resets the entire app and its forms.
