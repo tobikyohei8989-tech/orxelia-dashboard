@@ -1,33 +1,425 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>トビタ店舗設備 | 協力業者手配デモ</title>
 <style>
-:root{font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;color:#14253a;background:#f3f6fa}*{box-sizing:border-box}body{margin:0}header{background:#14253a;color:white;padding:22px max(18px,calc((100vw - 960px)/2))}header small{color:#b8c7d8}.wrap{max-width:960px;margin:24px auto;padding:0 16px}.panel{background:white;border:1px solid #dde4eb;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 3px 16px #162b4010}h1{font-size:23px;margin:5px 0}h2{font-size:17px;margin:0 0 15px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}button,input,select{font:inherit;border-radius:9px;border:1px solid #cbd5e1;padding:10px;background:white}button{cursor:pointer}button.primary{background:#1769c2;color:white;border-color:#1769c2}button:disabled{opacity:.5;cursor:not-allowed}.tabs button.active{background:#14253a;color:white}label{display:block;font-size:13px;color:#526278;margin-bottom:5px}.field{flex:1;min-width:140px}.field input,.field select{width:100%}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}.person,.request{border:1px solid #e0e6ed;border-radius:12px;padding:14px}.muted{color:#627389;font-size:13px}.tag{font-size:12px;padding:4px 8px;border-radius:50px;background:#e8edf2;display:inline-block}.free{background:#d9f5e4;color:#116d3e}.busy{background:#e8edf2;color:#46566a}.hold{background:#fff0c4;color:#885c00}.unknown{background:#ffe6e3;color:#9d3a2f}.notice{background:#e8f3ff;border-radius:10px;padding:12px;font-size:13px}.error{color:#ae2933}.success{color:#116d3e}.stack>*+*{margin-top:10px}table{width:100%;border-collapse:collapse}td,th{padding:9px 5px;border-bottom:1px solid #e8edf2;text-align:left;font-size:13px}.scroll{overflow-x:auto}@media(max-width:520px){h1{font-size:19px}header{padding:18px}button{padding:9px}}
-</style></head><body><header><small>TOBITA PARTNER SCHEDULE / 非公開運用前の試作品</small><h1>協力業者 空き日程・手配ボード</h1></header><main class="wrap">
-<div class="panel"><div class="notice">これは<strong>サンプルデータだけ</strong>を使うローカル動作デモです。認証・共有・実通知はありません。この端末のブラウザ内だけに保存されます。実名・現場情報を入力しないでください。</div><div class="row between" style="margin-top:12px"><div class="row tabs"><button id="adminTab" class="active" onclick="setMode('admin')">管理者</button><button id="workerTab" onclick="setMode('worker')">職人側（体験）</button></div><button onclick="resetDemo()">デモを初期化</button></div></div>
-<section id="adminView"><div class="panel"><h2>空いている職人を探す</h2><div class="row"><div class="field"><label>日付</label><input id="searchDate" type="date" onchange="render()"></div><div class="field"><label>職種</label><select id="tradeFilter" onchange="render()"><option value="">全職種</option><option>電気工事</option><option>冷媒配管</option><option>空調設備</option></select></div><div class="field"><label>時間帯</label><select id="slotFilter" onchange="render()"><option value="am">午前</option><option value="pm">午後</option><option value="all">終日</option></select></div></div><p class="muted">「未回答」は空きとみなしません。仮押さえ中は新しい打診を制限します。</p><div id="workers" class="grid"></div></div><div class="panel"><h2>仕事の打診・確定状況</h2><div id="adminRequests" class="stack"></div></div></section>
-<section id="workerView" hidden><div class="panel"><h2>職人さんの操作画面</h2><div class="row"><div class="field"><label>体験する職人</label><select id="workerSelect" onchange="render()"></select></div><div class="field"><label>日付</label><input id="workerDate" type="date" onchange="render()"></div></div><div class="row" style="margin-top:12px"><button onclick="updateAvailability('free')">○ 空き</button><button onclick="updateAvailability('busy')">× 予定あり</button><button onclick="updateAvailability('hold')">△ 仮予定</button><button onclick="updateAvailability('unknown')">？ 未回答</button></div><p class="muted" id="workerState"></p></div><div class="panel"><h2>届いた仕事の打診</h2><div id="workerRequests" class="stack"></div></div></section>
+:root{font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;color:#14253a;background:#f3f6fa}*{box-sizing:border-box}body{margin:0}header{background:#14253a;color:white;padding:22px max(18px,calc((100vw - 960px)/2))}header small{color:#b8c7d8}.wrap{max-width:960px;margin:24px auto;padding:0 16px}.panel{background:white;border:1px solid #dde4eb;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 3px 16px #162b4010}h1{font-size:23px;margin:5px 0}h2{font-size:17px;margin:0 0 15px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}button,input,select{font:inherit;border-radius:9px;border:1px solid #cbd5e1;padding:10px;background:white}button{cursor:pointer}button.primary{background:#1769c2;color:white;border-color:#1769c2}button:disabled{opacity:.5;cursor:not-allowed}.tabs button.active{background:#14253a;color:white}label{display:block;font-size:13px;color:#526278;margin-bottom:5px}.field{flex:1;min-width:140px}.field input,.field select{width:100%}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}.person,.request{border:1px solid #e0e6ed;border-radius:12px;padding:14px}.muted{color:#627389;font-size:13px}.tag{font-size:12px;padding:4px 8px;border-radius:50px;background:#e8edf2;display:inline-block}.free{background:#d9f5e4;color:#116d3e}.busy{background:#e8edf2;color:#46566a}.hold{background:#fff0c4;color:#885c00}.unknown{background:#ffe6e3;color:#9d3a2f}.notice{background:#e8f3ff;border-radius:10px;padding:12px;font-size:13px}.error{color:#ae2933}.success{color:#116d3e}.stack>*+*{margin-top:10px}table{width:100%
+;border-collapse:collapse}td,th{padding:9px 5px;border-bottom:1px solid #e8edf2;text-align:left;font-size:13px}.scroll{overflow-x:auto}
+
+.cal-dot[role="button"]{cursor:pointer;outline:1px solid #86d2a2;font-weight:700}.cal-dot[role="button"]:hover{filter:brightness(.9)}@media(min-width:1100px){.wrap{max-width:1200px}}
+/* Calendar Matrix Styles */
+.cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal-cell{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px;min-height:76px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;transition:background .2s}
+.cal-cell:hover{background:#edf2f7}
+.cal-cell.other-month{opacity:0.4}
+.cal-cell.today{border-color:#1769c2;background:#f0f6ff}
+.cal-date{font-weight:bold;font-size:13px}
+.cal-status-dots{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px}
+.cal-dot{font-size:10px;padding:1px 4px;border-radius:4px;white-space:nowrap}
+@media(max-width:520px){h1{font-size:19px}header{padding:18px}button{padding:9px}.cal-cell{min-height:64px;padding:4px}.cal-dot{font-size:9px;padding:1px 2px}}
+</style></head><body><header><small>TOBITA PARTNER SCHEDULE / 非公開運用前の試取り組</small><h1>協力業者 空き日程・手配ボード</h1></header><main class="wrap">
+<div class="panel">
+  <div class="notice">これは<strong>サンプルデータだけ</strong>を使うローカル動作デモです。認証・共有・実通知はありません。この端末のブラウザ内だけに保存されます。実名・現場情報を入力しないでください。<br><br><strong>【ご案内：仕事の打診と承認フローについて】</strong><br>1. 職人さんが「ダメな日（午前中・午後・終日）」として登録した日は、元請け管理画面でその日（またはその時間帯）の打診ができないようにブロックされます。<br>2. 管理者側で「空き」の職人に対して「仕事を打診」します（ステータス：<strong>打診中</strong>）。<br>3. 職人側（体験画面）の「届いた仕事の打診」に通知が届きます。内容を確認し、<strong>[承諾]</strong>または[辞退]ボタンを押してください。<br>4. また、管理画面・職人画面それぞれ専用のカレンダー及び確定情報一覧でスケジュールを1ヶ月単位で直感的に確認できます。</div>
+  <div class="row between" style="margin-top:12px">
+    <div class="row tabs">
+      <button id="adminTab" class="active" onclick="setMode('admin')">管理者画面</button>
+      <button id="workerTab" onclick="setMode('worker')">職人さん側画面（体験）</button>
+    </div>
+    <div class="row">
+      <button onclick="exportGoogleCalendarICS()" id="syncBtn">📅 Googleカレンダー同期(ICS出力)</button>
+      <button onclick="resetDemo()">デモを初期化</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ADMIN VIEW ================= -->
+<section id="adminView">
+<div class="panel">
+  <h2>管理者：空いている職人を探す</h2>
+  
+  <div class="panel" style="background:#fafbfc;border:1px solid #e2e8f0;margin-bottom:16px;">
+    <div class="cal-nav">
+      <button onclick="changeMonth(-1)">◀ 前月</button>
+      <strong id="calMonthTitle" style="font-size:16px">202X年X月</strong>
+      <button onclick="changeMonth(1)">翌月 ▶</button>
+    </div>
+    <div class="muted" style="margin-bottom:8px;font-size:12px">1ヶ月毎のカレンダー表示です。日付をクリックするとその日の詳細を選択できます。</div>
+    <div class="cal-grid" id="calHeaderRow" style="text-align:center;font-weight:bold;font-size:12px;color:#526278;margin-bottom:4px">
+      <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
+    </div>
+    <div class="cal-grid" id="calDaysGrid"></div>
+  </div>
+
+  <div class="row">
+    <div class="field"><label>日付</label><input id="searchDate" type="date"></div>
+    <div class="field"><label>職種</label><select id="tradeFilter"><option value="">全職種</option><option>電気工事</option><option>冷媒配管</option><option>空調設備</option></select></div>
+    <div class="field"><label>時間帯</label><select id="slotFilter"><option value="am">午前</option><option value="pm">午後</option><option value="all">終日</option></select></div>
+  </div>
+  <p class="muted">職人さんが「予定あり（ダメな日）」に設定している時間帯は、自動的に打診ボタンが無効化されます。</p>
+  <div id="workers" class="grid"></div>
+</div>
+
+<div class="panel">
+  <h2>管理者：マッチした確定・進行中の情報一覧</h2>
+  <div class="muted" style="margin-bottom:12px">現在進行中および確定した案件を一覧で分かり易く表示しています。</div>
+  <div id="adminRequests" class="stack"></div>
+</div>
+</section>
+
+<div class="panel"><h2>出勤実績・20日締め請求照合</h2><p class="muted">前月21日〜当月20日を1か月として集計。実際の出勤だけを登録してください。駐車場・交通費・税は請求書で別途確認。</p><div class="row"><div class="field"><label>対象職人</label><select id="attendanceWorker"></select></div><div class="field"><label>出勤日</label><input id="attendanceDate" type="date"></div><div class="field"><label>勤務区分</label><select id="attendanceSlot"><option value="1">終日（1人工）</option><option value="0.5">半日（0.5人工）</option></select></div><div class="field"><label>日当単価（円・税抜）</label><input id="attendanceRate" type="number" min="0" step="1" value="25000"></div></div><div class="row" style="margin:12px 0"><div class="field"><label>工事名（デモ用）</label><input id="attendanceJob" maxlength="80" placeholder="サンプル現場"></div><button class="primary" onclick="addAttendance()">出勤実績を登録</button></div><div class="row"><div class="field"><label>締め月</label><input id="billingMonth" type="month" onchange="renderReports()"></div><div class="field"><label>年間集計年</label><input id="billingYear" type="number" min="2020" max="2100" onchange="renderReports()"></div><button onclick="downloadAttendanceCSV()">実績CSV出力</button></div><div id="billingReport" class="scroll"></div><div id="annualReport" class="scroll"></div><div id="attendanceList" class="scroll"></div></div>
+<!-- ================= WORKER VIEW ================= -->
+<section id="workerView" hidden>
+<div class="panel">
+  <h2>職人さん専用操作画面（別アカウント表示）</h2>
+  <div class="row" style="margin-bottom:12px">
+    <div class="field"><label>職人アカウント切替（デモ用）</label><select id="workerSelect" onchange="render()"></select></div>
+  </div>
+
+  <!-- Worker 1-Month Calendar View -->
+  <div class="panel" style="background:#fafbfc;border:1px solid #e2e8f0;margin-bottom:16px;">
+    <div class="cal-nav">
+      <button onclick="changeWorkerMonth(-1)">◀ 前月</button>
+      <strong id="workerCalMonthTitle" style="font-size:16px">202X年X月</strong>
+      <button onclick="changeWorkerMonth(1)">翌月 ▶</button>
+    </div>
+    <div class="muted" style="margin-bottom:8px;font-size:12px">ご自身の1ヶ月毎のスケジュール状況です。日付をクリックして空き・ダメな日を登録できます。</div>
+    <div class="cal-grid" style="text-align:center;font-weight:bold;font-size:12px;color:#526278;margin-bottom:4px">
+      <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
+    </div>
+    <div class="cal-grid" id="workerCalDaysGrid"></div>
+  </div>
+
+  <div class="row">
+    <div class="field"><label>対象日</label><input id="workerDate" type="date"></div>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <button onclick="updateAvailability('free')">○ 空き</button>
+    <button onclick="updateAvailability('busy')">× 予定あり（ダメな日）</button>
+    <button onclick="updateAvailability('hold')">△ 仮予定</button>
+    <button onclick="updateAvailability('unknown')">？ 未回答</button>
+  </div>
+  <p class="muted" id="workerState" style="margin-top:8px"></p>
+</div>
+
+<div class="panel">
+  <h2>職人さん専用：届いた仕事の打診・マッチ確定一覧</h2>
+  <div class="muted" style="margin-bottom:12px">あなた宛ての打診、および確定した案件の一覧です。</div>
+  <div id="workerRequests" class="stack"></div>
+</div>
+</section>
+
 <div class="panel"><h2>変更履歴</h2><div class="scroll"><table><thead><tr><th>日時</th><th>操作</th></tr></thead><tbody id="history"></tbody></table></div></div>
 </main><script>
-const KEY='tobita-schedule-demo-v1',statuses={free:'空き',busy:'予定あり',hold:'仮予定',unknown:'未回答'};
+const KEY='tobita-schedule-demo-v2',statuses={free:'空き',busy:'予定あり',hold:'仮予定',unknown:'未回答'};
 const workersSeed=[{id:'w1',name:'協力業者 A',trade:'電気工事'},{id:'w2',name:'協力業者 B',trade:'冷媒配管'},{id:'w3',name:'協力業者 C',trade:'空調設備'}];
 const localDate=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};
 const seed=()=>({workers:workersSeed,availability:{},requests:[],history:[]});
-let data;try{data=JSON.parse(localStorage.getItem(KEY))||seed();if(!Array.isArray(data.requests)||!Array.isArray(data.workers))throw Error('invalid')}catch{data=seed()}
+
+let data;
+try{
+  const stored=safeGetItem(KEY);
+  data=stored?JSON.parse(stored):seed();
+  if(!Array.isArray(data.requests)||!Array.isArray(data.workers))throw Error('invalid');
+}catch(e){
+  data=seed();
+}
+
 let mode='admin';
-function save(action){data.history.unshift({at:new Date().toLocaleString('ja-JP'),action});data.history=data.history.slice(0,40);localStorage.setItem(KEY,JSON.stringify(data));render()}
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth(); // 0-indexed
+let workerCalYear = new Date().getFullYear();
+let workerCalMonth = new Date().getMonth();
+
+function safeGetItem(key){
+  try{ return localStorage.getItem(key); }catch(e){ return null; }
+}
+function safeSetItem(key, val){
+  try{ localStorage.setItem(key, val); }catch(e){}
+}
+
+function save(action){
+  try{
+    data.history.unshift({at:new Date().toLocaleString('ja-JP'),action});
+    data.history=data.history.slice(0,40);
+    safeSetItem(KEY,JSON.stringify(data));
+  }catch(e){}
+  render();
+}
+
 function setMode(m){mode=m;render()}
-function resetDemo(){if(confirm('サンプルデータと操作履歴を初期化しますか？')){data=seed();save('デモを初期化')}}
+
+function resetDemo(){
+  if(confirm('サンプルデータと操作履歴を初期化しますか？')){
+    data=seed();
+    save('デモを初期化');
+  }
+}
+
 function statusFor(w,date,slot){const a=data.availability[w+'|'+date]||{};return a[slot]||'unknown'}
-function isFree(w,date,slot){return (slot==='all'?['am','pm']:[slot]).every(s=>statusFor(w,date,s)==='free')&& !data.requests.some(r=>r.workerId===w&&r.date===date&&r.status!=='declined'&&r.status!=='cancelled'&&(r.slot==='all'||slot==='all'||r.slot===slot))}
-function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function requestWork(w){const date=document.getElementById('searchDate').value,slot=document.getElementById('slotFilter').value;if(!isFree(w,date,slot)){alert('空き状況が変更されています。再確認してください。');return}const job=prompt('現場名（デモ用の架空名称のみ）','サンプル現場');if(job===null)return;const trimmed=job.trim();if(!trimmed||trimmed.length>80){alert('1〜80文字で入力してください');return}data.requests.push({id:'r'+Date.now()+Math.random().toString(36).slice(2,6),workerId:w,date,slot,job:trimmed,status:'pending'});save('仕事を打診：'+w+' / '+date)}
-function changeRequest(id,next){const r=data.requests.find(x=>x.id===id);if(!r)return;const allowed={pending:['accepted','declined','cancelled'],accepted:['confirmed','cancelled'],confirmed:['cancelled']};if(!(allowed[r.status]||[]).includes(next)){alert('この状態では操作できません');return}if(next==='accepted'||next==='confirmed'){const conflict=data.requests.some(x=>x.id!==r.id&&x.workerId===r.workerId&&x.date===r.date&&['pending','accepted','confirmed'].includes(x.status)&&(x.slot==='all'||r.slot==='all'||x.slot===r.slot));if(conflict){alert('同じ時間帯に別の依頼があります');return}const slots=r.slot==='all'?['am','pm']:[r.slot];if(slots.some(s=>statusFor(r.workerId,r.date,s)!=='free')){alert('予定が変更されたため承諾・確定できません');return}}r.status=next;save('依頼 '+id+' → '+next)}
-function updateAvailability(status){const w=document.getElementById('workerSelect').value,date=document.getElementById('workerDate').value;if(!date)return;const existing=data.requests.some(r=>r.workerId===w&&r.date===date&&['pending','accepted','confirmed'].includes(r.status));if(existing&&status!=='free'){alert('有効な依頼があります。先に管理者と調整してキャンセルしてください。');return}data.availability[w+'|'+date]={am:status,pm:status};save(w+' '+date+' → '+statuses[status])}
+
+function isFree(w,date,slot){
+  const slotsToCheck = slot === 'all' ? ['am', 'pm'] : [slot];
+  const hasBusyOrNotFree = slotsToCheck.some(s => statusFor(w, date, s) === 'busy' || statusFor(w, date, s) === 'unknown');
+  return !hasBusyOrNotFree && !data.requests.some(r=>r.workerId===w&&r.date===date&&r.status!=='declined'&&r.status!=='cancelled'&&(r.slot==='all'||slot==='all'||r.slot===slot));
+}
+
+function requestWork(w){
+  const date=document.getElementById('searchDate').value;
+  const slot=document.getElementById('slotFilter').value;
+  if(!isFree(w,date,slot)){alert('職人さんが「予定あり（ダメな日）」に設定しているか、空き状況が変更されています。打診できません。');return}
+  const job=prompt('現場名（デモ用の架空名称のみ）','サンプル現場');
+  if(job===null)return;
+  const trimmed=job.trim();
+  if(!trimmed||trimmed.length>80){alert('1〜80文字で入力してください');return}
+  data.requests.push({
+    id:'r'+Date.now()+Math.random().toString(36).slice(2,6),
+    workerId:w,date,slot,job:trimmed,status:'pending'
+  });
+  save('仕事を打診：'+w+' / '+date);
+}
+
+function changeRequest(id,next){
+  const r=data.requests.find(x=>x.id===id);
+  if(!r)return;
+  const allowed={pending:['accepted','declined','cancelled'],accepted:['confirmed','cancelled'],confirmed:['cancelled']};
+  if(!(allowed[r.status]||[]).includes(next)){alert('この状態では操作できません');return}
+  if(next==='accepted'||next==='confirmed'){
+    const conflict=data.requests.some(x=>x.id!==r.id&&x.workerId===r.workerId&&x.date===r.date&&['pending','accepted','confirmed'].includes(x.status)&&(x.slot==='all'||r.slot==='all'||x.slot===r.slot));
+    if(conflict){alert('同じ時間帯に別の依頼があります');return}
+    const slots=r.slot==='all'?['am','pm']:[r.slot];
+    if(slots.some(s=>statusFor(r.workerId,r.date,s)==='busy')){alert('職人さんが「予定あり（ダメな日）」に設定したため承諾・確定できません');return}
+  }
+  r.status=next;
+  save('依頼 '+id+' → '+next);
+}
+
+function updateAvailability(status){
+  const w=document.getElementById('workerSelect').value;
+  const date=document.getElementById('workerDate').value;
+  if(!date)return;
+  const existing=data.requests.some(r=>r.workerId===w&&r.date===date&&['pending','accepted','confirmed'].includes(r.status));
+  if(existing&&status==='busy'){alert('有効な依頼があります。先に管理者と調整してキャンセルしてください。');return}
+  data.availability[w+'|'+date]={am:status,pm:status};
+  save(w+' '+date+' → '+statuses[status]);
+}
+
 const statusLabels={pending:'打診中',accepted:'職人承諾済',confirmed:'手配確定',declined:'辞退',cancelled:'取消'};
-function requestCard(r,admin){const w=data.workers.find(x=>x.id===r.workerId);const actions=admin?(r.status==='accepted'?'<button class="primary" onclick="changeRequest(\''+r.id+'\',\'confirmed\')">手配確定</button>':'')+(['pending','accepted','confirmed'].includes(r.status)?'<button onclick="changeRequest(\''+r.id+'\',\'cancelled\')">取消</button>':''):(r.status==='pending'?'<button class="primary" onclick="changeRequest(\''+r.id+'\',\'accepted\')">承諾</button> <button onclick="changeRequest(\''+r.id+'\',\'declined\')">辞退</button>':'');return '<div class="request"><strong>'+escapeHTML(r.job)+'</strong> <span class="tag">'+statusLabels[r.status]+'</span><p class="muted">'+escapeHTML(w?.name||'不明')+' / '+escapeHTML(r.date)+' / '+({am:'午前',pm:'午後',all:'終日'}[r.slot])+'</p><div class="row">'+actions+'</div></div>'}
-function render(){document.getElementById('adminView').hidden=mode!=='admin';document.getElementById('workerView').hidden=mode!=='worker';document.getElementById('adminTab').classList.toggle('active',mode==='admin');document.getElementById('workerTab').classList.toggle('active',mode==='worker');const sel=document.getElementById('workerSelect');const previous=sel.value;sel.innerHTML=data.workers.map(w=>'<option value="'+w.id+'">'+escapeHTML(w.name)+'</option>').join('');if(data.workers.some(w=>w.id===previous))sel.value=previous;
-const date=document.getElementById('searchDate').value,slot=document.getElementById('slotFilter').value,trade=document.getElementById('tradeFilter').value;document.getElementById('workers').innerHTML=data.workers.filter(w=>!trade||w.trade===trade).map(w=>{const free=isFree(w.id,date,slot);const status=free?'空き':(slot==='all'?[statusFor(w.id,date,'am'),statusFor(w.id,date,'pm')].map(s=>statuses[s]).join(' / '):statuses[statusFor(w.id,date,slot)]);return '<div class="person"><strong>'+escapeHTML(w.name)+'</strong><p class="muted">'+escapeHTML(w.trade)+'</p><p><span class="tag '+(free?'free':'busy')+'">'+escapeHTML(status)+'</span></p><button class="primary" '+(!free?'disabled':'')+' onclick="requestWork(\''+w.id+'\')">仕事を打診</button></div>'}).join('');
-document.getElementById('adminRequests').innerHTML=data.requests.length?data.requests.slice().reverse().map(r=>requestCard(r,true)).join(''):'<p class="muted">まだ打診はありません。</p>';
-const worker=sel.value,wd=document.getElementById('workerDate').value;document.getElementById('workerState').textContent=wd?'現在：午前 '+statuses[statusFor(worker,wd,'am')]+' / 午後 '+statuses[statusFor(worker,wd,'pm')]:'日付を選んでください';const own=data.requests.filter(r=>r.workerId===worker).slice().reverse();document.getElementById('workerRequests').innerHTML=own.length?own.map(r=>requestCard(r,false)).join(''):'<p class="muted">届いている打診はありません。</p>';document.getElementById('history').innerHTML=data.history.map(h=>'<tr><td>'+escapeHTML(h.at)+'</td><td>'+escapeHTML(h.action)+'</td></tr>').join('')||'<tr><td colspan="2">履歴なし</td></tr>'}
-document.getElementById('searchDate').value=localDate();document.getElementById('workerDate').value=localDate();render();
+
+function requestCard(r,admin){
+  const w=data.workers.find(x=>x.id===r.workerId);
+  const actions=admin?
+    (r.status==='accepted'?'<button class="primary" onclick="changeRequest(\''+r.id+'\',\'confirmed\')">手配確定</button>':'')+
+    (['pending','accepted','confirmed'].includes(r.status)?'<button onclick="changeRequest(\''+r.id+'\',\'cancelled\')">取消</button>':''):
+    (r.status==='pending'?'<button class="primary" onclick="changeRequest(\''+r.id+'\',\'accepted\')">承諾</button> <button onclick="changeRequest(\''+r.id+'\',\'declined\')">辞退</button>':'');
+  return '<div class="request"><strong>'+escapeHTML(r.job)+'</strong> <span class="tag">'+statusLabels[r.status]+'</span><p class="muted">'+escapeHTML(w?.name||'不明')+' / '+escapeHTML(r.date)+' / '+({am:'午前',pm:'午後',all:'終日'}[r.slot])+'</p><div class="row">'+actions+'</div></div>';
+}
+
+function changeMonth(delta){
+  calMonth += delta;
+  if(calMonth > 11){calMonth = 0; calYear++;}
+  else if(calMonth < 0){calMonth = 11; calYear--;}
+  renderCalendar();
+}
+
+function changeWorkerMonth(delta){
+  workerCalMonth += delta;
+  if(workerCalMonth > 11){workerCalMonth = 0; workerCalYear++;}
+  else if(workerCalMonth < 0){workerCalMonth = 11; workerCalYear--;}
+  renderWorkerCalendar();
+}
+
+function selectCalDate(dateStr){
+  document.getElementById('searchDate').value = dateStr;
+  render();
+}
+
+function selectWorkerCalDate(dateStr){
+  document.getElementById('workerDate').value = dateStr;
+  render();
+}
+
+function calendarRequest(workerId,date){document.getElementById('searchDate').value=date;const slots=['all','am','pm'];const found=slots.find(s=>isFree(workerId,date,s));if(!found){alert('この日の空きはありません。未回答の場合は確認してください。');return}document.getElementById('slotFilter').value=found;requestWork(workerId)}
+function renderCalendar(){
+  document.getElementById('calMonthTitle').textContent = calYear + '年 ' + (calMonth + 1) + '月';
+  const grid = document.getElementById('calDaysGrid');
+  let html = '';
+  
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const prevDaysInMonth = new Date(calYear, calMonth, 0).getDate();
+  const todayStr = localDate();
+
+  for(let i = firstDay - 1; i >= 0; i--){
+    const d = prevDaysInMonth - i;
+    const m = calMonth === 0 ? 12 : calMonth;
+    const y = calMonth === 0 ? calYear - 1 : calYear;
+    const dateStr = y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    html += '<div class="cal-cell other-month" onclick="selectCalDate(\''+dateStr+'\')"><div class="cal-date">'+d+'</div></div>';
+  }
+
+  for(let d = 1; d <= daysInMonth; d++){
+    const m = calMonth + 1;
+    const dateStr = calYear + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const isToday = (dateStr === todayStr);
+    
+    let dotsHtml = '';
+    data.workers.forEach(w => {
+      const am = statusFor(w.id, dateStr, 'am');
+      const pm = statusFor(w.id, dateStr, 'pm');
+      let cls = 'unknown';
+      let label = w.name.replace('協力業者 ','') + ':？';
+      if(am === 'free' && pm === 'free'){cls='free'; label=w.name.replace('協力業者 ','')+':○';}
+      else if(am === 'busy' || pm === 'busy'){cls='busy'; label=w.name.replace('協力業者 ','')+':×';}
+      else if(am === 'hold' || pm === 'hold'){cls='hold'; label=w.name.replace('協力業者 ','')+':△';}
+      dotsHtml += '<span class="cal-dot '+cls+'" '+(cls==='free'?'role="button" tabindex="0" onclick="event.stopPropagation();calendarRequest(\''+w.id+'\',\''+dateStr+'\')"':'')+'>'+escapeHTML(label)+'</span>';
+    });
+
+    html += '<div class="cal-cell '+(isToday?'today':'')+'" onclick="selectCalDate(\''+dateStr+'\')">'+
+      '<div class="cal-date">'+d+'</div>'+
+      '<div class="cal-status-dots">'+dotsHtml+'</div>'+
+    '</div>';
+  }
+
+  grid.innerHTML = html;
+}
+
+function renderWorkerCalendar(){
+  document.getElementById('workerCalMonthTitle').textContent = workerCalYear + '年 ' + (workerCalMonth + 1) + '月';
+  const grid = document.getElementById('workerCalDaysGrid');
+  let html = '';
+  
+  const firstDay = new Date(workerCalYear, workerCalMonth, 1).getDay();
+  const daysInMonth = new Date(workerCalYear, workerCalMonth + 1, 0).getDate();
+  const prevDaysInMonth = new Date(workerCalYear, workerCalMonth, 0).getDate();
+  const todayStr = localDate();
+  const currentWorkerId = document.getElementById('workerSelect').value;
+
+  for(let i = firstDay - 1; i >= 0; i--){
+    const d = prevDaysInMonth - i;
+    const m = workerCalMonth === 0 ? 12 : workerCalMonth;
+    const y = workerCalMonth === 0 ? workerCalYear - 1 : workerCalYear;
+    const dateStr = y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    html += '<div class="cal-cell other-month" onclick="selectWorkerCalDate(\''+dateStr+'\')"><div class="cal-date">'+d+'</div></div>';
+  }
+
+  for(let d = 1; d <= daysInMonth; d++){
+    const m = workerCalMonth + 1;
+    const dateStr = workerCalYear + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const isToday = (dateStr === todayStr);
+    
+    const am = statusFor(currentWorkerId, dateStr, 'am');
+    const pm = statusFor(currentWorkerId, dateStr, 'pm');
+    let cls = 'unknown';
+    let label = '未回答';
+    if(am === 'free' && pm === 'free'){cls='free'; label='空き(○)';}
+    else if(am === 'busy' || pm === 'busy'){cls='busy'; label='予定あり(×)';}
+    else if(am === 'hold' || pm === 'hold'){cls='hold'; label='仮予定(△)';}
+
+    html += '<div class="cal-cell '+(isToday?'today':'')+'" onclick="selectWorkerCalDate(\''+dateStr+'\')">'+
+      '<div class="cal-date">'+d+'</div>'+
+      '<div class="cal-status-dots"><span class="cal-dot '+cls+'">'+escapeHTML(label)+'</span></div>'+
+    '</div>';
+  }
+
+  grid.innerHTML = html;
+}
+
+function exportGoogleCalendarICS(){
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Tobita Partners//Schedule Demo//JA','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+  const esc=v=>String(v??'').replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;');
+  data.requests.filter(r=>r.status==='confirmed'||r.status==='accepted').forEach(r=>{
+    const w=data.workers.find(x=>x.id===r.workerId);
+    const d=r.date.replace(/-/g,'');
+    const start=new Date(r.date+'T00:00:00');
+    start.setDate(start.getDate()+1);
+    const next=start.getFullYear()+String(start.getMonth()+1).padStart(2,'0')+String(start.getDate()).padStart(2,'0');
+    lines.push('BEGIN:VEVENT','UID:tobita-req-'+r.id+'@local','DTSTAMP:'+d+'T000000Z','DTSTART;VALUE=DATE:'+d,'DTEND;VALUE=DATE:'+next,'SUMMARY:'+esc('[手配済] '+r.job+' ('+(w?w.name:'')+')'),'DESCRIPTION:'+esc('職種: '+(w?w.trade:'')+' / 時間帯: '+r.slot),'END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  const blob=new Blob([lines.join(String.fromCharCode(13,10))+String.fromCharCode(13,10)],{type:'text/calendar;charset=utf-8;'});
+  const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='tobita_schedule_sync.ics';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+}
+
+function addAttendance(){const w=document.getElementById('attendanceWorker').value,d=document.getElementById('attendanceDate').value,qty=Number(document.getElementById('attendanceSlot').value),rate=Number(document.getElementById('attendanceRate').value),job=document.getElementById('attendanceJob').value.trim();if(!w||!d||!job||!Number.isFinite(rate)||rate<0){alert('職人・日付・工事名・単価を確認してください');return}data.attendance=data.attendance||[];data.attendance.push({id:'a'+Date.now(),workerId:w,date:d,qty,rate,job});save('出勤実績登録 '+d+' '+w+' '+qty+'人工')}
+function deleteAttendance(id){if(!confirm('この出勤実績を削除しますか？'))return;data.attendance=(data.attendance||[]).filter(a=>a.id!==id);save('出勤実績を削除 '+id)}
+function billingKey(d){const x=new Date(d+'T12:00:00');if(x.getDate()>20)x.setMonth(x.getMonth()+1);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')}
+function renderReports(){const records=data.attendance||[];const m=document.getElementById('billingMonth').value,y=Number(document.getElementById('billingYear').value);const sum=(items)=>{const qty=items.reduce((n,a)=>n+Number(a.qty),0);const amount=items.reduce((n,a)=>n+Number(a.qty)*Number(a.rate),0);return qty.toFixed(1)+'人工 / '+amount.toLocaleString('ja-JP')+'円'};const group=(items)=>data.workers.map(w=>({name:w.name,items:items.filter(a=>a.workerId===w.id)})).filter(x=>x.items.length);const rows=(items)=>'<table><thead><tr><th>職人</th><th>人工・人工代</th></tr></thead><tbody>'+group(items).map(x=>'<tr><td>'+escapeHTML(x.name)+'</td><td>'+sum(x.items)+'</td></tr>').join('')+'</tbody></table>';const monthly=records.filter(a=>billingKey(a.date)===m);const annual=records.filter(a=>billingKey(a.date).startsWith(y+'-'));document.getElementById('billingReport').innerHTML='<h3>'+escapeHTML(m)+'度（20日締め）合計：'+sum(monthly)+'</h3>'+rows(monthly);document.getElementById('annualReport').innerHTML='<h3>'+y+'年度合計：'+sum(annual)+'</h3>'+rows(annual);document.getElementById('attendanceList').innerHTML='<h3>登録済み出勤実績</h3><table><tr><th>日付・職人・工事</th><th>人工</th><th>操作</th></tr>'+monthly.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(a=>'<tr><td>'+escapeHTML(a.date)+' '+escapeHTML(data.workers.find(w=>w.id===a.workerId)?.name||'')+' '+escapeHTML(a.job)+'</td><td>'+a.qty+'</td><td><button onclick="deleteAttendance(\''+a.id+'\')">削除</button></td></tr>').join('')+'</table>'}
+function downloadAttendanceCSV(){const rows=[['日付','締め月','職人','工事名','人工','日当単価','人工代'],...(data.attendance||[]).map(a=>[a.date,billingKey(a.date),data.workers.find(w=>w.id===a.workerId)?.name||'',a.job,a.qty,a.rate,a.qty*a.rate])];const csv='\uFEFF'+rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join(String.fromCharCode(13,10));const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='attendance.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+
+function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>c.charCodeAt(0)===39?'&#39;':({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]||c))}
+
+function render(){
+  // CRITICAL: Prevent form rerendering while user is actively typing or composing with Japanese IME
+  const activeEl = document.activeElement;
+  if(activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'SELECT' || activeEl.tagName === 'TEXTAREA')){
+    if(activeEl.dataset.isComposing === 'true'){
+      return;
+    }
+  }
+
+  document.getElementById('adminView').hidden = mode !== 'admin';
+  document.getElementById('workerView').hidden = mode !== 'worker';
+  document.getElementById('adminTab').classList.toggle('active', mode === 'admin');
+  document.getElementById('workerTab').classList.toggle('active', mode === 'worker');
+  document.getElementById('syncBtn').style.display = mode === 'admin' ? 'inline-block' : 'none';
+  
+  const sel=document.getElementById('workerSelect');
+  const previous=sel.value;
+  sel.innerHTML=data.workers.map(w=>'<option value="'+w.id+'">'+escapeHTML(w.name)+' ('+escapeHTML(w.trade)+')</option>').join('');
+  if(data.workers.some(w=>w.id===previous))sel.value=previous;
+  
+  const date=document.getElementById('searchDate').value;
+  const slot=document.getElementById('slotFilter').value;
+  const trade=document.getElementById('tradeFilter').value;
+  
+  document.getElementById('workers').innerHTML=data.workers.filter(w=>!trade||w.trade===trade).map(w=>{
+    const free=isFree(w.id,date,slot);
+    const status=free?'空き':(slot==='all'?[statusFor(w.id,date,'am'),statusFor(w.id,date,'pm')].map(s=>statuses[s]).join(' / '):statuses[statusFor(w.id,date,slot)]);
+    return '<div class="person"><strong>'+escapeHTML(w.name)+'</strong><p class="muted">'+escapeHTML(w.trade)+'</p><p><span class="tag '+(free?'free':'busy')+'">'+escapeHTML(status)+'</span></p><button class="primary" '+(!free?'disabled':'')+' onclick="requestWork(\''+w.id+'\')">仕事を打診</button></div>';
+  }).join('');
+  
+  document.getElementById('adminRequests').innerHTML=data.requests.length?data.requests.slice().reverse().map(r=>requestCard(r,true)).join(''):'<p class="muted">まだ打診や確定情報はありません。</p>';
+  
+  const worker=sel.value,wd=document.getElementById('workerDate').value;
+  document.getElementById('workerState').textContent=wd?'現在（'+wd+'）：午前 '+statuses[statusFor(worker,wd,'am')]+' / 午後 '+statuses[statusFor(worker,wd,'pm')]:'日付を選んでください';
+  
+  const own=data.requests.filter(r=>r.workerId===worker).slice().reverse();
+  document.getElementById('workerRequests').innerHTML=own.length?own.map(r=>requestCard(r,false)).join(''):'<p class="muted">届いている打診はありません。</p>';
+  document.getElementById('history').innerHTML=data.history.map(h=>'<tr><td>'+escapeHTML(h.at)+'</td><td>'+escapeHTML(h.action)+'</td></tr>').join('')||'<tr><td colspan="2">履歴なし</td></tr>';
+
+  const aw=document.getElementById('attendanceWorker');const prev=aw.value;aw.innerHTML=data.workers.map(w=>'<option value="'+w.id+'">'+escapeHTML(w.name)+'</option>').join('');if(prev)aw.value=prev;renderReports();
+  renderCalendar();
+  renderWorkerCalendar();
+}
+
+// iPhone & Japanese IME safety binding
+document.addEventListener('DOMContentLoaded', () => {
+  // Initialize default date values if empty
+  const today = localDate();
+  if(!document.getElementById('searchDate').value) document.getElementById('searchDate').value = today;
+  if(!document.getElementById('workerDate').value) document.getElementById('workerDate').value = today;
+  if(!document.getElementById('attendanceDate').value) document.getElementById('attendanceDate').value = today;
+  if(!document.getElementById('billingMonth').value) document.getElementById('billingMonth').value = today.slice(0, 7);
+  if(!document.getElementById('billingYear').value) document.getElementById('billingYear').value = new Date().getFullYear();
+
+  // IME composition tracking for all inputs to prevent premature re-rendering
+  document.querySelectorAll('input, select, textarea').forEach(el => {
+    el.addEventListener('compositionstart', () => { el.dataset.isComposing = 'true'; });
+    el.addEventListener('compositionend', () => { 
+      el.dataset.isComposing = 'false'; 
+      render(); 
+    });
+    el.addEventListener('input', () => {
+      if(el.dataset.isComposing !== 'true'){
+        render();
+      }
+    });
+    el.addEventListener('change', () => {
+      if(el.dataset.isComposing !== 'true'){
+        render();
+      }
+    });
+  });
+
+  render();
+});
 </script></body></html>
