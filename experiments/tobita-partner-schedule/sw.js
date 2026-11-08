@@ -9,3 +9,8 @@ self.addEventListener('notificationclick',event=>{
   await self.clients.openWindow(url);
  })());
 });
+
+self.addEventListener('push',event=>{
+ let data={};try{data=event.data?.json()||{}}catch{data={body:event.data?.text()||'新しいお知らせ'}}
+ event.waitUntil(self.registration.showNotification(data.title||'職人マッチング',{body:data.body||'新しいお知らせがあります',tag:data.tag||'tobita-notification',icon:'./icon.svg',badge:'./icon.svg',data:{url:'./app.html'}}));
+});
