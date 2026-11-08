@@ -1805,9 +1805,28 @@ const sync = (() => {
     if (!window.ORXELIA_PUBLISHABLE_KEY) return "";
     return '<div class="panel"><h3>iPhone・PCの自動同期</h3><p id="sync-status" role="status">' +
       esc(message || (session ? "接続を確認中…" : "同じアカウントで各端末からログインしてください。")) + '</p>' +
-      (recoveryToken ? '<form id="sync-recovery"><label>新しいパスワード<input type="password" name="password" autocomplete="new-password" minlength="12" required></label><button class="primary">新しいパスワードを保存</button></form>' : session ? '<button id="sync-now" type="button">今すぐ同期</button> <button id="sync-restore-cloud" type="button">クラウドから事業台帳を復元</button>' :
+      (recoveryToken ? '<form id="sync-recovery"><label>新しいパスワード<input type="password" name="password" autocomplete="new-password" minlength="12" required></label><button class="primary">新しいパスワードを保存</button></form>' : session ? '<button id="sync-account-check" type="button">ログインアカウントを確認</button> <button id="sync-now" type="button">今すぐ同期</button> <button id="sync-restore-cloud" type="button">クラウドから事業台帳を復元</button><p id="sync-account-result" role="status"></p>' :
         '<form id="sync-login"><label>メール<input type="email" name="email" autocomplete="username" required></label><label>パスワード<input type="password" name="password" autocomplete="current-password" required></label><button class="primary">ログインして同期</button> <button id="sync-reset" type="button">再設定メールを送る</button></form>') + '</div>';
   }
+  // Account diagnostics are read-only and scoped to the current authenticated user.
+  document.addEventListener("click",async event=>{
+    if(event.target.id!=="sync-account-check")return;
+    const btn=event.target;
+    const output=document.getElementById("sync-account-result");
+    if(!output)return;
+    if(!session?.user?.id){output.textContent="ログイン状態を確認できません。";return;}
+    btn.disabled=true;
+    output.textContent="アカウントを確認しています…";
+    try{
+      const user=await request("/auth/v1/user");
+      const rows=await request(table+"?select=revision,snapshot&limit=1");
+      const remote=rows?.[0];
+      const email=String(user?.email||session.user.email||"メールアドレス不明");
+      if(!user?.id||user.id!==session.user.id)throw Error("ログイン情報が一致しません");
+      output.textContent="現在のログイン: "+email+" ／ "+(remote?"事業台帳あり（事業 "+remote.snapshot?.projects?.length+"件・判断 "+remote.snapshot?.decisions?.length+"件・版 "+remote.revision+"）":"このアカウントに事業台帳なし。別アカウントに保存されている可能性があります。");
+    }catch(error){output.textContent="確認できませんでした: "+String(error?.message||error);}
+    finally{btn.disabled=false;}
+  });
   // Explicit recovery is download-only from the cloud; never POST/PATCH the cloud.
   document.addEventListener("click", async event => {
     if(event.target.id!=="sync-restore-cloud")return;
