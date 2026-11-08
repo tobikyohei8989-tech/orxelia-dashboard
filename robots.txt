@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /experiments/
+Sitemap: https://phenomenal-basbousa-1200eb.netlify.app/sitemap.xml
