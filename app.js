@@ -1341,28 +1341,35 @@ document.addEventListener("click", event => {
       if (confirm("この営業記録を削除しますか？")) { saveSales(rows.filter(r=>r.id!==value)); render(); }
     }
     if (kind === "recoveryView") {
-      const payload = {
-        format:"orxelia-device-recovery-view-v1",
-        exportedAt:new Date().toISOString(),
-        portfolio:JSON.parse(localStorage.getItem(key)||"null"),
-        recovery:JSON.parse(localStorage.getItem(recoveryKey)||"null"),
-        safetyHistory:JSON.parse(localStorage.getItem(backupKey)||"null"),
-        sales:JSON.parse(localStorage.getItem(salesKey)||"null"),
-        tasks:JSON.parse(localStorage.getItem(tasksKey)||"null"),
-        evidence:JSON.parse(localStorage.getItem(evidenceKey)||"null")
-      };
-      const json=JSON.stringify(payload,null,2);
-      const area=document.createElement("textarea");
-      area.readOnly=true;area.value=json;area.rows=12;
-      area.style.cssText="display:block;width:100%;min-height:230px;font:13px/1.5 monospace;overflow:auto;margin-top:12px";
-      const box=document.createElement("div");
-      box.style.cssText="padding:14px;margin:12px 0;border:2px solid #1b65a8;border-radius:12px;background:#fff";
+      // Read-only recovery viewer: malformed records must not hide other intact data.
+      const keys={portfolio:key,recovery:recoveryKey,safetyHistory:backupKey,sales:salesKey,tasks:tasksKey,evidence:evidenceKey};
+      const payload={format:"orxelia-device-recovery-view-v2",exportedAt:new Date().toISOString()};
+      for(const [name,storageKey] of Object.entries(keys)){
+        try {
+          const raw=localStorage.getItem(storageKey);
+          payload[name]=raw===null?null:JSON.parse(raw);
+        } catch(error) {
+          payload[name]={readError:String(error?.message||error),note:"Stored value was not changed"};
+        }
+      }
+      const previous=document.getElementById("orxelia-recovery-viewer");
+      if(previous)previous.remove();
+      const box=document.createElement("section");
+      box.id="orxelia-recovery-viewer";
+      box.style.cssText="padding:16px;margin:14px 0;border:3px solid #1b65a8;border-radius:12px;background:#fff;color:#14243b";
+      const heading=document.createElement("h3");
+      heading.textContent="端末内の復旧データを表示しました";
       const label=document.createElement("p");
-      label.textContent="復旧データ（読み取り専用）です。下の内容を長押し→すべて選択→コピーしてください。共有前に個人情報の有無をご確認ください。";
-      box.append(label,area);
+      label.textContent="読み取り専用です。データを変更しません。個人情報を含む場合があります。";
+      const area=document.createElement("textarea");
+      area.readOnly=true;area.value=JSON.stringify(payload,null,2);area.rows=12;
+      area.style.cssText="display:block;width:100%;min-height:230px;font:13px/1.5 monospace;overflow:auto;margin:12px 0";
+      const copy=document.createElement("button");
+      copy.type="button";copy.textContent="復旧データをすべて選択";
+      copy.addEventListener("click",()=>{area.focus();area.select();});
+      box.append(heading,label,area,copy);
       button.insertAdjacentElement("afterend",box);
-      area.focus();area.select();
-      box.scrollIntoView({block:"center",behavior:"smooth"});
+      box.scrollIntoView({block:"center",behavior:"auto"});
     }
     if (kind === "recoveryExport") downloadRecoverySnapshot();
     if (kind === "bundleExport") exportBundle();
