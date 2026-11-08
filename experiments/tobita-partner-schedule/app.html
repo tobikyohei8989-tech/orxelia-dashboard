@@ -49,17 +49,34 @@ $('toggleBrandSettings').addEventListener('click',()=>{if(member?.role!=='admin'
 $('removeCompanyLogo').addEventListener('click',()=>{pendingLogo=null;$('companyLogo').value='';paintLogoPreview();});
 $('saveCompanyBrand').addEventListener('click',async()=>{if(member?.role!=='admin')return;const company_line1=$('companyLine1').value.trim(),company_line2=$('companyLine2').value.trim();if(!company_line1&&!company_line2){$('brandSaveStatus').textContent='会社名を1段以上入力してください。';return;}const button=$('saveCompanyBrand');button.disabled=true;const {data,error}=await supabase.from('tobita_match_branding').update({company_line1,company_line2,logo_data:pendingLogo,updated_at:new Date().toISOString()}).eq('id',1).select('company_line1,company_line2,logo_data').single();button.disabled=false;if(error){$('brandSaveStatus').textContent='保存できませんでした：'+error.message;return;}branding=data;paintBrand();$('brandSaveStatus').textContent='会社設定を保存しました。';});
 let lastNoticeIds=null;
+const pushEndpoint='https://yzlxcfncdtojajlhihap.supabase.co/functions/v1/tobita-match-push';
+function pushKeyBytes(base64){const str=atob(base64.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(base64.length/4)*4,'='));return Uint8Array.from(str,c=>c.charCodeAt(0));}
 function updateNotificationControls(){
- const supported=('Notification' in window)&&('serviceWorker' in navigator)&&window.isSecureContext;
- $('enableNotifications').hidden=!member||!supported||Notification.permission==='granted';
- $('notificationStatus').textContent=!member?'':!supported?'このブラウザでは通知に対応していません':Notification.permission==='granted'?'この端末の通知は許可済み（アプリ起動中のみ）':Notification.permission==='denied'?'通知が拒否されています。端末設定で許可してください。':'通知を有効にするとアプリ使用中にお知らせします';
+ const supported=('Notification' in window)&&('serviceWorker' in navigator)&&('PushManager' in window)&&window.isSecureContext;
+ $('enableNotifications').hidden=!member||!supported;
+ $('enableNotifications').textContent=Notification.permission==='granted'?'🔔 プッシュ通知を再設定':'🔔 この端末の通知を有効にする';
+ $('notificationStatus').textContent=!member?'':!supported?'このブラウザではプッシュ通知に対応していません。iPhoneはSafariからホーム画面に追加してください。':Notification.permission==='denied'?'通知が拒否されています。端末設定で許可してください。':Notification.permission==='granted'?'通知の許可済み（配信登録はボタンから確認できます）':'通知を許可するとアプリを閉じていてもお知らせします';
 }
 $('enableNotifications').onclick=async()=>{
+ const button=$('enableNotifications');button.disabled=true;
  try{
+  if(!member)throw Error('ログインしてください。');
   const permission=await Notification.requestPermission();
-  updateNotificationControls();
-  if(permission==='granted')note('通知を許可しました。アプリを閉じている間のプッシュ通知は準備中です。');
- }catch(e){note('通知を設定できません：'+e.message,true);}
+  if(permission!=='granted')throw Error('端末の通知が許可されていません。');
+  const registration=await navigator.serviceWorker.ready;
+  const keyResponse=await fetch(pushEndpoint+'?action=public-key');
+  const keyData=await keyResponse.json();
+  if(!keyResponse.ok||!keyData.publicKey)throw Error('通知サーバーの設定を確認できません。');
+  let subscription=await registration.pushManager.getSubscription();
+  if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushKeyBytes(keyData.publicKey)});
+  const {data:{session}}=await supabase.auth.getSession();
+  if(!session?.access_token)throw Error('再ログインしてください。');
+  const response=await fetch(pushEndpoint,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:JSON.stringify({action:'subscribe',subscription:subscription.toJSON()})});
+  if(!response.ok)throw Error('通知の配信登録に失敗しました（'+response.status+'）。');
+  $('notificationStatus').textContent='プッシュ通知の登録が完了しました。アプリを閉じていても受信できます。';
+  note('この端末のプッシュ通知を登録しました。');
+ }catch(e){$('notificationStatus').textContent='設定できません：'+e.message;note('通知設定：'+e.message,true);}
+ finally{button.disabled=false;}
 };
 async function notifyNewEvents(newEvents){
  if(!member||!('Notification' in window)||Notification.permission!=='granted'||document.hidden)return;
