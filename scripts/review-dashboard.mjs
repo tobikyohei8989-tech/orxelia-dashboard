@@ -1,20 +1,8 @@
 import {readFileSync,writeFileSync,appendFileSync} from 'node:fs';
 const key=process.env.GEMINI_API_KEY;
 if(!key)throw Error('GEMINI_API_KEY is not configured in GitHub Actions secrets');
-const files=['index.html','style.css','app.js'];
-const sources=files.map(f=>{
- const content=readFileSync(f,'utf8');
- if(f==='app.js'){
-  const targets=['function executiveQuickMatrix()','function home()','function render()','function businessRevenueOverview()','function portfolio(','function orxeliaTrialProposalPanel()','document.addEventListener("click"'];
-  const excerpts=targets.map(name=>{
-   const i=content.indexOf(name);
-   return i<0?'### NOT FOUND '+name:'### '+name+'\\n'+content.slice(i,i+(name.includes('orxeliaTrial')?6500:3800));
-  });
-  return '### '+f+'\\n'+content.slice(0,10000)+'\\n\\n'+excerpts.join('\\n\\n');
- }
- return '### '+f+'\\n'+(f==='style.css'?content.slice(0,6000)+'\\n/* FINAL OVERRIDES */\\n'+content.slice(-12500):content.slice(0,12000));
-}).join('\\n\\n');
-const prompt=`あなたはORXELIAと独立した日本語UI/UX監査担当のGeminiです。対象はGitHub Pages上の経営ダッシュボード。次の実装コードだけを根拠にレビューしてください。CSS末尾の上書きとホーム画面の最新コードを必ず確認してください。実際の画面・iPhone実機・操作テストを見ていない場合は必ず明記してください。事業ごとのAI生成デザインのレビューと混同しないこと。特に今回改修した「事業一覧」と「承認・販売」のタブを最優先で評価してください。事業一覧の次の行動の明確さ、承認案件の優先順位、折りたたみ式プレビュー、iPhoneでの操作性、誤承認防止を確認し、改善が必要なら具体的に指摘してください。次の順番でMarkdownで返してください：1. 総評（100点満点、採点根拠） 2. iPhone 390pxの視認性とナビゲーション 3. 経営者が30秒で承認待ち、事業別売上、利益、契約数を把握できるか 4. 情報過多と削るべき項目 5. 重要度順の具体的改善提案5つ（対象ファイル・要素・変更内容・期待効果） 6. 確認できないことと追加テスト。事実と推測を区別し、Stripe連携済みや売上確定などと断定しない。\n\n${sources}`;
+const sources = ['index.html','experiments/tobita-partner-schedule/app.html'].map(f => {const raw=readFileSync(f,'utf8');return 'FILE '+f+'\n'+(f==='index.html'?raw:raw.slice(0,raw.indexOf('<script type="module">'))+'\n'+raw.slice(raw.indexOf('function render(){'),raw.indexOf('function render(){')+10000));}).join('\n\n');
+const prompt = `あなたはORXELIAのWebデザインをChatGPTと共同検討するGeminiです。ユーザーは「現HPのPartner Link紹介と操作デモは分かりにくい。実際の画面とも違う。もっと実物を伝えたい。改修案を3つ」と希望。ソースは公開済みコードのみ。3案を独立した意図で提案し、推奨案を選んでください。ChatGPT暫定案はA実画面を大きく見せる製品紹介、B管理者から職人回答までの3手順ガイド、C管理者・職人を並べた両側比較。良い点と弱点、見出し、ファーストビュー、スクロール順、CTA、スマホ仕様、実画面と整合させる方法を日本語Markdownで具体的に。実装ソースだけを根拠とし、画像を見た/実機で動かしたとは言わないこと。20日締め人工集計・年次集計は要望だが現app.htmlの画面では確認できないため実装済みと断定しない。プッシュ通知は端末設定とホーム追加が必要。架空の顧客実績・効果数値・料金を作らない。デモはサンプル名と固定日付、通信なし、実通知と本番更新なし。本番ソース、企業HP、認証は変更せず別ブランチで案を保存する。ユーザーは60歳以上の職人にも分かる見やすさを重視。デモの成立は自動成功でなく職人側の承諾操作を明示。最後に比較表と必須修正5つを出す。\n\n${sources}`;
 const api='https://generativelanguage.googleapis.com/v1beta/';
 async function request(url,options={}){
  const response=await fetch(url,{...options,headers:{'x-goog-api-key':key,...options.headers},signal:AbortSignal.timeout(90000)});
@@ -45,7 +33,7 @@ for(const name of selected){
    if(!result)throw Error('Empty review');
    const truncated=data.candidates?.[0]?.finishReason==='MAX_TOKENS';
    if(truncated && result.length<700)throw Error('Review truncated before meaningful content');
-   const output='# ORXELIA 経営ダッシュボード Geminiデザインレビュー\\n\\n実施日時（UTC）: '+new Date().toISOString()+'\\n対象コミット: '+(process.env.GITHUB_SHA||'unknown')+'\\nモデル: '+name+'\\n評価範囲: ソースコードレビュー（実機画面検証ではありません）\\n\\n'+result+'\\n';
+   const output='# ORXELIA Partner Link ホームページ共同検討\\n\\n実施日時（UTC）: '+new Date().toISOString()+'\\n対象コミット: '+(process.env.GITHUB_SHA||'unknown')+'\\nモデル: '+name+'\\n評価範囲: ソースコードレビュー（実機画面検証ではありません）\\n\\n'+result+'\\n';
    writeFileSync('gemini-dashboard-review.md',output);
    if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,output);
    console.log('Gemini dashboard review completed with',name);
