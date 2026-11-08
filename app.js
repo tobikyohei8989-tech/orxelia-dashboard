@@ -1146,7 +1146,7 @@ const orxeliaPush = (() => {
   const {publicKey}=await response.json();if(!publicKey)throw Error("通知配信鍵が未設定です。");
   const sub=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:decode(publicKey)});
   const payload={owner_id:s.user.id,endpoint:sub.endpoint,p256dh:btoa(String.fromCharCode(...new Uint8Array(sub.getKey("p256dh")))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""),auth_secret:btoa(String.fromCharCode(...new Uint8Array(sub.getKey("auth")))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")};
-  const saved=await fetch(endpoint+"/rest/v1/orxelia_push_subscriptions",{method:"POST",headers:{apikey:window.ORXELIA_PUBLISHABLE_KEY,Authorization:"Bearer "+s.access_token,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates"},body:JSON.stringify(payload)});
+  const saved=await fetch(endpoint+"/rest/v1/orxelia_push_subscriptions",{method:"POST",headers:{apikey:window.ORXELIA_PUBLISHABLE_KEY,Authorization:"Bearer "+s.access_token,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(payload)});
   if(!saved.ok)throw Error("端末登録に失敗しました（HTTP "+saved.status+"）。");
   return "iPhoneの通知登録が完了しました。";
  }
