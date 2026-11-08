@@ -829,7 +829,7 @@ let aiFeedCheckedAt = "";
 async function autoImportAiFeed() {
   if (!readable || loadEvidence()===null) {aiFeedStatus="保存データに問題があるため自動反映を停止";return;}
   try {
-    const response=await fetch(new URL(aiFeedPath,location.href).href+"?t="+Date.now(),{cache:"no-store"});
+    const response=await fetch(new URL('/'+aiFeedPath,location.origin).href+"?t="+Date.now(),{cache:"no-store"});
     if(!response.ok) throw Error("公開レポートなし（HTTP "+response.status+"）");
     if(Number(response.headers.get("content-length")||0)>maxAiFeedSize) throw Error("レポートのサイズ超過");
     const body=await response.text();if(body.length>maxAiFeedSize)throw Error("レポートのサイズ超過");
