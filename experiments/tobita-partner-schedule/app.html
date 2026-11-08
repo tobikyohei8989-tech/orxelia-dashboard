@@ -7,6 +7,7 @@
 <section class="card"><h2>カレンダー <span id="monthTitle"></span></h2><div class="row"><button id="prev">前月</button><button id="next">翌月</button><button id="clear">日付選択を解除</button></div><p id="chosen" class="muted">日付を選択してください</p><div class="calendar" id="calendar"></div></section>
 <section id="workerPanel" class="card" hidden><h2>空いている日を登録</h2><p class="muted">日付を複数選び、空いている時間帯を登録してください。打診中・確定済みの時間は変更できません。</p><div class="row"><button data-slot="am">午前空き</button><button data-slot="pm">午後空き</button><button data-slot="all" class="primary">終日空き</button><button data-slot="clear">空き登録を解除</button></div></section>
 <section id="adminPanel" class="card" hidden><h2>仕事を打診</h2><p class="muted">複数日を選択すると、すべての日に空きがある職人だけ表示されます。</p><label>職人</label><select id="workerChoice"></select><label>現場名</label><input id="jobName" maxlength="80" placeholder="例：店舗エアコン工事"><label>時間帯</label><select id="slot"><option value="all">終日</option><option value="am">午前</option><option value="pm">午後</option></select><label>集合時間</label><input id="meetingTime" type="time" required value="07:30"><label>集合場所</label><input id="meetingPlace" maxlength="200" required placeholder="例：現場正面駐車場"><div class="row"><button class="primary" id="send">選択した日をまとめて打診</button></div></section>
+<section id="workerRegisterPanel" class="card" hidden><h2>職人を登録</h2><p class="muted">職人本人のSupabase Authアカウントを先に作成し、そのユーザーID（UID）を登録してください。パスワードは入力しません。</p><label>職人の表示名</label><input id="newWorkerName" maxlength="60" placeholder="例：山田 太郎"><label>職人のユーザーID（UID）</label><input id="newWorkerUid" type="text" autocomplete="off" spellcheck="false" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"><div class="row"><button id="registerWorker" class="primary">職人を登録</button></div><p class="muted">登録後、職人は自分のメールアドレスとパスワードでログインできます。</p></section>
 <section class="card"><h2>仕事の進捗</h2><div class="row tabs"><button data-tab="pending" class="active">打診中 <span id="pendingCount"></span></button><button data-tab="confirmed">マッチング済み <span id="confirmedCount"></span></button><button data-tab="history">終了・取消</button></div><div id="requests"></div></section>
 <section class="card"><h2>お知らせ <span id="eventCount"></span></h2><div id="events"></div><p class="muted">画面を開いている間は定期的に同期します。端末プッシュ通知は未実装です。</p></section>
 </div></main>
@@ -22,7 +23,7 @@ function slotFree(worker,date,slot){const slots=slot==='all'?['am','pm']:[slot];
 function render(){
  $('login').hidden=!!member;$('app').hidden=!member;if(!member)return;
  $('who').textContent=member.display_name+'（'+(member.role==='admin'?'管理者':'職人')+'）';
- $('workerPanel').hidden=member.role!=='worker';$('adminPanel').hidden=member.role!=='admin';
+ $('workerPanel').hidden=member.role!=='worker';$('adminPanel').hidden=member.role!=='admin';$('workerRegisterPanel').hidden=member.role!=='admin';
  $('monthTitle').textContent=month.getFullYear()+'年'+(month.getMonth()+1)+'月';
  $('chosen').textContent=dates().length?dates().length+'日選択中：'+dates().join('、'):'日付をタップして選択';
  const first=new Date(month.getFullYear(),month.getMonth(),1).getDay(),days=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();
@@ -68,6 +69,7 @@ async function start(){
  channel=supabase.channel('tobita-match-'+member.user_id).on('postgres_changes',{event:'*',schema:'public',table:'tobita_match_requests'},()=>refresh()).on('postgres_changes',{event:'*',schema:'public',table:'tobita_match_availability'},()=>refresh()).on('postgres_changes',{event:'*',schema:'public',table:'tobita_match_events'},()=>refresh()).subscribe();
 }
 $('signIn').onclick=async()=>{const {error}=await supabase.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)note(error.message,true);else start()};
+$('registerWorker').onclick=async()=>{const name=$('newWorkerName').value.trim(),uid=$('newWorkerUid').value.trim();if(!name||name.length>60||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){note('職人名と正しいUIDを入力してください',true);return}if(await mutate('tobita_match_register_worker',{p_worker:uid,p_name:name})){$('newWorkerName').value='';$('newWorkerUid').value='';note('職人を登録しました。本人のログイン後、空き日を登録できます。')}};
 $('logout').onclick=async()=>{await supabase.auth.signOut();member=null;channel?.unsubscribe();channel=null;render()};
 $('reload').onclick=refresh;
 $('prev').onclick=()=>{month.setMonth(month.getMonth()-1);render()};
