@@ -61,7 +61,8 @@ async function mutate(name,args){try{const {error}=await supabase.rpc(name,args)
 async function start(){
  const {data:{user}}=await supabase.auth.getUser();
  if(!user){member=null;channel?.unsubscribe();channel=null;render();return}
- const {data,error}=await supabase.from('tobita_match_members').select('*').eq('user_id',user.id).maybeSingle();
+ let {data,error}=await supabase.from('tobita_match_members').select('*').eq('user_id',user.id).maybeSingle();
+ if(!error&&!data&&user.email?.toLowerCase()==='tobikyohei8989@gmail.com'){const activation=await supabase.rpc('tobita_match_activate_admin');if(!activation.error){const lookup=await supabase.from('tobita_match_members').select('*').eq('user_id',user.id).maybeSingle();data=lookup.data;error=lookup.error;}else{note('管理者の認証が完了していません：'+activation.error.message,true)}}
  if(error||!data){member=null;note('このアカウントは職人マッチングに登録されていません。管理者による招待が必要です。',true);render();return}
  member=data;render();await refresh();channel?.unsubscribe();
  channel=supabase.channel('tobita-match-'+member.user_id).on('postgres_changes',{event:'*',schema:'public',table:'tobita_match_requests'},()=>refresh()).on('postgres_changes',{event:'*',schema:'public',table:'tobita_match_availability'},()=>refresh()).on('postgres_changes',{event:'*',schema:'public',table:'tobita_match_events'},()=>refresh()).subscribe();
