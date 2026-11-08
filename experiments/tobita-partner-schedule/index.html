@@ -16,6 +16,18 @@
 .cal-status-dots{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px}
 .cal-dot{font-size:10px;padding:1px 4px;border-radius:4px;white-space:nowrap}
 @media(max-width:520px){h1{font-size:19px}header{padding:18px}button{padding:9px}.cal-cell{min-height:64px;padding:4px}.cal-dot{font-size:9px;padding:1px 2px}}
+
+/* Senior-friendly: readable, high-contrast, low-scroll layouts */
+:root{font-size:18px}body{line-height:1.55}header{padding-top:14px;padding-bottom:14px}
+.wrap{max-width:1240px;margin:12px auto}.panel{padding:14px;margin-bottom:12px}
+h1{font-size:clamp(22px,3vw,30px)}h2{font-size:22px;margin-bottom:10px}
+label,.muted,.notice,td,th{font-size:16px}.tag{font-size:16px;font-weight:700;padding:5px 10px}
+button,input,select{min-height:52px;font-size:18px;font-weight:600;touch-action:manipulation}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #1769c2;outline-offset:2px}
+.tabs button{min-width:145px}.cal-cell{min-height:85px}.cal-date{font-size:17px}
+.cal-dot{font-size:13px;padding:3px 5px}.grid{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+#workerView[hidden],#adminView[hidden]{display:none}
+@media(max-width:640px){:root{font-size:17px}.wrap{padding:0 9px;margin:8px auto}.panel{padding:12px;border-radius:12px}.row{gap:7px}.field{min-width:135px}button,input,select{font-size:17px;min-height:50px}.cal-cell{min-height:70px;padding:3px}.cal-dot{font-size:11px}.cal-date{font-size:14px}.notice{font-size:15px}.tabs{width:100%}.tabs button{flex:1;min-width:0}}
 </style></head><body><header><small>TOBITA PARTNER SCHEDULE / 非公開運用前の試取り組</small><h1>協力業者 空き日程・手配ボード</h1></header><main class="wrap">
 <div class="panel">
   <div class="notice">これは<strong>サンプルデータだけ</strong>を使うローカル動作デモです。認証・共有・実通知はありません。この端末のブラウザ内だけに保存されます。実名・現場情報を入力しないでください。<br><br><strong>【ご案内：仕事の打診と承認フローについて】</strong><br>1. 職人さんが「ダメな日（午前中・午後・終日）」として登録した日は、元請け管理画面でその日（またはその時間帯）の打診ができないようにブロックされます。<br>2. 管理者側で「空き」の職人に対して「仕事を打診」します（ステータス：<strong>打診中</strong>）。<br>3. 職人側（体験画面）の「届いた仕事の打診」に通知が届きます。内容を確認し、<strong>[承諾]</strong>または[辞退]ボタンを押してください。<br>4. また、管理画面・職人画面それぞれ専用のカレンダー及び確定情報一覧でスケジュールを1ヶ月単位で直感的に確認できます。</div>
@@ -65,7 +77,7 @@
 </div>
 </section>
 
-<div class="panel"><h2>出勤実績・20日締め請求照合</h2><p class="muted">前月21日〜当月20日を1か月として集計。実際の出勤だけを登録してください。駐車場・交通費・税は請求書で別途確認。</p><div class="row"><div class="field"><label>対象職人</label><select id="attendanceWorker"></select></div><div class="field"><label>出勤日</label><input id="attendanceDate" type="date"></div><div class="field"><label>勤務区分</label><select id="attendanceSlot"><option value="1">終日（1人工）</option><option value="0.5">半日（0.5人工）</option></select></div><div class="field"><label>日当単価（円・税抜）</label><input id="attendanceRate" type="number" min="0" step="1" value="25000"></div></div><div class="row" style="margin:12px 0"><div class="field"><label>工事名（デモ用）</label><input id="attendanceJob" maxlength="80" placeholder="サンプル現場"></div><button class="primary" onclick="addAttendance()">出勤実績を登録</button></div><div class="row"><div class="field"><label>締め月</label><input id="billingMonth" type="month" onchange="renderReports()"></div><div class="field"><label>年間集計年</label><input id="billingYear" type="number" min="2020" max="2100" onchange="renderReports()"></div><button onclick="downloadAttendanceCSV()">実績CSV出力</button></div><div id="billingReport" class="scroll"></div><div id="annualReport" class="scroll"></div><div id="attendanceList" class="scroll"></div></div>
+<div class="panel" id="attendancePanel"><h2>出勤実績・20日締め請求照合</h2><p class="muted">前月21日〜当月20日を1か月として集計。実際の出勤だけを登録してください。駐車場・交通費・税は請求書で別途確認。</p><div class="row"><div class="field"><label>対象職人</label><select id="attendanceWorker"></select></div><div class="field"><label>出勤日</label><input id="attendanceDate" type="date"></div><div class="field"><label>勤務区分</label><select id="attendanceSlot"><option value="1">終日（1人工）</option><option value="0.5">半日（0.5人工）</option></select></div><div class="field"><label>日当単価（円・税抜）</label><input id="attendanceRate" type="number" min="0" step="1" value="25000"></div></div><div class="row" style="margin:12px 0"><div class="field"><label>工事名（デモ用）</label><input id="attendanceJob" maxlength="80" placeholder="サンプル現場"></div><button class="primary" onclick="addAttendance()">出勤実績を登録</button></div><div class="row"><div class="field"><label>締め月</label><input id="billingMonth" type="month" onchange="renderReports()"></div><div class="field"><label>年間集計年</label><input id="billingYear" type="number" min="2020" max="2100" onchange="renderReports()"></div><button onclick="downloadAttendanceCSV()">実績CSV出力</button></div><div id="billingReport" class="scroll"></div><div id="annualReport" class="scroll"></div><div id="attendanceList" class="scroll"></div></div>
 <!-- ================= WORKER VIEW ================= -->
 <section id="workerView" hidden>
 <div class="panel">
@@ -401,24 +413,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if(!document.getElementById('billingMonth').value) document.getElementById('billingMonth').value = today.slice(0, 7);
   if(!document.getElementById('billingYear').value) document.getElementById('billingYear').value = new Date().getFullYear();
 
-  // IME composition tracking for all inputs to prevent premature re-rendering
-  document.querySelectorAll('input, select, textarea').forEach(el => {
-    el.addEventListener('compositionstart', () => { el.dataset.isComposing = 'true'; });
-    el.addEventListener('compositionend', () => { 
-      el.dataset.isComposing = 'false'; 
-      render(); 
-    });
-    el.addEventListener('input', () => {
-      if(el.dataset.isComposing !== 'true'){
-        render();
-      }
-    });
-    el.addEventListener('change', () => {
-      if(el.dataset.isComposing !== 'true'){
-        render();
-      }
-    });
-  });
+  // Avoid re-rendering while a senior user types or uses Japanese IME.
+  // Individual controls already declare onchange where updates are required.
 
   render();
 });
