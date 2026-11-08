@@ -170,7 +170,7 @@ function statusFor(w,date,slot){const a=data.availability[w+'|'+date]||{};return
 
 function isFree(w,date,slot){
   const slotsToCheck = slot === 'all' ? ['am', 'pm'] : [slot];
-  const hasBusyOrNotFree = slotsToCheck.some(s => statusFor(w, date, s) === 'busy' || statusFor(w, date, s) === 'unknown');
+  const hasBusyOrNotFree = slotsToCheck.some(s => statusFor(w, date, s) !== 'free');
   return !hasBusyOrNotFree && !data.requests.some(r=>r.workerId===w&&r.date===date&&r.status!=='declined'&&r.status!=='cancelled'&&(r.slot==='all'||slot==='all'||r.slot===slot));
 }
 
