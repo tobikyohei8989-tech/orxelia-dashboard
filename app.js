@@ -1805,9 +1805,32 @@ const sync = (() => {
     if (!window.ORXELIA_PUBLISHABLE_KEY) return "";
     return '<div class="panel"><h3>iPhone・PCの自動同期</h3><p id="sync-status" role="status">' +
       esc(message || (session ? "接続を確認中…" : "同じアカウントで各端末からログインしてください。")) + '</p>' +
-      (recoveryToken ? '<form id="sync-recovery"><label>新しいパスワード<input type="password" name="password" autocomplete="new-password" minlength="12" required></label><button class="primary">新しいパスワードを保存</button></form>' : session ? '<button id="sync-now" type="button">今すぐ同期</button>' :
+      (recoveryToken ? '<form id="sync-recovery"><label>新しいパスワード<input type="password" name="password" autocomplete="new-password" minlength="12" required></label><button class="primary">新しいパスワードを保存</button></form>' : session ? '<button id="sync-now" type="button">今すぐ同期</button> <button id="sync-restore-cloud" type="button">クラウドから事業台帳を復元</button>' :
         '<form id="sync-login"><label>メール<input type="email" name="email" autocomplete="username" required></label><label>パスワード<input type="password" name="password" autocomplete="current-password" required></label><button class="primary">ログインして同期</button> <button id="sync-reset" type="button">再設定メールを送る</button></form>') + '</div>';
   }
+  // Explicit recovery is download-only from the cloud; never POST/PATCH the cloud.
+  document.addEventListener("click", async event => {
+    if(event.target.id!=="sync-restore-cloud")return;
+    const btn=event.target;
+    if(busy){status("同期処理が終わってからもう一度押してください。");return;}
+    if(!session?.user?.id){status("先にログインしてください。");return;}
+    if(!readable){status("端末に読み取りエラーがあります。上書きせず停止しました。");return;}
+    if(populated(data)){status("端末に既存の事業データがあります。上書き防止のため復元を停止しました。");return;}
+    btn.disabled=true;
+    try{
+      const rows=await request(table+"?select=revision,snapshot&limit=1");
+      const remote=rows?.[0];
+      if(!remote){status("このログインアカウントにクラウド事業台帳が見つかりません。");return;}
+      validate(remote.snapshot);
+      if(!populated(remote.snapshot)){status("クラウドの事業台帳も空です。復元を停止しました。");return;}
+      const count=remote.snapshot.projects.length,decisions=remote.snapshot.decisions.length;
+      if(!confirm("クラウドの事業 "+count+"件・判断履歴 "+decisions+"件（版 "+remote.revision+"）をこの端末へ復元しますか？ クラウドの内容は変更しません。"))return;
+      if(populated(data)){status("操作中に端末データが変化したため停止しました。");return;}
+      adopt(remote);
+      status("クラウドから復元しました（事業 "+count+"件／判断 "+decisions+"件／版 "+remote.revision+"）。");
+    }catch(error){status("復元できませんでした。端末・クラウドは変更していません: "+String(error?.message||error));}
+    finally{btn.disabled=false;}
+  });
   if (recoveryToken) {
     tab = "settings";
     history.replaceState(null,"",location.pathname + location.search);
