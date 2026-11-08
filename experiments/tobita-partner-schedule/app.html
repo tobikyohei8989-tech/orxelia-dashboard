@@ -1,0 +1,85 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#152b49"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="職人マッチング"><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icon.svg"><title>職人マッチング | 安全な実用化候補</title><style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;color:#172338;background:#f4f7fb}*{box-sizing:border-box}body{margin:0}header{background:#152b49;color:white;padding:18px}header h1{font-size:20px;margin:0}main{max-width:960px;margin:auto;padding:14px}.card{background:white;border-radius:15px;padding:17px;margin:12px 0;box-shadow:0 2px 14px #152b4912}h2{font-size:19px;margin:0 0 12px}input,select,button{font:inherit;padding:12px;border-radius:9px;border:1px solid #b5c4d6;min-height:46px}input{max-width:100%}button{cursor:pointer;background:white}button.primary,.active{background:#1763b6;color:white;border-color:#1763b6}button:disabled{opacity:.5}label{display:block;margin:9px 0 4px}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.muted{color:#607086}.tabs button{flex:1}.item{padding:13px;border:1px solid #dbe3ed;border-radius:10px;margin:8px 0}.tag{display:inline-block;background:#e3f5e9;color:#15663a;border-radius:9px;padding:3px 9px;font-size:12px}.calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.day{min-width:0;min-height:64px;padding:5px 2px;font-size:12px;overflow-wrap:anywhere}.day.selected{background:#1763b6;color:white}.day.free{border-color:#22a267}.day.busy{background:#f5e9e8}.day small{display:block;font-size:10px}#message{white-space:pre-wrap}.warn{color:#9c381f}#app[hidden],#login[hidden],[hidden]{display:none!important}@media(min-width:680px){.day{min-height:82px;font-size:15px}}</style></head><body>
+<header><h1>職人マッチング</h1><small>管理者・職人専用／認証必須</small></header><main>
+<div id="message" role="status" aria-live="polite"></div>
+<section id="login" class="card"><h2>ログイン</h2><p class="muted">登録済みの管理者・職人アカウントのみ利用できます。新規登録は管理者の招待が必要です。</p><label>メールアドレス</label><input id="email" type="email" autocomplete="username"><label>パスワード</label><input id="password" type="password" autocomplete="current-password"><div class="row"><button id="signIn" class="primary">ログイン</button></div></section>
+<div id="app" hidden><div class="card row"><strong id="who"></strong><button id="logout">ログアウト</button><button id="reload">更新</button></div>
+<section class="card"><h2>カレンダー <span id="monthTitle"></span></h2><div class="row"><button id="prev">前月</button><button id="next">翌月</button><button id="clear">日付選択を解除</button></div><p id="chosen" class="muted">日付を選択してください</p><div class="calendar" id="calendar"></div></section>
+<section id="workerPanel" class="card" hidden><h2>空いている日を登録</h2><p class="muted">日付を複数選び、空いている時間帯を登録してください。打診中・確定済みの時間は変更できません。</p><div class="row"><button data-slot="am">午前空き</button><button data-slot="pm">午後空き</button><button data-slot="all" class="primary">終日空き</button><button data-slot="clear">空き登録を解除</button></div></section>
+<section id="adminPanel" class="card" hidden><h2>仕事を打診</h2><p class="muted">複数日を選択すると、すべての日に空きがある職人だけ表示されます。</p><label>職人</label><select id="workerChoice"></select><label>現場名</label><input id="jobName" maxlength="80" placeholder="例：店舗エアコン工事"><label>時間帯</label><select id="slot"><option value="all">終日</option><option value="am">午前</option><option value="pm">午後</option></select><div class="row"><button class="primary" id="send">選択した日をまとめて打診</button></div></section>
+<section class="card"><h2>仕事の進捗</h2><div class="row tabs"><button data-tab="pending" class="active">打診中 <span id="pendingCount"></span></button><button data-tab="confirmed">マッチング済み <span id="confirmedCount"></span></button><button data-tab="history">終了・取消</button></div><div id="requests"></div></section>
+<section class="card"><h2>お知らせ <span id="eventCount"></span></h2><div id="events"></div><p class="muted">画面を開いている間は定期的に同期します。端末プッシュ通知は未実装です。</p></section>
+</div></main>
+<script type="module">
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.95.0';
+const supabase=createClient('https://yzlxcfncdtojajlhihap.supabase.co','sb_publishable_T9287hFW7tudpePLIu9c_w_9xsxTujp',{auth:{persistSession:true,autoRefreshToken:true}});
+const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let member=null,workers=[],availability=[],requests=[],events=[],month=new Date(),selected=new Set(),tab='pending',channel=null,loading=false;
+month.setDate(1);
+function note(s,error=false){$('message').textContent=s;$('message').className=error?'warn':''}
+function dates(){return [...selected].sort()}
+function slotFree(worker,date,slot){const slots=slot==='all'?['am','pm']:[slot];return slots.every(x=>availability.some(a=>a.worker_id===worker&&a.work_date===date&&a.slot===x)&&!requests.some(r=>r.worker_id===worker&&r.work_date===date&&['pending','confirmed'].includes(r.status)&&(r.slot===x||r.slot==='all')))}
+function render(){
+ $('login').hidden=!!member;$('app').hidden=!member;if(!member)return;
+ $('who').textContent=member.display_name+'（'+(member.role==='admin'?'管理者':'職人')+'）';
+ $('workerPanel').hidden=member.role!=='worker';$('adminPanel').hidden=member.role!=='admin';
+ $('monthTitle').textContent=month.getFullYear()+'年'+(month.getMonth()+1)+'月';
+ $('chosen').textContent=dates().length?dates().length+'日選択中：'+dates().join('、'):'日付をタップして選択';
+ const first=new Date(month.getFullYear(),month.getMonth(),1).getDay(),days=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();
+ $('calendar').innerHTML=['日','月','火','水','木','金','土'].map(d=>'<strong style="text-align:center">'+d+'</strong>').join('')+Array(first).fill('<span></span>').join('')+Array.from({length:days},(_,i)=>{const d=month.getFullYear()+'-'+String(month.getMonth()+1).padStart(2,'0')+'-'+String(i+1).padStart(2,'0');const n=requests.filter(r=>r.work_date===d&&['pending','confirmed'].includes(r.status));const free=member.role==='worker'?slotFree(member.user_id,d,'am')||slotFree(member.user_id,d,'pm'):workers.some(w=>slotFree(w.user_id,d,'am')||slotFree(w.user_id,d,'pm'));return '<button class="day '+(selected.has(d)?'selected ':'')+(free?'free ':'')+(n.length?'busy':'')+'" data-date="'+d+'">'+(i+1)+'<small>'+(n.some(r=>r.status==='confirmed')?'成立':n.length?'打診中':free?'空き':'—')+'</small></button>'}).join('');
+ document.querySelectorAll('[data-date]').forEach(b=>b.onclick=()=>{selected.has(b.dataset.date)?selected.delete(b.dataset.date):selected.add(b.dataset.date);render()});
+ const chosen=dates(),slot=$('slot').value;
+ const eligible=workers.filter(w=>chosen.length&&chosen.every(d=>slotFree(w.user_id,d,slot)));
+ const old=$('workerChoice').value;
+ $('workerChoice').innerHTML=eligible.map(w=>'<option value="'+esc(w.user_id)+'">'+esc(w.display_name)+'</option>').join('');
+ if(eligible.some(w=>w.user_id===old))$('workerChoice').value=old;
+ $('send').disabled=!eligible.length;
+ for(const t of ['pending','confirmed','history'])document.querySelector('[data-tab="'+t+'"]').classList.toggle('active',tab===t);
+ $('pendingCount').textContent='('+requests.filter(r=>r.status==='pending').length+')';$('confirmedCount').textContent='('+requests.filter(r=>r.status==='confirmed').length+')';
+ const visible=requests.filter(r=>tab==='history'?['cancelled','declined'].includes(r.status):r.status===tab).sort((a,b)=>a.work_date.localeCompare(b.work_date));
+ $('requests').innerHTML=visible.length?visible.map(r=>{const name=workers.find(w=>w.user_id===r.worker_id)?.display_name||member.display_name;const action=r.status==='pending'&&member.role==='worker'?'<button data-respond="'+r.id+'" data-accept="yes" class="primary">承諾・確定</button> <button data-respond="'+r.id+'" data-accept="no">辞退</button>':member.role==='admin'&&['pending','confirmed'].includes(r.status)?'<button data-cancel="'+r.id+'">取消</button>':'';return '<div class="item"><strong>'+esc(r.job_name)+'</strong> <span class="tag">'+({pending:'打診中',confirmed:'マッチング成立',declined:'辞退',cancelled:'取消'}[r.status])+'</span><p>'+esc(r.work_date)+' / '+esc(name)+' / '+({all:'終日',am:'午前',pm:'午後'}[r.slot])+'</p>'+action+'</div>'}).join(''):'<p class="muted">該当する仕事はありません。</p>';
+ document.querySelectorAll('[data-respond]').forEach(b=>b.onclick=()=>mutate('tobita_match_respond',{p_request:b.dataset.respond,p_accept:b.dataset.accept==='yes'}));
+ document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{if(confirm('この仕事を取り消しますか？'))mutate('tobita_match_cancel',{p_request:b.dataset.cancel})});
+ $('eventCount').textContent='('+events.length+')';
+ $('events').innerHTML=events.slice(0,15).map(e=>'<div class="item"><small>'+esc(new Date(e.created_at).toLocaleString('ja-JP'))+'</small><p>'+esc(e.message)+'</p></div>').join('')||'<p class="muted">お知らせはありません。</p>';
+}
+async function refresh(){
+ if(!member||loading)return;loading=true;
+ try{
+ const base=member.role==='admin'?['owner_id',member.user_id]:['worker_id',member.user_id];
+ const [w,a,r,e]=await Promise.all([
+ supabase.from('tobita_match_members').select('*').eq('owner_id',member.owner_id),
+ supabase.from('tobita_match_availability').select('*').eq(base[0],base[1]),
+ supabase.from('tobita_match_requests').select('*').eq(base[0],base[1]),
+ supabase.from('tobita_match_events').select('*').eq('recipient_id',member.user_id).order('created_at',{ascending:false}).limit(30)
+ ]);
+ for(const x of [w,a,r,e])if(x.error)throw x.error;
+ workers=w.data.filter(x=>x.role==='worker');availability=a.data;requests=r.data;events=e.data;render();note('');
+ }catch(e){note('同期に失敗しました：'+e.message,true)}finally{loading=false}
+}
+async function mutate(name,args){try{const {error}=await supabase.rpc(name,args);if(error)throw error;note('保存しました');await refresh()}catch(e){note('操作できません：'+e.message,true)}}
+async function start(){
+ const {data:{user}}=await supabase.auth.getUser();
+ if(!user){member=null;channel?.unsubscribe();channel=null;render();return}
+ let {data,error}=await supabase.from('tobita_match_members').select('*').eq('user_id',user.id).maybeSingle();
+ if(!error&&!data&&user.email?.toLowerCase()==='tobikyohei8989@gmail.com'){const activation=await supabase.rpc('tobita_match_activate_admin');if(!activation.error){const lookup=await supabase.from('tobita_match_members').select('*').eq('user_id',user.id).maybeSingle();data=lookup.data;error=lookup.error;}else{note('管理者の認証が完了していません：'+activation.error.message,true)}}
+ if(error||!data){member=null;note('このアカウントは職人マッチングに登録されていません。管理者による招待が必要です。',true);render();return}
+ member=data;render();await refresh();channel?.unsubscribe();
+ channel=supabase.channel('tobita-match-'+member.user_id).on('postgres_changes',{event:'*',schema:'public',table:'tobita_match_requests'},()=>refresh()).on('postgres_changes',{event:'*',schema:'public',table:'tobita_match_availability'},()=>refresh()).on('postgres_changes',{event:'*',schema:'public',table:'tobita_match_events'},()=>refresh()).subscribe();
+}
+$('signIn').onclick=async()=>{const {error}=await supabase.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)note(error.message,true);else start()};
+$('logout').onclick=async()=>{await supabase.auth.signOut();member=null;channel?.unsubscribe();channel=null;render()};
+$('reload').onclick=refresh;
+$('prev').onclick=()=>{month.setMonth(month.getMonth()-1);render()};
+$('next').onclick=()=>{month.setMonth(month.getMonth()+1);render()};
+$('clear').onclick=()=>{selected.clear();render()};
+$('slot').onchange=render;
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render()});
+document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=async()=>{const ds=dates();if(!ds.length){note('日付を選択してください',true);return}const slots=b.dataset.slot==='all'||b.dataset.slot==='clear'?['am','pm']:[b.dataset.slot];for(const date of ds)for(const slot of slots){const {error}=await supabase.rpc('tobita_match_set_availability',{p_date:date,p_slot:slot,p_free:b.dataset.slot!=='clear'});if(error){note('登録を中断しました：'+error.message,true);await refresh();return}}note(ds.length+'日を登録しました');selected.clear();await refresh()});
+$('send').onclick=async()=>{if(!dates().length||!$('workerChoice').value)return;await mutate('tobita_match_send',{p_worker:$('workerChoice').value,p_job:$('jobName').value.trim(),p_dates:dates(),p_slot:$('slot').value});selected.clear();render()};
+supabase.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT'){member=null;render()}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+setInterval(()=>{if(member&&!document.hidden)refresh()},30000);
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}
+start();
+</script></body></html>
