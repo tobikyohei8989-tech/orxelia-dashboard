@@ -260,10 +260,11 @@ function submitJobRequest(){
 function changeRequest(id,next){
   const r=data.requests.find(x=>x.id===id);
   if(!r)return;
-  const allowed={pending:['accepted','declined','cancelled'],accepted:['confirmed','cancelled'],confirmed:['cancelled']};
+  const allowed={pending:['confirmed','declined','cancelled'],accepted:['confirmed','cancelled'],confirmed:['cancelled']};
+  if(next==='accepted')next='confirmed';
   if(next==='cancelled'&&mode!=='admin'){alert('取消は管理者のみ可能です。承諾後の都合変更は管理者へ電話してください。');return;}
-  if(next==='confirmed'&&mode!=='admin'){alert('手配確定は管理者のみ可能です');return;}
-  if((next==='accepted'||next==='declined')&&mode!=='worker'){alert('承諾・辞退は職人さん側から操作してください');return;}
+  if(next==='confirmed'&&mode!=='worker'&&r.status!=='accepted'){alert('マッチング確定は職人さんの承諾によって行われます');return;}
+  if(next==='declined'&&mode!=='worker'){alert('承諾・辞退は職人さん側から操作してください');return;}
   if(!(allowed[r.status]||[]).includes(next)){alert('この状態では操作できません');return}
   if(next==='accepted'||next==='confirmed'){
     const conflict=data.requests.some(x=>x.id!==r.id&&x.workerId===r.workerId&&x.date===r.date&&['pending','accepted','confirmed'].includes(x.status)&&(x.slot==='all'||r.slot==='all'||x.slot===r.slot));
@@ -301,14 +302,14 @@ function updateAvailability(status){
   save(w+' '+date+' → '+statuses[status]);
 }
 
-const statusLabels={pending:'打診中',accepted:'職人承諾済',confirmed:'マッチング成立',declined:'辞退',cancelled:'取消'};
+const statusLabels={pending:'打診中',accepted:'マッチング成立',confirmed:'マッチング成立',declined:'辞退',cancelled:'取消'};
 
 function requestCard(r,admin){
   const w=data.workers.find(x=>x.id===r.workerId);
   const actions=admin?
-    (r.status==='accepted'?'<button class="primary" onclick="changeRequest(\''+r.id+'\',\'confirmed\')">手配確定</button>':'')+
+    ''+
     (['pending','accepted','confirmed'].includes(r.status)?'<button onclick="changeRequest(\''+r.id+'\',\'cancelled\')">取消</button>':''):
-    (r.status==='pending'?'<button class="primary" onclick="changeRequest(\''+r.id+'\',\'accepted\')">承諾</button> <button onclick="changeRequest(\''+r.id+'\',\'declined\')">辞退</button>':'');
+    (r.status==='pending'?'<button class="primary" onclick="changeRequest(\''+r.id+'\',\'confirmed\')">承諾してマッチング確定</button> <button onclick="changeRequest(\''+r.id+'\',\'declined\')">辞退</button>':'');
   const phoneNote=!admin&&['accepted','confirmed'].includes(r.status)?'<p class="worker-phone-note">都合が悪くなった場合は管理者へ電話で連絡してください。画面からの取消はできません。</p>':'';
   return '<div class="request"><strong>'+escapeHTML(r.job)+'</strong> <span class="tag">'+statusLabels[r.status]+'</span><p class="muted">'+escapeHTML(w?.name||'不明')+' / '+escapeHTML(r.date)+' / '+({am:'午前',pm:'午後',all:'終日'}[r.slot])+'</p>'+phoneNote+'<div class="row">'+actions+'</div></div>';
 }
@@ -392,8 +393,8 @@ function renderCalendar(){
     let dotsHtml = '';
     data.workers.forEach(w => {
       data.requests.filter(r=>r.workerId===w.id&&r.date===dateStr&&['pending','accepted','confirmed'].includes(r.status)).forEach(r=>{
-        const state=r.status==='confirmed'?'成立':r.status==='accepted'?'承諾済':'打診中';
-        const stateClass=r.status==='confirmed'?'matched':r.status==='accepted'?'accepted':'pending';
+        const state=['confirmed','accepted'].includes(r.status)?'成立':'打診中';
+        const stateClass=['confirmed','accepted'].includes(r.status)?'matched':'pending';
         const time={all:'終日',am:'午前',pm:'午後'}[r.slot]||'';
         dotsHtml+='<span class="cal-dot admin-status '+stateClass+'" title="'+escapeHTML(w.name+' '+r.job+' '+state)+'">'+escapeHTML(w.name.replace('協力業者 ','')+' '+state+' '+time)+'</span>';
       });
@@ -452,8 +453,8 @@ function renderWorkerCalendar(){
     else if(pm === 'free'){cls='free'; label='午後○';}
     else {label='—';}
     if(active){
-      cls=active.status==='confirmed'?'matched':active.status==='accepted'?'accepted':'pending';
-      label=(active.status==='confirmed'?'成立':active.status==='accepted'?'承諾済':'打診中')+' '+({am:'午前',pm:'午後',all:'終日'}[active.slot]);
+      cls=['confirmed','accepted'].includes(active.status)?'matched':'pending';
+      label=(['confirmed','accepted'].includes(active.status)?'成立':'打診中')+' '+({am:'午前',pm:'午後',all:'終日'}[active.slot]);
     }
 
     html += '<div class="cal-cell '+(isToday?'today':'')+(selected?' worker-selected':'')+'" role="button" aria-pressed="'+selected+'" onclick="selectWorkerCalDate(\''+dateStr+'\')">'+
@@ -525,7 +526,7 @@ function render(){
   const worker=sel.value,wd=document.getElementById('workerDate').value;
   document.getElementById('workerState').textContent=wd?'登録状況（'+wd+'）：午前 '+(statusFor(worker,wd,'am')==='free'?'空き':'登録なし')+' / 午後 '+(statusFor(worker,wd,'pm')==='free'?'空き':'登録なし'):'日付を選んでください';
   
-  const matched=data.requests.filter(r=>r.workerId===worker&&r.status==='confirmed').slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const matched=data.requests.filter(r=>r.workerId===worker&&['confirmed','accepted'].includes(r.status)).slice().sort((a,b)=>a.date.localeCompare(b.date));
   document.getElementById('workerMatchedSchedule').innerHTML=matched.length?matched.map(r=>{
     const time={all:'終日（1日）',am:'午前',pm:'午後'}[r.slot]||'';
     return '<div class="matched-schedule-item"><div class="matched-schedule-date">'+escapeHTML(r.date)+' <span class="tag matched-schedule-tag">マッチング成立</span></div><strong>'+escapeHTML(r.job)+'</strong><div class="muted">'+time+'</div></div>';
