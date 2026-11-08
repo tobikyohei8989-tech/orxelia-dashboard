@@ -10,7 +10,7 @@
 <div id="message" role="status" aria-live="polite"></div>
 <section id="login" class="card"><h2>ログイン</h2><p class="muted">登録済みの管理者・職人アカウントのみ利用できます。新規登録は管理者の招待が必要です。</p><label>メールアドレス</label><input id="email" type="email" autocomplete="username"><label>パスワード</label><input id="password" type="password" autocomplete="current-password"><div class="login-actions"><button id="signIn" class="primary">ログイン</button></div></section>
 <section id="inviteSignup" class="card" hidden><h2>職人登録（招待制）</h2><p class="muted">招待された方は、名前・メールアドレス・パスワードを入力してください。メール確認後に登録が完了します。</p><label>お名前</label><input id="inviteName" maxlength="60" autocomplete="name"><label>メールアドレス</label><input id="inviteEmail" type="email" autocomplete="email"><label>パスワード（12文字以上）</label><input id="invitePassword" type="password" minlength="12" autocomplete="new-password"><div class="row"><button id="inviteSignupBtn" class="primary">アカウントを作成</button><button id="inviteClaimBtn">メール確認済み・登録を完了</button></div><p class="muted">確認メールが届いた場合はメール内のリンクを開き、このページに戻って「登録を完了」を押してください。既にアカウントがある場合は通常ログイン後に登録を完了できます。</p></section><div id="app" hidden><div class="card row"><strong id="who"></strong><button id="logout">ログアウト</button><button id="reload">更新</button><button id="toggleBrandSettings" type="button" aria-expanded="false" aria-controls="brandSettings" hidden>⚙ 設定</button></div>
-<section class="card"><h2>お知らせ <span id="eventCount"></span></h2><div id="events"></div><p class="muted">画面を開いている間は定期的に同期します。端末プッシュ通知は未実装です。</p></section>
+<section class="card"><h2>お知らせ <span id="eventCount"></span></h2><div class="row"><button id="enableNotifications" type="button" hidden>🔔 この端末の通知を有効にする</button><span id="notificationStatus" class="muted" style="font-size:12px"></span></div><div id="events"></div><p class="muted">画面を開いている間は定期的に同期します。端末プッシュ通知は未実装です。</p></section>
 <section class="card"><h2>仕事の進捗</h2><div class="row tabs"><button data-tab="pending" class="active">打診中 <span id="pendingCount"></span></button><button data-tab="confirmed">マッチング済み <span id="confirmedCount"></span></button><button data-tab="history">終了・取消 <span id="historyCount"></span></button></div><div id="requests"></div></section>
 <section class="card"><div class="calendar-heading"><h2 id="monthTitle"></h2></div><div class="row"><button id="prev">前月</button><button id="next">翌月</button><button id="clear">日付選択を解除</button></div><p id="chosen" class="muted">日付を選択してください</p><div class="calendar" id="calendar"></div><div id="dayDetails" class="day-details" hidden></div><section id="adminPanel" class="card inline-job-form" hidden><h2>選択した日の仕事を打診</h2><p class="muted">複数日を選択すると、すべての日に空きがある職人だけ表示されます。</p><label>職人</label><select id="workerChoice"></select><label>現場名</label><input id="jobName" maxlength="80" placeholder="例：店舗エアコン工事"><label>時間帯</label><select id="slot"><option value="all">終日</option><option value="am">午前</option><option value="pm">午後</option></select><label>集合時間</label><input id="meetingTime" type="time" required value="07:30"><label>集合場所</label><input id="meetingPlace" maxlength="200" required placeholder="例：現場正面駐車場"><div class="row"><button class="primary" id="send">選択した日をまとめて打診</button></div></section>
 <div class="row" style="margin-top:12px;font-size:12px;color:#51687f"><span>🟢 空きあり</span><span>🟠 打診中・確定あり</span><span>🔵 選択中</span></div></section>
@@ -48,6 +48,27 @@ $('companyLogo').addEventListener('change',async e=>{
 $('toggleBrandSettings').addEventListener('click',()=>{if(member?.role!=='admin')return;brandSettingsOpen=!brandSettingsOpen;render();if(brandSettingsOpen)$('brandSettings').scrollIntoView({behavior:'smooth',block:'start'});});
 $('removeCompanyLogo').addEventListener('click',()=>{pendingLogo=null;$('companyLogo').value='';paintLogoPreview();});
 $('saveCompanyBrand').addEventListener('click',async()=>{if(member?.role!=='admin')return;const company_line1=$('companyLine1').value.trim(),company_line2=$('companyLine2').value.trim();if(!company_line1&&!company_line2){$('brandSaveStatus').textContent='会社名を1段以上入力してください。';return;}const button=$('saveCompanyBrand');button.disabled=true;const {data,error}=await supabase.from('tobita_match_branding').update({company_line1,company_line2,logo_data:pendingLogo,updated_at:new Date().toISOString()}).eq('id',1).select('company_line1,company_line2,logo_data').single();button.disabled=false;if(error){$('brandSaveStatus').textContent='保存できませんでした：'+error.message;return;}branding=data;paintBrand();$('brandSaveStatus').textContent='会社設定を保存しました。';});
+let lastNoticeIds=null;
+function updateNotificationControls(){
+ const supported=('Notification' in window)&&('serviceWorker' in navigator)&&window.isSecureContext;
+ $('enableNotifications').hidden=!member||!supported||Notification.permission==='granted';
+ $('notificationStatus').textContent=!member?'':!supported?'このブラウザでは通知に対応していません':Notification.permission==='granted'?'この端末の通知は許可済み（アプリ起動中のみ）':Notification.permission==='denied'?'通知が拒否されています。端末設定で許可してください。':'通知を有効にするとアプリ使用中にお知らせします';
+}
+$('enableNotifications').onclick=async()=>{
+ try{
+  const permission=await Notification.requestPermission();
+  updateNotificationControls();
+  if(permission==='granted')note('通知を許可しました。アプリを閉じている間のプッシュ通知は準備中です。');
+ }catch(e){note('通知を設定できません：'+e.message,true);}
+};
+async function notifyNewEvents(newEvents){
+ if(!member||!('Notification' in window)||Notification.permission!=='granted'||document.hidden)return;
+ const registration=await navigator.serviceWorker.ready;
+ for(const e of newEvents.slice(0,3)){
+  const raw=String(e.message||'');
+  await registration.showNotification('職人マッチング',{body:raw.slice(0,140),tag:'tobita-event-'+e.id,icon:'./icon.svg',data:{url:'./app.html'}});
+ }
+}
 const inviteToken=new URLSearchParams(location.search).get('invite');let inviteClaiming=false;
 let detailDate=null;
 let member=null,workers=[],availability=[],requests=[],events=[],month=new Date(),selected=new Set(),tab='pending',channel=null,loading=false;
@@ -70,7 +91,7 @@ function jpHolidays(year){
  return h;
 }
 function render(){
- $('login').hidden=!!member;$('app').hidden=!member;$('inviteSignup').hidden=!!member||!inviteToken;$('toggleBrandSettings').hidden=member?.role!=='admin';$('brandSettings').hidden=member?.role!=='admin'||!brandSettingsOpen;$('toggleBrandSettings').setAttribute('aria-expanded',String(member?.role==='admin'&&brandSettingsOpen));paintBrand();if(!member)return;
+ $('login').hidden=!!member;$('app').hidden=!member;$('inviteSignup').hidden=!!member||!inviteToken;$('toggleBrandSettings').hidden=member?.role!=='admin';$('brandSettings').hidden=member?.role!=='admin'||!brandSettingsOpen;updateNotificationControls();$('toggleBrandSettings').setAttribute('aria-expanded',String(member?.role==='admin'&&brandSettingsOpen));paintBrand();if(!member)return;
  $('who').textContent=member.display_name+'（'+(member.role==='admin'?'管理者':'職人')+'）';
  $('workerPanel').hidden=member.role!=='worker';$('adminPanel').hidden=member.role!=='admin'||!selected.size;$('inviteAdminPanel').hidden=member.role!=='admin';
  $('monthTitle').textContent=month.getFullYear()+'年'+(month.getMonth()+1)+'月';
@@ -140,11 +161,11 @@ async function refresh(){
  supabase.from('tobita_match_events').select('*').eq('recipient_id',member.user_id).order('created_at',{ascending:false}).limit(30)
  ]);
  for(const x of [w,a,r,e])if(x.error)throw x.error;
- workers=w.data.filter(x=>x.role==='worker');availability=a.data;requests=r.data;events=e.data;render();note('');
+ workers=w.data.filter(x=>x.role==='worker');availability=a.data;requests=r.data;events=e.data;const currentIds=new Set(events.map(e=>e.id));if(lastNoticeIds){const fresh=events.filter(e=>!lastNoticeIds.has(e.id));if(fresh.length)notifyNewEvents(fresh).catch(()=>{});}lastNoticeIds=currentIds;render();note('');
  }catch(e){note('同期に失敗しました：'+e.message,true)}finally{loading=false}
 }
 async function mutate(name,args){try{const {error}=await supabase.rpc(name,args);if(error)throw error;note('保存しました');await refresh();return true}catch(e){note('操作できません：'+e.message,true);return false}}
-async function start(){await loadBrand();
+async function start(){lastNoticeIds=null;await loadBrand();
  const {data:{user}}=await supabase.auth.getUser();
  if(!user){member=null;channel?.unsubscribe();channel=null;render();return}
  let {data,error}=await supabase.from('tobita_match_members').select('*').eq('user_id',user.id).maybeSingle();
