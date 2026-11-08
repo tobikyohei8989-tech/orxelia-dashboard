@@ -230,6 +230,7 @@ function requestWork(w,date=document.getElementById('searchDate').value,preferre
  const dates=adminSelectedDates.size?[...adminSelectedDates].sort():[date];
  if(!dates.length||!dates[0]){alert('カレンダーで日付を選択してください');return;}
  const availableDates=dates.filter(d=>['all','am','pm'].some(slot=>isFree(w,d,slot)));
+ if(availableDates.length!==dates.length){alert('選択した全日程に空きがある職人さんだけ打診できます。');return;}
  if(!availableDates.length){alert('選択日に空きがありません');return;}
  adminSelectedWorker={workerId:w,dates:availableDates};
  const worker=data.workers.find(x=>x.id===w);
@@ -249,8 +250,7 @@ function submitJobRequest(){
  const slot=document.getElementById('jobRequestSlot').value;
  const job=document.getElementById('jobRequestName').value.trim();
  if(!job||job.length>80){alert('現場名を1〜80文字で入力してください');return;}
- const dates=[...adminSelectedDates].sort();
- const targetDates=dates.length?dates:selected.dates;
+ const targetDates=selected.dates.slice();
  const unavailable=targetDates.filter(date=>!isFree(selected.workerId,date,slot));
  if(unavailable.length){alert('この時間帯に空きがない日があります：'+unavailable.join('、')+'。日付または時間帯を変更してください。');return;}
  const groupId='g'+Date.now()+Math.random().toString(36).slice(2,6);
@@ -265,6 +265,7 @@ function submitJobRequest(){
 function changeRequest(id,next){
   const r=data.requests.find(x=>x.id===id);
   if(!r)return;
+  if(next==='cancelled'&&mode==='admin'&&!confirm('この仕事の打診・マッチングを取り消しますか？'))return;
   const allowed={pending:['confirmed','declined','cancelled'],accepted:['confirmed','cancelled'],confirmed:['cancelled']};
   if(next==='accepted')next='confirmed';
   if(next==='cancelled'&&mode!=='admin'){alert('取消は管理者のみ可能です。承諾後の都合変更は管理者へ電話してください。');return;}
@@ -288,7 +289,16 @@ function setWorkerFree(slot){
  const dates=workerSelectedDates.size?[...workerSelectedDates]:(fallback?[fallback]:[]);
  if(!dates.length){alert('カレンダーで日付を選択してください');return;}
  const next=slot==='clear'?{am:'unknown',pm:'unknown'}:slot==='all'?{am:'free',pm:'free'}:slot==='am'?{am:'free',pm:'unknown'}:{am:'unknown',pm:'free'};
- const blocked=dates.filter(date=>(data.requests||[]).some(r=>r.workerId===w&&r.date===date&&['accepted','confirmed'].includes(r.status)||(['pending'].includes(r.status)&&((r.slot==='all'&&(next.am!=='free'||next.pm!=='free'))||(r.slot==='am'&&next.am!=='free')||(r.slot==='pm'&&next.pm!=='free')))));
+ const blocked=dates.filter(date=>data.requests.some(r=>
+   r.workerId===w&&r.date===date&&(
+     ['accepted','confirmed'].includes(r.status)||
+     (r.status==='pending'&&(
+       (r.slot==='all'&&(next.am!=='free'||next.pm!=='free'))||
+       (r.slot==='am'&&next.am!=='free')||
+       (r.slot==='pm'&&next.pm!=='free')
+     ))
+   )
+ ));
  if(blocked.length){alert('承諾・マッチング済みの日は変更できません。都合が悪くなった場合は管理者へ電話してください。対象日：'+blocked.join('、')+'。該当日を外して再操作してください。');return;}
  for(const date of dates)data.availability[w+'|'+date]=next;
  const count=dates.length;
@@ -345,17 +355,17 @@ function renderAdminDateSelection(){
  document.getElementById('adminSelectionCount').textContent=dates.length?dates.length+'日選択中：'+dates.join('、'):'日付をタップして複数日を選択できます';
  const box=document.getElementById('calendarQuickRequest');
  if(!dates.length){box.hidden=true;renderCalendar();return;}
- const available=data.workers.filter(w=>dates.some(date=>['all','am','pm'].some(slot=>isFree(w.id,date,slot))));
+ const available=data.workers.filter(w=>dates.every(date=>['all','am','pm'].some(slot=>isFree(w.id,date,slot))));
  box.innerHTML='<strong>打診する職人さんを選択（'+dates.length+'日）</strong>';
  const options=document.createElement('div');options.className='calendar-quick-options';
  available.forEach(w=>{
   const count=dates.filter(date=>['all','am','pm'].some(slot=>isFree(w.id,date,slot))).length;
   const button=document.createElement('button');button.type='button';button.className='primary';
-  button.textContent=w.name+'（空き '+count+'/'+dates.length+'日）';
+  button.textContent=w.name+'（'+count+'日すべて空き）';
   button.addEventListener('click',()=>requestWork(w.id,dates[0],'all'));
   options.appendChild(button);
  });
- if(!available.length)box.innerHTML+='<p>選択日に空き登録のある職人さんはいません。</p>';
+ if(!available.length)box.innerHTML+='<p>選択したすべての日に空きがある職人さんはいません。日付を減らすか、別の職人さんを探してください。</p>';
  box.appendChild(options);box.hidden=false;
  renderCalendar();
 }
