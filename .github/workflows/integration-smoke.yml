@@ -4,6 +4,7 @@ on:
     paths:
       - 'app.js'
       - 'index.html'
+      - 'dashboard/index.html'
       - 'style.css'
       - 'business-economics.js'
       - 'scripts/check-business-flow.mjs'
@@ -31,7 +32,7 @@ jobs:
           node --input-type=module <<'NODE'
           import {readFileSync} from 'node:fs';
           import assert from 'node:assert/strict';
-          const html=readFileSync('index.html','utf8');
+          const html=readFileSync('dashboard/index.html','utf8');
           const js=readFileSync('app.js','utf8');
           const css=readFileSync('style.css','utf8');
           const tabs=['home','portfolio','verification','finance','settings'];
