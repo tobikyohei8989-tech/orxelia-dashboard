@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<script>(function(){var hash=location.hash||"";if(/^#(?:access_token=|type=recovery(?:&|$)|error=|error_code=)/.test(hash)){location.replace("/dashboard/"+hash);return;}if(window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true){location.replace("/dashboard/");}})();</script>
+<script>(function(){var hash=location.hash||"";if(/^#(?:access_token=|type=recovery(?:&|$)|error=|error_code=)/.test(hash)){var base=location.hostname.endsWith("github.io")?"/orxelia-dashboard/":"/";var recovery=new URLSearchParams(hash.slice(1)).get("type")==="recovery";location.replace(base+(recovery?"reset-password.html":"dashboard/")+hash);return;}if(window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true){location.replace("/dashboard/");}})();</script>
 <link rel="canonical" href="https://phenomenal-basbousa-1200eb.netlify.app/">
 <meta name="google-site-verification" content="pjuGU7f7PAFNhk3H4TsdBhYmKYYlSfe30jXNJLsE5xo">
 <meta property="og:url" content="https://phenomenal-basbousa-1200eb.netlify.app/">
