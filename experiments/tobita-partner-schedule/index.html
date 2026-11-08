@@ -65,7 +65,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 #workers .person .tag{font-size:12px;padding:3px 8px}
 #workers .person>button{grid-area:action;min-height:44px;padding:7px 11px;font-size:14px;white-space:nowrap}
 @media(max-width:640px){#workers{grid-template-columns:1fr;gap:7px}#workers .person{padding:9px 10px;border-radius:10px}#workers .person>strong{font-size:16px}#workers .person>button{font-size:14px}}
-#attendancePanel[hidden]{display:none!important}#workerView .row>button{flex:1 1 calc(50% - 8px)}@media(max-width:640px){#workerView .row>button{font-size:15px;min-height:48px;padding:7px 5px}} .worker-selected{outline:3px solid #1769c2!important;outline-offset:-3px;background:#dbeafe!important}.worker-selected .cal-date{color:#073c7a;font-weight:900}#workerSelectionCount{font-weight:700;color:#14549b;margin:8px 0} #calDaysGrid .available-worker{display:block;width:100%;min-height:18px;text-align:left;cursor:pointer;border:0;border-radius:3px;font-weight:700;padding:2px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#calDaysGrid .cal-status-dots{gap:2px}#calDaysGrid .available-worker:focus-visible{outline:2px solid #1769c2}@media(max-width:640px){#calDaysGrid .available-worker{min-height:16px;font-size:9px;padding:1px 2px}} .cal-dot.pending{background:#fff0b8;color:#7c4a00;font-weight:800}.cal-dot.accepted{background:#dbeafe;color:#164a90;font-weight:800}.cal-dot.matched{background:#14532d;color:#fff;font-weight:800}.worker-phone-note{background:#fff5e8;color:#8a400a;border-radius:8px;padding:8px 10px;font-size:14px;font-weight:700} </style></head><body><header><small>TOBITA PARTNER SCHEDULE / 非公開運用前の試取り組</small><h1>協力業者 空き日程・手配ボード</h1></header><main class="wrap">
+#attendancePanel[hidden]{display:none!important}#workerView .row>button{flex:1 1 calc(50% - 8px)}@media(max-width:640px){#workerView .row>button{font-size:15px;min-height:48px;padding:7px 5px}} .worker-selected{outline:3px solid #1769c2!important;outline-offset:-3px;background:#dbeafe!important}.worker-selected .cal-date{color:#073c7a;font-weight:900}#workerSelectionCount{font-weight:700;color:#14549b;margin:8px 0} #calDaysGrid .available-worker{display:block;width:100%;min-height:18px;text-align:left;cursor:pointer;border:0;border-radius:3px;font-weight:700;padding:2px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#calDaysGrid .cal-status-dots{gap:2px}#calDaysGrid .available-worker:focus-visible{outline:2px solid #1769c2}@media(max-width:640px){#calDaysGrid .available-worker{min-height:16px;font-size:9px;padding:1px 2px}} .cal-dot.pending{background:#fff0b8;color:#7c4a00;font-weight:800}.cal-dot.accepted{background:#dbeafe;color:#164a90;font-weight:800}.cal-dot.matched{background:#14532d;color:#fff;font-weight:800}.worker-phone-note{background:#fff5e8;color:#8a400a;border-radius:8px;padding:8px 10px;font-size:14px;font-weight:700} .calendar-quick-request{margin-top:9px;padding:10px;border:2px solid #1769c2;border-radius:10px;background:#f0f7ff}.calendar-quick-request[hidden]{display:none}.calendar-quick-options{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.calendar-quick-options button{font-size:15px;min-height:46px}.cal-cell{cursor:pointer}@media(max-width:640px){.calendar-quick-options button{flex:1 1 100%;font-size:15px}} </style></head><body><header><small>TOBITA PARTNER SCHEDULE / 非公開運用前の試取り組</small><h1>協力業者 空き日程・手配ボード</h1></header><main class="wrap">
 <div class="panel">
   <details class="notice demo-guide"><summary>デモの注意事項・使い方を見る</summary><div class="guide-body">これは<strong>サンプルデータだけ</strong>を使うローカル動作デモです。認証・共有・実通知はありません。この端末のブラウザ内だけに保存されます。実名・現場情報を入力しないでください。<br><br><strong>【ご案内：仕事の打診と承認フローについて】</strong><br>1. 職人さんは空いている日・時間帯だけ登録します。登録がない時間帯は打診できません。<br>2. 管理者側で「空き」の職人に対して「仕事を打診」します（ステータス：<strong>打診中</strong>）。<br>3. 職人側（体験画面）の「届いた仕事の打診」に通知が届きます。内容を確認し、<strong>[承諾]</strong>または[辞退]ボタンを押してください。<br>4. また、管理画面・職人画面それぞれ専用のカレンダー及び確定情報一覧でスケジュールを1ヶ月単位で直感的に確認できます。</div></details>
   <div class="row between" style="margin-top:12px">
@@ -95,7 +95,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     <div class="cal-grid" id="calHeaderRow" style="text-align:center;font-weight:bold;font-size:12px;color:#526278;margin-bottom:4px">
       <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
     </div>
-    <div class="cal-grid" id="calDaysGrid"></div>
+    <div class="cal-grid" id="calDaysGrid"></div><div id="calendarQuickRequest" class="calendar-quick-request" hidden aria-live="polite"></div>
   </div>
 
   <div class="row">
@@ -299,8 +299,30 @@ function changeWorkerMonth(delta){
 }
 
 function selectCalDate(dateStr){
-  document.getElementById('searchDate').value = dateStr;
-  render();
+ document.getElementById('searchDate').value=dateStr;
+ const available=data.workers.flatMap(w=>{
+   if(isFree(w.id,dateStr,'all'))return [{worker:w,slot:'all'}];
+   return ['am','pm'].filter(slot=>isFree(w.id,dateStr,slot)).map(slot=>({worker:w,slot}));
+ });
+ const box=document.getElementById('calendarQuickRequest');
+ if(!available.length){
+   box.textContent=dateStr+'：空いている業者はいません。';
+ }else{
+   box.innerHTML='<strong>'+escapeHTML(dateStr)+' の打診先を選択</strong>';
+   const options=document.createElement('div');
+   options.className='calendar-quick-options';
+   available.forEach(a=>{
+     const button=document.createElement('button');
+     button.type='button';button.className='primary';
+     button.textContent=a.worker.name+'（'+({all:'終日',am:'午前',pm:'午後'}[a.slot])+'）に打診';
+     button.addEventListener('click',()=>calendarRequestSlot(a.worker.id,dateStr,a.slot));
+     options.appendChild(button);
+   });
+   box.appendChild(options);
+ }
+ box.hidden=false;
+ if(box.scrollIntoView)box.scrollIntoView({block:'nearest',behavior:'smooth'});
+ renderCalendar();
 }
 
 function selectWorkerCalDate(dateStr){
