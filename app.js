@@ -1805,9 +1805,26 @@ const sync = (() => {
     if (!window.ORXELIA_PUBLISHABLE_KEY) return "";
     return '<div class="panel"><h3>iPhone・PCの自動同期</h3><p id="sync-status" role="status">' +
       esc(message || (session ? "接続を確認中…" : "同じアカウントで各端末からログインしてください。")) + '</p>' +
-      (recoveryToken ? '<form id="sync-recovery"><label>新しいパスワード<input type="password" name="password" autocomplete="new-password" minlength="12" required></label><button class="primary">新しいパスワードを保存</button></form>' : session ? '<button id="sync-account-check" type="button">ログインアカウントを確認</button> <button id="sync-now" type="button">今すぐ同期</button> <button id="sync-restore-cloud" type="button">クラウドから事業台帳を復元</button><p id="sync-account-result" role="status"></p>' :
+      (recoveryToken ? '<form id="sync-recovery"><label>新しいパスワード<input type="password" name="password" autocomplete="new-password" minlength="12" required></label><button class="primary">新しいパスワードを保存</button></form>' : session ? '<button id="sync-logout" type="button">別のアカウントに切り替える</button> <button id="sync-account-check" type="button">ログインアカウントを確認</button> <button id="sync-now" type="button">今すぐ同期</button> <button id="sync-restore-cloud" type="button">クラウドから事業台帳を復元</button><p id="sync-account-result" role="status"></p>' :
         '<form id="sync-login"><label>メール<input type="email" name="email" autocomplete="username" required></label><label>パスワード<input type="password" name="password" autocomplete="current-password" required></label><button class="primary">ログインして同期</button> <button id="sync-reset" type="button">再設定メールを送る</button></form>') + '</div>';
   }
+  document.addEventListener("click",event=>{
+    if(event.target.id!=="sync-logout")return;
+    if(busy){status("同期処理中です。終了後に切り替えてください。");return;}
+    if(!confirm("この端末のログインだけ解除し、別のアカウントに切り替えますか？ 事業データやクラウドの記録は削除しません。"))return;
+    session=null;
+    baseline=null;
+    localStorage.removeItem(sessionKey);
+    localStorage.removeItem(markerKey);
+    dailyReport=null;
+    approvalRecord=null;
+    dailyApprovalConflict=null;
+    pipelineRecords=[];
+    developmentJob=null;
+    orxeliaTrialProposals=[];
+    message="ログインを解除しました。事業データを保存したアカウントでログインしてください。";
+    render();
+  });
   // Account diagnostics are read-only and scoped to the current authenticated user.
   document.addEventListener("click",async event=>{
     if(event.target.id!=="sync-account-check")return;
