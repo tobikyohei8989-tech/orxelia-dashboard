@@ -55,6 +55,16 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
  .tag{font-size:13px;padding:3px 7px}
 }
 @media(max-width:380px){.cal-cell{height:43px}.cal-dot{font-size:7px}.cal-nav button{font-size:12px;padding:4px}}
+
+/* Compact worker result cards: one glance per worker, large enough tap target */
+#workers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:8px;margin-top:10px}
+#workers .person{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name action" "trade action" "status action";column-gap:10px;row-gap:2px;align-items:center;padding:10px 12px;min-width:0}
+#workers .person>strong{grid-area:name;font-size:17px;line-height:1.25}
+#workers .person>p.muted{grid-area:trade;margin:0;font-size:13px;line-height:1.3}
+#workers .person>p:not(.muted){grid-area:status;margin:1px 0 0;line-height:1}
+#workers .person .tag{font-size:12px;padding:3px 8px}
+#workers .person>button{grid-area:action;min-height:44px;padding:7px 11px;font-size:14px;white-space:nowrap}
+@media(max-width:640px){#workers{grid-template-columns:1fr;gap:7px}#workers .person{padding:9px 10px;border-radius:10px}#workers .person>strong{font-size:16px}#workers .person>button{font-size:14px}}
 </style></head><body><header><small>TOBITA PARTNER SCHEDULE / 非公開運用前の試取り組</small><h1>協力業者 空き日程・手配ボード</h1></header><main class="wrap">
 <div class="panel">
   <details class="notice demo-guide"><summary>デモの注意事項・使い方を見る</summary><div class="guide-body">これは<strong>サンプルデータだけ</strong>を使うローカル動作デモです。認証・共有・実通知はありません。この端末のブラウザ内だけに保存されます。実名・現場情報を入力しないでください。<br><br><strong>【ご案内：仕事の打診と承認フローについて】</strong><br>1. 職人さんが「ダメな日（午前中・午後・終日）」として登録した日は、元請け管理画面でその日（またはその時間帯）の打診ができないようにブロックされます。<br>2. 管理者側で「空き」の職人に対して「仕事を打診」します（ステータス：<strong>打診中</strong>）。<br>3. 職人側（体験画面）の「届いた仕事の打診」に通知が届きます。内容を確認し、<strong>[承諾]</strong>または[辞退]ボタンを押してください。<br>4. また、管理画面・職人画面それぞれ専用のカレンダー及び確定情報一覧でスケジュールを1ヶ月単位で直感的に確認できます。</div></details>
