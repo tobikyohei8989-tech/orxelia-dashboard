@@ -55,9 +55,9 @@
 </head>
 <body id="top">
 <a class="skip" href="#main">本文へ</a>
-<header class="header"><div class="wrap"><a class="brand" href="#top">ORXELIA</a><nav aria-label="メインメニュー"><a href="#examples">製品紹介</a><a href="#philosophy">ORXELIAについて</a><a href="#company">会社概要・連絡先</a></nav></div></header>
+<header class="header"><div class="wrap"><a class="brand" href="#top">ORXELIA</a><nav aria-label="メインメニュー"><a href="#examples">製品紹介</a><a href="#demo">操作デモ</a><a href="#philosophy">ORXELIAについて</a><a href="#company">会社概要・連絡先</a></nav></div></header>
 <main id="main">
-<div class="brand-hero"><img src="https://6aed8b509d26ce92afab58fc--phenomenal-basbousa-1200eb.netlify.app/brand.png" width="1672" height="941" alt="ORXELIA オルクセリア。価値を磨き、未来を創る。名刺、企業サイン、ウェブサイトのブランドイメージ。"></div>
+<div class="brand-hero" style="display:grid;place-items:center;text-align:center;padding:clamp(45px,10vw,100px) 16px;aspect-ratio:auto;background:radial-gradient(ellipse at 50% 95%,#273d58 0%,#0a111d 65%)"><div><div style="font:clamp(40px,8vw,90px) Georgia,serif;color:#e8c78b;letter-spacing:.25em">ORXELIA</div><div style="color:#e8c78b;letter-spacing:.5em;margin-top:12px">オルクセリア</div><p style="color:#f7f3ea;font-size:clamp(18px,3vw,28px);letter-spacing:.12em;margin-top:30px">価値を磨き、未来を創る。</p></div></div>
 <section class="hero"><div class="wrap">
  <p class="label">小さな事業者のための業務システム</p>
  <h1>日々の業務を、<br>シンプルな仕組みへ。</h1>
@@ -75,9 +75,37 @@
  <li><span>03 / MANAGEMENT</span><h3>稼働実績を管理</h3><p>日々の稼働を記録し、20日締めの人工集計や請求書との照合を支援します。</p></li>
  </ol>
  <p class="copy" style="font-size:14px">管理者はPC・スマートフォン、職人はスマートフォンから利用できる設計です。利用には登録済みアカウントが必要です。</p>
- <a class="button" href="../experiments/tobita-partner-schedule/app.html" style="background:#152b49;color:#fff">Partner Linkを開く →</a>
+ <a class="button" href="#demo" style="background:#152b49;color:#fff">ログイン不要のデモを体験 →</a>
  <p class="terms">現在は運用・検証中です。一般向けの利用申込方法、提供条件、料金は準備中です。</p>
  </div></section>
+<section class="section" id="demo" style="background:#0f1c2d"><div class="wrap" style="max-width:880px">
+<p class="label">INTERACTIVE DEMO</p><h2>Partner Linkを体験する</h2>
+<p class="copy" style="max-width:650px;margin:0 auto 24px">職人の空き日程を確認して、仕事を依頼。成立までの流れを操作できます。登録・ログインは不要です。</p>
+<div class="card" style="text-align:left;background:#f7f9fc;color:#14243b;padding:clamp(16px,4vw,28px)">
+<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><strong style="font-size:21px">Partner Link <small style="font-size:11px;color:#287a78">by ORXELIA</small></strong><span style="font-size:12px;color:#5b6d80">操作体験・サンプルデータ</span></div>
+<div style="border-top:1px solid #d8e0e8;margin:16px 0"></div>
+<p style="font-weight:700;color:#14243b">① 職人の空き状況を確認</p>
+<p style="color:#52647a;font-size:14px">依頼したい職人を選んでください。</p>
+<div id="pl-demo-workers" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
+<button type="button" class="pl-worker" data-worker="佐藤さん" style="cursor:pointer;padding:14px;border-radius:10px;border:2px solid #278c85;background:#e7f6f3;color:#14243b;text-align:left;font:inherit"><strong>佐藤さん</strong><br><small>空調工事・対応可能</small></button>
+<button type="button" class="pl-worker" data-worker="鈴木さん" style="cursor:pointer;padding:14px;border-radius:10px;border:1px solid #ccd7e3;background:#fff;color:#14243b;text-align:left;font:inherit"><strong>鈴木さん</strong><br><small>電気工事・対応可能</small></button>
+<button type="button" disabled style="padding:14px;border-radius:10px;border:1px solid #e1e4e8;background:#eceff3;color:#8995a3;text-align:left;font:inherit"><strong>田中さん</strong><br><small>予定あり・依頼不可</small></button>
+</div>
+<div style="margin-top:22px"><p style="font-weight:700;color:#14243b">② 仕事を依頼する</p><p id="pl-demo-selected" style="font-size:14px;color:#52647a">佐藤さんを選択中</p>
+<button type="button" id="pl-demo-request" style="cursor:pointer;background:#152b49;color:white;border:0;border-radius:8px;padding:12px 20px;font:inherit;font-weight:700">仕事を依頼する →</button></div>
+<div id="pl-demo-result" role="status" aria-live="polite" style="margin-top:18px;border-radius:10px;padding:16px;background:#edf2f7;color:#40536a">依頼すると、職人からの回答・マッチング成立を体験できます。</div>
+<button type="button" id="pl-demo-reset" style="cursor:pointer;margin-top:14px;border:0;background:transparent;color:#215c84;text-decoration:underline;font:inherit">最初からやり直す</button>
+</div>
+<p class="terms">このデモは操作イメージです。実際の通知送信、依頼登録、アカウント認証、データ保存は行いません。</p>
+</div></section>
+<script>
+(function(){
+const buttons=Array.from(document.querySelectorAll('.pl-worker')),selected=document.getElementById('pl-demo-selected'),result=document.getElementById('pl-demo-result'),request=document.getElementById('pl-demo-request'),reset=document.getElementById('pl-demo-reset');let worker='佐藤さん',stage=0;
+buttons.forEach(b=>b.addEventListener('click',()=>{worker=b.dataset.worker;stage=0;selected.textContent=worker+'を選択中';buttons.forEach(x=>{x.style.border=x===b?'2px solid #278c85':'1px solid #ccd7e3';x.style.background=x===b?'#e7f6f3':'#fff'});request.textContent='仕事を依頼する →';request.disabled=false;result.textContent='依頼すると、職人からの回答・マッチング成立を体験できます。';result.style.background='#edf2f7'}));
+request.addEventListener('click',()=>{if(stage===0){stage=1;result.textContent='📨 '+worker+'に仕事の依頼を送信しました（デモ）。次に職人からの回答を確認します。';result.style.background='#fff2d7';request.textContent='職人の回答を確認 →'}else if(stage===1){stage=2;result.textContent='🎉 マッチング成立！ '+worker+'が依頼を承諾しました（デモ）。管理者・職人双方の予定に反映される流れです。';result.style.background='#dff6ec';request.textContent='成立しました';request.disabled=true}});
+reset.addEventListener('click',()=>{stage=0;request.disabled=false;request.textContent='仕事を依頼する →';result.textContent='依頼すると、職人からの回答・マッチング成立を体験できます。';result.style.background='#edf2f7'});
+})();
+</script>
 <section class="section philosophy" id="philosophy" aria-labelledby="philosophy-title"><div class="wrap">
 <div class="philosophy-intro"><p class="label">ABOUT ORXELIA</p><h2 id="philosophy-title">小さな課題に、大きな可能性を。</h2>
 <p class="copy">ORXELIAは、AIとデータ分析を活用し、新しい事業を育てる事業開発ブランドです。日々の不便や、まだ満たされていないニーズを見つけ、テクノロジーと創造力で解決策を形にします。</p></div>
