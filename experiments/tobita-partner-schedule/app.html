@@ -5,12 +5,12 @@
 .notice{padding:11px 12px;border-bottom:1px solid #e3eaf2;min-width:0}.notice:last-child{border-bottom:0}.notice-main{font-size:13px;font-weight:700;color:#1c3855;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.notice-meta{font-size:11px;color:#66798d;margin-top:3px}.notice:first-child{background:#f3f8fc;border-radius:9px}@media(max-width:400px){.notice-main{font-size:12px}} .day-details{margin-top:10px;border:1px solid #c5d9eb;border-radius:12px;background:#f5faff;padding:12px}.day-detail-item{border-top:1px solid #dce8f1;padding:10px 0 3px}.day-detail-item strong{font-size:14px;color:#163b5e}.day-detail-item .muted{font-size:13px;margin-top:4px}#events .notice:nth-child(n+6){display:none}#events{max-height:315px;overflow:auto}#requests .item{padding:10px 12px;margin:6px 0}#requests .item p{margin:5px 0;font-size:13px}#requests .item strong{font-size:14px}@media(max-width:480px){#events{max-height:260px}.card{margin:10px 0}} .notice.notice-cancel{background:#fff0ee;border-left:4px solid #d34236;border-radius:8px;margin:5px 0}.notice.notice-cancel .notice-main,.notice.notice-cancel .notice-meta strong{color:#aa2920}.notice.notice-confirmed{background:#ebf8ef;border-left:4px solid #27955a;border-radius:8px;margin:5px 0}.notice.notice-confirmed .notice-meta strong{color:#166e3c}.notice.notice-pending{background:#edf5ff;border-left:4px solid #2877c7;border-radius:8px;margin:5px 0}.notice.notice-pending .notice-meta strong{color:#1a5d9e}.notice.notice-declined{background:#f4f5f7;border-left:4px solid #8b95a4;border-radius:8px;margin:5px 0}.notice.notice-other{border-left:4px solid #a3aab4}.notice:first-child{border-radius:8px}.notice-main{white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .notice.notice-cancel .notice-meta strong{display:inline-block;font-size:15px;font-weight:900;letter-spacing:.025em}.notice.notice-cancel{border-left-width:5px;background:#ffe8e5}.notice.notice-cancel .notice-main{text-decoration:line-through;text-decoration-color:#bd5c51;text-decoration-thickness:1px} .calendar-heading{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}.calendar-heading-label{font-size:13px;font-weight:700;color:#667c90}.calendar-heading h2{font-size:clamp(27px,6vw,36px);line-height:1.2;margin:0;color:#163b5e;font-weight:900}.weekday.sun{color:#c34e54}.weekday.sat{color:#2873bb}.day.sun:not(.selected) .day-number{color:#c34e54}.day.sat:not(.selected) .day-number{color:#2873bb}.day.holiday:not(.selected){background:#fff2f1;border-color:#f1cece}.day.holiday .holiday-name{color:#b13d43;font-size:9px;line-height:1.1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.day.selected .holiday-name{color:#fff}.day .day-number{font-size:clamp(16px,3.4vw,21px);font-weight:850}.day{min-height:78px;gap:3px}.day small{margin-top:auto}.inline-job-form{margin-top:14px;background:#f6faff;box-shadow:none;border:1px solid #bdd6eb}.inline-job-form h2{font-size:17px}.inline-job-form[hidden]{display:none!important}@media(max-width:400px){.day{min-height:68px}.day.holiday .holiday-name{font-size:8px}.calendar-heading h2{font-size:28px}} /* Calendar alignment and semantic color hierarchy */
 .calendar{display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;column-gap:5px!important;row-gap:6px!important;align-items:stretch}.calendar>.weekday{display:flex;align-items:center;justify-content:center;width:100%;min-width:0;min-height:34px;padding:0;margin:0;text-align:center;box-sizing:border-box}.calendar>.weekday.sun{color:#bd444e}.calendar>.weekday.sat{color:#246fb5}.calendar>.day{width:100%;min-width:0;margin:0;box-sizing:border-box;color:#24394e!important}.calendar>.day .day-number{color:#24394e!important}.calendar>.day.sun .day-number,.calendar>.day.holiday .day-number{color:#bf454e!important}.calendar>.day.sat:not(.holiday) .day-number{color:#246fb5!important}.calendar>.day.free:not(.selected){background:#edf8f2;border-color:#3b9d78}.calendar>.day.busy:not(.selected){background:#fff5e9;border-color:#dba95e}.calendar>.day.holiday:not(.selected):not(.free):not(.busy){background:#fff0f0;border-color:#e8c3c6}.calendar>.day.selected{background:#185d99!important;border-color:#185d99!important}.calendar>.day.selected .day-number,.calendar>.day.selected .holiday-name,.calendar>.day.selected small{color:#fff!important}.calendar>.day small{color:#586e83}.calendar>.day.free small{color:#176348}.calendar>.day.busy small{color:#87511a}.calendar>.day .holiday-name{max-width:100%;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;font-size:clamp(7px,1.6vw,10px);line-height:1.2;text-align:center}.calendar-heading{margin-bottom:12px}.calendar-heading h2{margin:0}@media(max-width:400px){.calendar{column-gap:3px!important;row-gap:5px!important}.calendar>.weekday{min-height:30px}.calendar>.day{padding:7px 1px}} .calendar>.day.matched:not(.selected){background:linear-gradient(150deg,#167b51,#09563b)!important;border:2px solid #0b6544!important;box-shadow:0 3px 9px #0c6c4838;color:#fff!important}.calendar>.day.matched:not(.selected) .day-number,.calendar>.day.matched:not(.selected) small,.calendar>.day.matched:not(.selected) .holiday-name{color:#fff!important}.calendar>.day.matched small{font-weight:900;font-size:clamp(10px,2vw,13px);letter-spacing:.01em}.calendar>.day.matched:not(.selected):active{filter:brightness(1.1)}.calendar>.day.matched.selected{box-shadow:0 0 0 3px #f4bd54!important} /* Confirmed matches: bold amber/gold, distinct from blue selection and green availability */
 .calendar>.day.matched:not(.selected){background:linear-gradient(145deg,#ffb000 0%,#f07800 100%)!important;border:2px solid #d96b00!important;box-shadow:0 3px 12px #ec870066!important;color:#542800!important}.calendar>.day.matched:not(.selected) .day-number{color:#512800!important;font-weight:950}.calendar>.day.matched:not(.selected) small{display:inline-block;background:#fff;color:#a84a00!important;border-radius:6px;padding:3px 4px;font-weight:950;box-shadow:0 1px 3px #7b390029}.calendar>.day.matched:not(.selected) .holiday-name{color:#663000!important}.calendar>.day.matched.selected{background:#185d99!important;border-color:#185d99!important}.calendar>.day.matched.selected small{background:#fff;color:#185d99!important;border-radius:6px;padding:3px 4px} /* Stamp-based match state; ensure clear separation from selected and available */
-.calendar>.day.matched:not(.selected){position:relative;background:linear-gradient(150deg,#ffdb53,#ff9c13)!important;border:2px solid #d97c00!important;box-shadow:0 3px 12px #db860066!important}.calendar>.day.matched:not(.selected) .day-number{color:#532e00!important}.calendar>.day.matched .match-stamp{display:flex;align-items:center;justify-content:center;position:absolute;top:35%;left:50%;transform:translate(-50%,-50%) rotate(-13deg);width:34px;height:34px;border:3px solid #d3212a;border-radius:50%;background:#fffaf0eb;color:#cf2029!important;font-size:20px;font-weight:950;line-height:1;box-shadow:0 2px 5px #6d2b0029;pointer-events:none;z-index:1}.calendar>.day.matched .day-number{align-self:flex-start;margin-left:7px}.calendar>.day.matched small{position:relative;z-index:2;margin-top:auto;font-size:11px;font-weight:900}.calendar>.day.matched.selected .match-stamp{background:#fff;color:#d3212a!important}.calendar>.day.matched:not(.selected) small{background:#fff!important;color:#8b4300!important;border-radius:5px;padding:2px 4px}@media(max-width:400px){.calendar>.day.matched .match-stamp{width:28px;height:28px;font-size:17px;border-width:2px}} .brand-logo[hidden],.brand-preview[hidden]{display:none!important}.brand-header{display:flex;align-items:center;gap:12px;min-width:0}.brand-logo{width:56px;height:56px;flex:none;border-radius:10px;background:#fff;object-fit:contain;padding:4px}.brand-copy{flex:1;min-width:0}.brand-line1{font-size:13px;line-height:1.35;overflow-wrap:anywhere}.brand-line2{font-size:clamp(15px,4.4vw,23px);font-weight:800;line-height:1.3;overflow-wrap:anywhere}.brand-role{font-size:12px;color:#80ded7;margin-top:3px}.brand-product{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end;gap:3px;align-self:flex-end;white-space:nowrap;margin-left:auto;padding-bottom:2px}.brand-product-name{font-size:10px;color:#c6d5e3}.brand-powered{font-size:10px;color:#80ded7;letter-spacing:.025em}.brand-powered strong{font-size:11px;color:#fff;letter-spacing:.075em}#login input{display:block;width:100%;margin:8px 0 16px}#login .login-actions{margin-top:22px}#signIn{display:block;width:100%;min-height:52px}.brand-settings input[type=text]{width:100%;display:block;margin:7px 0 12px}.brand-settings input[type=file]{width:100%;font-size:13px}.brand-settings .brand-preview{max-width:100%;max-height:100px;object-fit:contain;margin:8px 0}.brand-settings .brand-preview[hidden]{display:none}@media(max-width:360px){.brand-header{gap:8px}.brand-logo{width:44px;height:44px}.brand-product{font-size:9px}}</style></head><body>
+.calendar>.day.matched:not(.selected){position:relative;background:linear-gradient(150deg,#ffdb53,#ff9c13)!important;border:2px solid #d97c00!important;box-shadow:0 3px 12px #db860066!important}.calendar>.day.matched:not(.selected) .day-number{color:#532e00!important}.calendar>.day.matched .match-stamp{display:flex;align-items:center;justify-content:center;position:absolute;top:35%;left:50%;transform:translate(-50%,-50%) rotate(-13deg);width:34px;height:34px;border:3px solid #d3212a;border-radius:50%;background:#fffaf0eb;color:#cf2029!important;font-size:20px;font-weight:950;line-height:1;box-shadow:0 2px 5px #6d2b0029;pointer-events:none;z-index:1}.calendar>.day.matched .day-number{align-self:flex-start;margin-left:7px}.calendar>.day.matched small{position:relative;z-index:2;margin-top:auto;font-size:11px;font-weight:900}.calendar>.day.matched.selected .match-stamp{background:#fff;color:#d3212a!important}.calendar>.day.matched:not(.selected) small{background:#fff!important;color:#8b4300!important;border-radius:5px;padding:2px 4px}@media(max-width:400px){.calendar>.day.matched .match-stamp{width:28px;height:28px;font-size:17px;border-width:2px}} .brand-logo[hidden],.brand-preview[hidden]{display:none!important}.brand-header{display:flex;align-items:center;gap:12px;min-width:0}.brand-logo{width:56px;height:56px;flex:none;border-radius:10px;background:#fff;object-fit:contain;padding:4px}.brand-copy{flex:1;min-width:0}.brand-line1{font-size:13px;line-height:1.35;overflow-wrap:anywhere}.brand-line2{font-size:clamp(15px,4.4vw,23px);font-weight:800;line-height:1.3;overflow-wrap:anywhere}.brand-role{font-size:12px;color:#80ded7;margin-top:3px}.brand-product{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end;gap:3px;align-self:flex-end;white-space:nowrap;margin-left:auto;padding-bottom:2px}.brand-product-name{font-size:10px;color:#c6d5e3}.brand-powered{font-size:10px;color:#80ded7;letter-spacing:.025em}.brand-powered strong{font-size:11px;color:#fff;letter-spacing:.075em}#login input{display:block;width:100%;margin:8px 0 16px}#login .login-actions{margin-top:22px}#signIn{display:block;width:100%;min-height:52px}.brand-settings input[type=text]{width:100%;display:block;margin:7px 0 12px}.brand-settings input[type=file]{width:100%;font-size:13px}.brand-settings .brand-preview{max-width:100%;max-height:100px;object-fit:contain;margin:8px 0}.brand-settings .brand-preview[hidden]{display:none}@media(max-width:360px){.brand-header{gap:8px}.brand-logo{width:44px;height:44px}.brand-product{font-size:9px}}.push-settings{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.push-status{font-size:12px;flex:1;min-width:0}.push-button{flex:none;font-size:12px;font-weight:600;padding:7px 10px;min-height:34px;border-radius:8px;white-space:nowrap}@media(max-width:400px){.push-button{font-size:11px;padding:7px 8px}}</style></head><body>
 <header><div class="brand-header"><img id="brandLogo" class="brand-logo" alt="会社ロゴ" hidden><div id="brandFallback" class="brand-logo" style="display:grid;place-items:center;color:#152b49;font-weight:bold">社</div><div class="brand-copy"><div id="brandLine1" class="brand-line1">株式会社</div><div id="brandLine2" class="brand-line2">トビタ店舗設備</div><div id="brandRole" class="brand-role">職人用</div></div><div class="brand-product"><span class="brand-product-name">職人マッチング</span><span class="brand-powered">by <strong>ORXELIA</strong></span></div></div></header><main>
 <div id="message" role="status" aria-live="polite"></div>
 <section id="login" class="card"><h2>ログイン</h2><p class="muted">登録済みの管理者・職人アカウントのみ利用できます。新規登録は管理者の招待が必要です。</p><label>メールアドレス</label><input id="email" type="email" autocomplete="username"><label>パスワード</label><input id="password" type="password" autocomplete="current-password"><div class="login-actions"><button id="signIn" class="primary">ログイン</button></div></section>
 <section id="inviteSignup" class="card" hidden><h2>職人登録（招待制）</h2><p class="muted">招待された方は、名前・メールアドレス・パスワードを入力してください。メール確認後に登録が完了します。</p><label>お名前</label><input id="inviteName" maxlength="60" autocomplete="name"><label>メールアドレス</label><input id="inviteEmail" type="email" autocomplete="email"><label>パスワード（12文字以上）</label><input id="invitePassword" type="password" minlength="12" autocomplete="new-password"><div class="row"><button id="inviteSignupBtn" class="primary">アカウントを作成</button><button id="inviteClaimBtn">メール確認済み・登録を完了</button></div><p class="muted">確認メールが届いた場合はメール内のリンクを開き、このページに戻って「登録を完了」を押してください。既にアカウントがある場合は通常ログイン後に登録を完了できます。</p></section><div id="app" hidden><div class="card account-toolbar"><strong id="who"></strong><div class="account-actions"><button id="reload" class="account-btn">更新</button><button id="toggleBrandSettings" class="account-btn" type="button" aria-expanded="false" aria-controls="brandSettings" hidden>⚙ 設定</button><button id="logout" class="account-btn">ログアウト</button></div></div>
-<section class="card"><h2>お知らせ <span id="eventCount"></span></h2><div class="row"><button id="enableNotifications" type="button" hidden>🔔 この端末の通知を有効にする</button><span id="notificationStatus" class="muted" style="font-size:12px"></span></div><div id="events"></div><p class="muted">画面を開いている間は定期的に同期します。iPhoneのプッシュ通知はSafariからホーム画面に追加し、アプリ内で通知を許可してください。</p></section>
+<section class="card"><h2>お知らせ <span id="eventCount"></span></h2><div class="push-settings"><span id="notificationStatus" class="muted push-status"></span><button id="enableNotifications" class="push-button" type="button" hidden>🔔 通知を有効にする</button></div><div id="events"></div><p class="muted">画面を開いている間は定期的に同期します。iPhoneのプッシュ通知はSafariからホーム画面に追加し、アプリ内で通知を許可してください。</p></section>
 <section class="card"><h2>仕事の進捗</h2><div class="row tabs"><button data-tab="pending" class="active">打診中 <span id="pendingCount"></span></button><button data-tab="confirmed">マッチング済み <span id="confirmedCount"></span></button><button data-tab="history">終了・取消 <span id="historyCount"></span></button></div><div id="requests"></div></section>
 <section class="card"><div class="calendar-heading"><h2 id="monthTitle"></h2></div><div class="row"><button id="prev">前月</button><button id="next">翌月</button><button id="clear">日付選択を解除</button></div><p id="chosen" class="muted">日付を選択してください</p><div class="calendar" id="calendar"></div><div id="dayDetails" class="day-details" hidden></div><section id="adminPanel" class="card inline-job-form" hidden><h2>選択した日の仕事を打診</h2><p class="muted">複数日を選択すると、すべての日に空きがある職人だけ表示されます。</p><label>職人</label><select id="workerChoice"></select><label>現場名</label><input id="jobName" maxlength="80" placeholder="例：店舗エアコン工事"><label>時間帯</label><select id="slot"><option value="all">終日</option><option value="am">午前</option><option value="pm">午後</option></select><label>集合時間</label><input id="meetingTime" type="time" required value="07:30"><label>集合場所</label><input id="meetingPlace" maxlength="200" required placeholder="例：現場正面駐車場"><div class="row"><button class="primary" id="send">選択した日をまとめて打診</button></div></section>
 <div class="row" style="margin-top:12px;font-size:12px;color:#51687f"><span>🟢 空きあり</span><span>🟠 打診中・確定あり</span><span>🔵 選択中</span></div></section>
@@ -50,38 +50,51 @@ $('removeCompanyLogo').addEventListener('click',()=>{pendingLogo=null;$('company
 $('saveCompanyBrand').addEventListener('click',async()=>{if(member?.role!=='admin')return;const company_line1=$('companyLine1').value.trim(),company_line2=$('companyLine2').value.trim();if(!company_line1&&!company_line2){$('brandSaveStatus').textContent='会社名を1段以上入力してください。';return;}const button=$('saveCompanyBrand');button.disabled=true;const {data,error}=await supabase.from('tobita_match_branding').update({company_line1,company_line2,logo_data:pendingLogo,updated_at:new Date().toISOString()}).eq('id',1).select('company_line1,company_line2,logo_data').single();button.disabled=false;if(error){$('brandSaveStatus').textContent='保存できませんでした：'+error.message;return;}branding=data;paintBrand();$('brandSaveStatus').textContent='会社設定を保存しました。';});
 let lastNoticeIds=null;
 const pushEndpoint='https://yzlxcfncdtojajlhihap.supabase.co/functions/v1/tobita-match-push';
+let pushRegisteredUser=null;
 function pushKeyBytes(base64){const str=atob(base64.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(base64.length/4)*4,'='));return Uint8Array.from(str,c=>c.charCodeAt(0));}
 function updateNotificationControls(){
  const button=$('enableNotifications'),status=$('notificationStatus');
  if(!button||!status)return;
  const supported=typeof window.Notification!=='undefined'&&'serviceWorker' in navigator&&'PushManager' in window&&window.isSecureContext;
  const permission=supported?window.Notification.permission:'unsupported';
- button.hidden=!member||!supported;
- button.textContent=permission==='granted'?'🔔 プッシュ通知を再設定':'🔔 この端末の通知を有効にする';
- status.textContent=!member?'':!supported?'この環境ではプッシュ通知に対応していません。iPhoneはSafariからホーム画面に追加してください。':permission==='denied'?'通知が拒否されています。端末設定で許可してください。':permission==='granted'?'通知は許可済みです（配信登録はボタンから確認できます）':'通知を許可するとアプリを閉じていてもお知らせします';
+ const registered=!!member&&pushRegisteredUser===member.user_id&&permission==='granted';
+ button.hidden=!member||!supported||registered;
+ button.textContent=permission==='granted'?'🔔 通知を確認':'🔔 通知を有効にする';
+ status.textContent=!member?'':!supported?'プッシュ通知はホーム画面に追加したアプリで設定できます':permission==='denied'?'通知が拒否されています。iPhoneの設定から許可してください':registered?'🔔 通知設定済み':permission==='granted'?'通知の配信登録を確認しています':'通知を許可するとアプリを閉じていても受信できます';
+}
+async function registerPush({interactive=false}={}){
+ if(!member||typeof window.Notification==='undefined'||!('serviceWorker' in navigator)||!('PushManager' in window))return;
+ if(interactive){
+  const permission=await window.Notification.requestPermission();
+  if(permission!=='granted')throw Error('端末の通知が許可されていません。');
+ }else if(window.Notification.permission!=='granted')return;
+ const registration=await navigator.serviceWorker.ready;
+ let subscription=await registration.pushManager.getSubscription();
+ if(!subscription){
+  const response=await fetch(pushEndpoint+'?action=public-key');
+  if(!response.ok)throw Error('通知サーバーへ接続できません。');
+  const data=await response.json();
+  if(!data.publicKey)throw Error('通知の公開鍵を取得できません。');
+  subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushKeyBytes(data.publicKey)});
+ }
+ const accountId=member.user_id;
+ const {error}=await supabase.rpc('tobita_match_register_push',{p_endpoint:subscription.endpoint,p_p256dh:subscription.toJSON().keys.p256dh,p_auth_secret:subscription.toJSON().keys.auth});
+ if(error)throw Error('通知の登録に失敗しました：'+error.message);
+ if(member?.user_id===accountId){pushRegisteredUser=accountId;updateNotificationControls();}
 }
 $('enableNotifications').onclick=async()=>{
  const button=$('enableNotifications');button.disabled=true;
- try{
-  if(!member)throw Error('ログインしてください。');
-  if(typeof window.Notification==='undefined')throw Error('この環境ではプッシュ通知を利用できません。Safariからホーム画面に追加してください。');
-  const permission=await window.Notification.requestPermission();
-  if(permission!=='granted')throw Error('端末の通知が許可されていません。');
-  const registration=await navigator.serviceWorker.ready;
-  const keyResponse=await fetch(pushEndpoint+'?action=public-key');
-  const keyData=await keyResponse.json();
-  if(!keyResponse.ok||!keyData.publicKey)throw Error('通知サーバーの設定を確認できません。');
-  let subscription=await registration.pushManager.getSubscription();
-  if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushKeyBytes(keyData.publicKey)});
-  const {data:{session}}=await supabase.auth.getSession();
-  if(!session?.access_token)throw Error('再ログインしてください。');
-  const response=await fetch(pushEndpoint,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:JSON.stringify({action:'subscribe',subscription:subscription.toJSON()})});
-  if(!response.ok)throw Error('通知の配信登録に失敗しました（'+response.status+'）。');
-  $('notificationStatus').textContent='プッシュ通知の登録が完了しました。アプリを閉じていても受信できます。';
-  note('この端末のプッシュ通知を登録しました。');
- }catch(e){$('notificationStatus').textContent='設定できません：'+e.message;note('通知設定：'+e.message,true);}
+ try{await registerPush({interactive:true});note('通知設定が完了しました。');}
+ catch(e){$('notificationStatus').textContent='設定できません：'+e.message;note('通知設定：'+e.message,true);}
  finally{button.disabled=false;}
 };
+async function unregisterPush(){
+ if(!member||!('serviceWorker' in navigator))return;
+ const registration=await navigator.serviceWorker.ready;
+ const subscription=await registration.pushManager.getSubscription();
+ if(subscription)await supabase.rpc('tobita_match_unregister_push',{p_endpoint:subscription.endpoint});
+ pushRegisteredUser=null;
+}
 async function notifyNewEvents(newEvents){
  if(!member||!('Notification' in window)||window.Notification.permission!=='granted'||document.hidden)return;
  const registration=await navigator.serviceWorker.ready;
@@ -139,6 +152,9 @@ function render(){
  document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{if(confirm('この仕事を取り消しますか？'))mutate('tobita_match_cancel',{p_request:b.dataset.cancel})});
  // 案件ごとに元の通知を1枚だけ残し、現在の仕事ステータスを表示する。
  const eventRequest=e=>{
+  const direct=requests.find(r=>r.id===e.request_id);
+  if(direct)return direct;
+  if(e.request_id)return null;
   const raw=String(e.message||'');
   return requests.filter(r=>r.work_date&&raw.includes(r.work_date)&&r.job_name&&raw.includes(r.job_name))
    .sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0))[0];
@@ -146,7 +162,7 @@ function render(){
  const grouped=new Map();
  for(const e of events){
   const related=eventRequest(e);
-  const key=related?'request:'+related.id:'event:'+e.id;
+  const key=e.request_id?'request:'+e.request_id:related?'request:'+related.id:'event:'+e.id;
   const current=grouped.get(key);
   if(!current){grouped.set(key,e);continue;}
   // 成立通知があればそれを元のカードとして優先し、取消後は赤く表示する。
@@ -159,9 +175,9 @@ function render(){
  const raw=String(e.message||'');
  const initialKind=raw.startsWith('仕事の取消')?'cancel':raw.startsWith('マッチング成立')?'confirmed':raw.startsWith('新しい仕事の打診')?'pending':raw.includes('辞退')?'declined':'other';
  const related=eventRequest(e);
- const cancelled=related?.status==='cancelled';
- const kind=cancelled?'cancel':initialKind;
- const typeLabel=cancelled?'【取消】この仕事はキャンセルされました':{cancel:'【取消】この仕事はキャンセルされました',confirmed:'マッチング成立',pending:'新しい仕事の打診',declined:'辞退',other:'お知らせ'}[kind];
+ const currentKind=related?.status==='confirmed'?'confirmed':related?.status==='cancelled'?'cancel':related?.status==='declined'?'declined':related?.status==='pending'?'pending':null;
+ const kind=currentKind||initialKind;
+ const typeLabel=kind==='cancel'?'【取消】この仕事はキャンセルされました':{cancel:'【取消】この仕事はキャンセルされました',confirmed:'マッチング成立',pending:'新しい仕事の打診',declined:'辞退',other:'お知らせ'}[kind];
  const dateMatch=raw.match(/20\d{2}-\d{2}-\d{2}/);
  const date=related?.work_date||dateMatch?.[0]||'';
  const job=related?.job_name||raw.split('：').slice(1).join('：').split(' / ')[0]||'';
@@ -192,7 +208,7 @@ async function start(){lastNoticeIds=null;await loadBrand();
  let {data,error}=await supabase.from('tobita_match_members').select('*').eq('user_id',user.id).maybeSingle();
  if(!error&&!data&&user.email?.toLowerCase()==='tobikyohei8989@gmail.com'){const activation=await supabase.rpc('tobita_match_activate_admin');if(!activation.error){const lookup=await supabase.from('tobita_match_members').select('*').eq('user_id',user.id).maybeSingle();data=lookup.data;error=lookup.error;}else{note('管理者の認証が完了していません：'+activation.error.message,true)}}
  if(error||!data){member=null;render();if(inviteToken){await claimInvite();return}note('このアカウントは職人マッチングに登録されていません。管理者による招待が必要です。',true);return}
- member=data;render();await loadBrand();await refresh();channel?.unsubscribe();
+ member=data;render();registerPush().catch(e=>console.warn('通知の自動登録を確認できませんでした',e));await loadBrand();await refresh();channel?.unsubscribe();
  channel=supabase.channel('tobita-match-'+member.user_id).on('postgres_changes',{event:'*',schema:'public',table:'tobita_match_requests'},()=>refresh()).on('postgres_changes',{event:'*',schema:'public',table:'tobita_match_availability'},()=>refresh()).on('postgres_changes',{event:'*',schema:'public',table:'tobita_match_events'},()=>refresh()).subscribe();
 }
 
@@ -234,7 +250,7 @@ $('copyInvite').onclick=async()=>{try{await navigator.clipboard.writeText($('inv
 $('shareInvite').onclick=async()=>{const url=$('inviteUrl').value;if(navigator.share)try{await navigator.share({title:'職人マッチング 招待',url})}catch(e){}else{$('copyInvite').click()}};
 
 $('signIn').onclick=async()=>{const {error}=await supabase.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)note(error.message,true);else start()};
-$('logout').onclick=async()=>{await supabase.auth.signOut();member=null;channel?.unsubscribe();channel=null;render()};
+$('logout').onclick=async()=>{try{await unregisterPush()}catch(e){console.warn('通知の解除に失敗しました',e)}await supabase.auth.signOut();pushRegisteredUser=null;member=null;channel?.unsubscribe();channel=null;render()};
 $('reload').onclick=refresh;
 $('prev').onclick=()=>{month.setMonth(month.getMonth()-1);detailDate=null;render()};
 $('next').onclick=()=>{month.setMonth(month.getMonth()+1);detailDate=null;render()};
