@@ -2,7 +2,7 @@ import { chromium, devices } from 'playwright';
 import assert from 'node:assert/strict';
 
 const browser = await chromium.launch({headless:true});
-const base='http://127.0.0.1:8765/';
+const base='http://127.0.0.1:8765/dashboard/';
 const failures=[];
 for(const [name,contextOptions] of [
  ['desktop',{viewport:{width:1280,height:850}}],
