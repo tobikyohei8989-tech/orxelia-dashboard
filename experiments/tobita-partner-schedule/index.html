@@ -65,7 +65,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 #workers .person .tag{font-size:12px;padding:3px 8px}
 #workers .person>button{grid-area:action;min-height:44px;padding:7px 11px;font-size:14px;white-space:nowrap}
 @media(max-width:640px){#workers{grid-template-columns:1fr;gap:7px}#workers .person{padding:9px 10px;border-radius:10px}#workers .person>strong{font-size:16px}#workers .person>button{font-size:14px}}
-#attendancePanel[hidden]{display:none!important}#workerView .row>button{flex:1 1 calc(50% - 8px)}@media(max-width:640px){#workerView .row>button{font-size:15px;min-height:48px;padding:7px 5px}} </style></head><body><header><small>TOBITA PARTNER SCHEDULE / 非公開運用前の試取り組</small><h1>協力業者 空き日程・手配ボード</h1></header><main class="wrap">
+#attendancePanel[hidden]{display:none!important}#workerView .row>button{flex:1 1 calc(50% - 8px)}@media(max-width:640px){#workerView .row>button{font-size:15px;min-height:48px;padding:7px 5px}} .worker-selected{outline:3px solid #1769c2!important;outline-offset:-3px;background:#dbeafe!important}.worker-selected .cal-date{color:#073c7a;font-weight:900}#workerSelectionCount{font-weight:700;color:#14549b;margin:8px 0} </style></head><body><header><small>TOBITA PARTNER SCHEDULE / 非公開運用前の試取り組</small><h1>協力業者 空き日程・手配ボード</h1></header><main class="wrap">
 <div class="panel">
   <details class="notice demo-guide"><summary>デモの注意事項・使い方を見る</summary><div class="guide-body">これは<strong>サンプルデータだけ</strong>を使うローカル動作デモです。認証・共有・実通知はありません。この端末のブラウザ内だけに保存されます。実名・現場情報を入力しないでください。<br><br><strong>【ご案内：仕事の打診と承認フローについて】</strong><br>1. 職人さんは空いている日・時間帯だけ登録します。登録がない時間帯は打診できません。<br>2. 管理者側で「空き」の職人に対して「仕事を打診」します（ステータス：<strong>打診中</strong>）。<br>3. 職人側（体験画面）の「届いた仕事の打診」に通知が届きます。内容を確認し、<strong>[承諾]</strong>または[辞退]ボタンを押してください。<br>4. また、管理画面・職人画面それぞれ専用のカレンダー及び確定情報一覧でスケジュールを1ヶ月単位で直感的に確認できます。</div></details>
   <div class="row between" style="margin-top:12px">
@@ -140,6 +140,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   <div class="row">
     <div class="field"><label>対象日</label><input id="workerDate" type="date"></div>
   </div>
+  <p id="workerSelectionCount" class="muted" aria-live="polite">カレンダーの日付をタップして選択</p><button onclick="clearWorkerSelection()">選択を解除</button>
   <div class="row" style="margin-top:12px">
     <button class="primary" onclick="setWorkerFree('am')">午前が空き</button>
     <button class="primary" onclick="setWorkerFree('pm')">午後が空き</button>
@@ -173,6 +174,7 @@ try{
 }
 
 let mode='admin';
+const workerSelectedDates=new Set();
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth(); // 0-indexed
 let workerCalYear = new Date().getFullYear();
@@ -244,15 +246,17 @@ function changeRequest(id,next){
 
 function setWorkerFree(slot){
  const w=document.getElementById('workerSelect').value;
- const date=document.getElementById('workerDate').value;
- if(!date){alert('日付を選択してください');return;}
- const active=(data.requests||[]).filter(r=>r.workerId===w&&r.date===date&&['pending','accepted','confirmed'].includes(r.status));
- const current=data.availability[w+'|'+date]||{};
+ const fallback=document.getElementById('workerDate').value;
+ const dates=workerSelectedDates.size?[...workerSelectedDates]:(fallback?[fallback]:[]);
+ if(!dates.length){alert('カレンダーで日付を選択してください');return;}
  const next=slot==='clear'?{am:'unknown',pm:'unknown'}:slot==='all'?{am:'free',pm:'free'}:slot==='am'?{am:'free',pm:'unknown'}:{am:'unknown',pm:'free'};
- const blocked=active.some(r=>(r.slot==='all'&& (next.am!=='free'||next.pm!=='free'))||(r.slot==='am'&&next.am!=='free')||(r.slot==='pm'&&next.pm!=='free'));
- if(blocked){alert('この日には進行中の仕事依頼があります。管理者と調整してから変更してください。');return;}
- data.availability[w+'|'+date]=next;
- save(date+' '+({am:'午前空き',pm:'午後空き',all:'終日空き',clear:'空き登録取消'}[slot]));
+ const blocked=dates.filter(date=>(data.requests||[]).some(r=>r.workerId===w&&r.date===date&&['pending','accepted','confirmed'].includes(r.status)&&((r.slot==='all'&&(next.am!=='free'||next.pm!=='free'))||(r.slot==='am'&&next.am!=='free')||(r.slot==='pm'&&next.pm!=='free'))));
+ if(blocked.length){alert('進行中の依頼があるため変更できない日があります：'+blocked.join('、')+'。該当日を外して再操作してください。');return;}
+ for(const date of dates)data.availability[w+'|'+date]=next;
+ const count=dates.length;
+ workerSelectedDates.clear();
+ save(count+'日を一括登録：'+({am:'午前空き',pm:'午後空き',all:'終日空き',clear:'空き登録取消'}[slot]));
+ renderWorkerSelection();
 }
 
 function updateAvailability(status){
@@ -296,9 +300,13 @@ function selectCalDate(dateStr){
 }
 
 function selectWorkerCalDate(dateStr){
-  document.getElementById('workerDate').value = dateStr;
-  render();
+  if(workerSelectedDates.has(dateStr))workerSelectedDates.delete(dateStr);else workerSelectedDates.add(dateStr);
+  document.getElementById('workerDate').value=dateStr;
+  renderWorkerSelection();
+  renderWorkerCalendar();
 }
+function renderWorkerSelection(){const n=workerSelectedDates.size;const el=document.getElementById('workerSelectionCount');if(el)el.textContent=n?n+'日選択中（もう一度タップで解除）':'カレンダーの日付をタップして選択';}
+function clearWorkerSelection(){workerSelectedDates.clear();renderWorkerSelection();renderWorkerCalendar();}
 
 function calendarRequest(workerId,date){document.getElementById('searchDate').value=date;const slots=['all','am','pm'];const found=slots.find(s=>isFree(workerId,date,s));if(!found){alert('この日の空きはありません。未回答の場合は確認してください。');return}document.getElementById('slotFilter').value=found;requestWork(workerId)}
 function renderCalendar(){
@@ -368,6 +376,7 @@ function renderWorkerCalendar(){
     const m = workerCalMonth + 1;
     const dateStr = workerCalYear + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
     const isToday = (dateStr === todayStr);
+    const selected=workerSelectedDates.has(dateStr);
     
     const am = statusFor(currentWorkerId, dateStr, 'am');
     const pm = statusFor(currentWorkerId, dateStr, 'pm');
@@ -378,7 +387,7 @@ function renderWorkerCalendar(){
     else if(pm === 'free'){cls='free'; label='午後○';}
     else {label='—';}
 
-    html += '<div class="cal-cell '+(isToday?'today':'')+'" onclick="selectWorkerCalDate(\''+dateStr+'\')">'+
+    html += '<div class="cal-cell '+(isToday?'today':'')+(selected?' worker-selected':'')+'" role="button" aria-pressed="'+selected+'" onclick="selectWorkerCalDate(\''+dateStr+'\')">'+
       '<div class="cal-date">'+d+'</div>'+
       '<div class="cal-status-dots"><span class="cal-dot '+cls+'">'+escapeHTML(label)+'</span></div>'+
     '</div>';
