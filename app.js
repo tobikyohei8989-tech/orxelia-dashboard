@@ -1976,7 +1976,7 @@ const sync = (() => {
       if (!email.reportValidity() || busy) return;
       busy = true;
       try {
-        const redirect = new URL("./",location.href).href;
+        const redirect = new URL("/dashboard/",location.origin).href;
         await request("/auth/v1/recover?redirect_to=" + encodeURIComponent(redirect),
           {method:"POST",body:JSON.stringify({email:email.value.trim()})},false);
         status("再設定メールをリクエストしました。受信箱と迷惑メールを確認してください。");
