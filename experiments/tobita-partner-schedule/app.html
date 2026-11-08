@@ -82,11 +82,17 @@ async function claimInvite(){
 $('inviteSignupBtn').onclick=async()=>{
  const name=$('inviteName').value.trim(),email=$('inviteEmail').value.trim(),password=$('invitePassword').value;
  if(!name||!email.includes('@')||password.length<12){note('名前・メールアドレス・12文字以上のパスワードを入力してください',true);return}
+ const btn=$('inviteSignupBtn');btn.disabled=true;btn.textContent='登録処理中…';note('アカウント登録を送信しています…');
+ try{
  sessionStorage.setItem('tobitaInviteName',name);
- const {data,error}=await supabase.auth.signUp({email,password,options:{emailRedirectTo:location.href}});
- if(error){note(error.message,true);return}
+ const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('通信がタイムアウトしました。接続を確認して再度お試しください。')),15000));
+ const {data,error}=await Promise.race([supabase.auth.signUp({email,password,options:{emailRedirectTo:location.href}}),timeout]);
+ if(error)throw error;
  $('invitePassword').value='';
- if(data.session){await claimInvite()}else note('確認メールを送信しました。メールのリンクで認証後、この招待ページに戻ってください。');
+ if(data.session){note('アカウントを作成しました。職人登録を完了します…');await claimInvite()}
+ else note('登録を受け付けました。確認メールが届かない場合は、迷惑メール・Supabaseのメール送信設定を確認してください。');
+ }catch(e){note('登録できませんでした：'+(e?.message||String(e)),true)}
+ finally{btn.disabled=false;btn.textContent='アカウントを作成'}
 };
 $('inviteClaimBtn').onclick=claimInvite;
 $('makeInvite').onclick=async()=>{
