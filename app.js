@@ -1151,7 +1151,7 @@ const orxeliaPush = (() => {
   return "iPhoneの通知登録が完了しました。";
  }
  document.addEventListener("click",async e=>{const button=e.target.closest("#orxelia-enable-push");if(!button)return;button.disabled=true;try{alert(await enable())}catch(err){alert(err.message)}finally{button.disabled=false}});
- async function testLocal(){if(!("serviceWorker" in navigator))throw Error("Service Workerに対応していません");const registration=await navigator.serviceWorker.register("./push-sw.js?v=2");await navigator.serviceWorker.ready;if(Notification.permission!=="granted")throw Error("通知が許可されていません");const worker=registration.active||registration.waiting||registration.installing;if(!worker)throw Error("通知受信プログラムが起動していません");worker.postMessage({type:"ORXELIA_LOCAL_NOTIFICATION_TEST"});return "通知表示テストを実行しました。通知センターを確認してください。";}
+ async function testLocal(){if(!("serviceWorker" in navigator))throw Error("Service Worker非対応");const registration=await navigator.serviceWorker.register("./push-sw.js?v=3");await navigator.serviceWorker.ready;if(Notification.permission!=="granted")throw Error("通知が許可されていません");await registration.showNotification("ORXELIA 通知表示テスト",{body:"iPhone内で直接生成した通知です",tag:"orxelia-direct-"+Date.now()});const notifications=await registration.getNotifications();return "通知表示API成功。登録済み通知数: "+notifications.length+"件。ホーム画面に戻り通知センターを確認してください。";}
  document.addEventListener("click",async e=>{const button=e.target.closest("#orxelia-test-local-push");if(!button)return;button.disabled=true;try{alert(await testLocal())}catch(err){alert(err.message)}finally{button.disabled=false}});
  return {enable,testLocal};
 })();
