@@ -396,3 +396,6 @@ details[data-prototype-preview]>summary{cursor:pointer;min-height:44px}
  details[data-prototype-preview]>.prototype-live-frame{border-radius:10px;min-height:540px}
  .proposal-item-body{min-width:0;overflow-wrap:anywhere}
 }
+
+/* iOS emergency fallback: inner preview must remain scrollable if auto-height messages fail */
+@media(max-width:640px){details[data-prototype-preview]>.prototype-live-frame{height:72dvh;min-height:540px;overflow:auto;-webkit-overflow-scrolling:touch}}
