@@ -1,0 +1,23 @@
+name: Partner Link practical feature checks
+on:
+  push:
+    paths:
+      - 'experiments/tobita-partner-schedule/**'
+      - 'scripts/check-partner-*.mjs'
+      - 'database/changes/partner_*.sql'
+      - '.github/workflows/partner-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Headcount and practical features (no production requests)
+        run: |
+          node scripts/check-partner-capacity.mjs
+          node scripts/check-partner-practical.mjs
