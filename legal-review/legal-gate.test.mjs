@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {CHECKS,assessLegalGate,canStartDevelopment,canPublish} from './legal-gate.mjs';
+const base={version:'v1',checks:Object.fromEntries(CHECKS.map(c=>[c.id,{status:'passed',evidence:['official source'],reviewedAt:'2026-11-10',reviewer:'reviewer'}])),risks:[]};
+assert.equal(assessLegalGate({}).eligible,false);
+assert.equal(assessLegalGate(base).eligible,true);
+assert.equal(canStartDevelopment(base,{}),false);
+const approval={decision:'approved',scope:'development',approvedBy:'owner',approvedAt:'2026-11-10',reviewVersion:'v1'};
+assert.equal(canStartDevelopment(base,approval),true);
+assert.equal(canStartDevelopment({...base,version:'v2'},approval),false);
+assert.equal(assessLegalGate({...base,risks:[{severity:'high',status:'open'}]}).eligible,false);
+assert.equal(assessLegalGate({...base,checks:{...base.checks,privacy:{status:'expert_review'}}}).eligible,false);
+assert.equal(canPublish(base,approval),false);
+console.log('8 legal-gate checks passed');
