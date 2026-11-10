@@ -3,6 +3,13 @@ export function tokyoDate(now=new Date()){
  return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
 }
 const pad=n=>String(n).padStart(2,'0');
+// Work lists follow the scheduled work date, then meeting time; alerts never reorder them.
+export function compareWorkSchedule(a,b){
+ const date=String(a.work_date||'9999-12-31').localeCompare(String(b.work_date||'9999-12-31'));
+ if(date)return date;
+ const time=r=>/^\d{2}:\d{2}/.test(r.meeting_time||'')?String(r.meeting_time).slice(0,5):'99:99';
+ return time(a).localeCompare(time(b))||({all:0,am:1,pm:2}[a.slot]??3)-({all:0,am:1,pm:2}[b.slot]??3)||String(a.created_at||'').localeCompare(String(b.created_at||''))||String(a.id).localeCompare(String(b.id));
+}
 export function closingMonth(now=new Date()){
  const [y,m,d]=tokyoDate(now).split('-').map(Number);const next=new Date(Date.UTC(y,m-1+(d>20?1:0),1));
  return next.getUTCFullYear()+'-'+pad(next.getUTCMonth()+1);
