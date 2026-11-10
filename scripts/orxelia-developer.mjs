@@ -177,7 +177,7 @@ try {
   messages=[...messages,{role:'assistant',content:html},{role:'user',content:'Fix these test failures, return entire corrected HTML: '+JSON.stringify(last.errors)}];
  }
  const deliverables=[
- {type:'prototype',title:generationMethod==='ai_generated'?'AI生成試作品（非公開HTML）':'既存テンプレートによる動作試作（AI生成ではありません）',generationMethod,status:last.passed?'generated_tested':'generated_unverified',html,generatedAt:new Date().toISOString()},
+ {type:'prototype',title:!last.passed?'品質基準未達（未提出）':generationMethod==='ai_generated'?'AI生成試作品（非公開HTML）':'既存テンプレートによる動作試作（AI生成ではありません）',generationMethod,status:last.passed?'generated_tested':'quality_blocked',...(last.passed?{html}:{}),generatedAt:new Date().toISOString()},
  {type:'submission_quality',title:'提出前の画面・主要操作検証',status:submissionQuality?.passed?'passed':'failed',results:submissionQuality},
  {type:'functional_test',title:'ブラウザ自動スモークテスト',status:last.passed?'passed':'failed',results:last},
  {type:'design_review',title:'Geminiデザインレビュー・修正結果',status:designReview.status,feedback:designReview.feedback||null,revision:designRevision,reviewedAt:new Date().toISOString()},

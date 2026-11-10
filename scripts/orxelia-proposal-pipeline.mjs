@@ -60,7 +60,7 @@ try{
   await update(proposal.id,{status:'developing'},'approved_for_development');
   const h=await generateHtml('You are ORXELIA engineer implementing the user-approved business. Produce ONLY complete standalone functional Japanese HTML, CSS and inline JS (no external dependencies or network). Mobile-first clear design inspired by this Gemini-reviewed visual mockup, preserve its visual hierarchy and make buttons actually work. Use localStorage, validated forms, list, delete confirmation, JSON backup and CSV export. Clearly label prototype, no real approval/contract or payment claims. Business: '+brief(proposal)+' DESIGN REVIEW: '+(proposal.design_review||'')+' DESIGN HTML: '+(proposal.design_html||'').slice(0,12000),16000,true);
   const t=await test(h,true);
-  await update(proposal.id,{status:t.passed?'development_ready':'failed',prototype_html:h,test_report:{passed:t.passed&&latestQuality?.passed===true,details:t,submission_quality:latestQuality,scope:'Desktop/mobile screenshots and core record workflow verified; business-specific functions, real iOS, security and demand remain separate'},error_message:t.passed?null:'Browser smoke test failed'},'developing');
+  await update(proposal.id,{status:t.passed?'development_ready':'failed',...(t.passed?{prototype_html:h}:{}),test_report:{passed:t.passed&&latestQuality?.passed===true,details:t,submission_quality:latestQuality,scope:'Desktop/mobile screenshots and core record workflow verified; business-specific functions, real iOS, security and demand remain separate'},error_message:t.passed?null:'Browser smoke test failed'},'developing');
   console.log('Prototype test',JSON.stringify(t));
  }else if(proposal.status==='prototype_revision_requested'){
   const feedback=(proposal.prototype_revision_request||'').trim();
@@ -70,7 +70,7 @@ try{
   const t=await test(h,true);
   const history=Array.isArray(proposal.prototype_revision_history)?proposal.prototype_revision_history:[];
   const version=(proposal.prototype_revision_number||1)+1;
-  await update(proposal.id,{status:t.passed?'development_ready':'failed',prototype_html:h,prototype_revision_number:version,prototype_revision_request:null,prototype_revision_history:[...history,{version,feedback,passed:t.passed,at:new Date().toISOString()}].slice(-30),test_report:{passed:t.passed&&latestQuality?.passed===true,details:t,submission_quality:latestQuality,scope:'Desktop/mobile screenshots and core record workflow verified; real iOS and business-specific functions remain separate'},error_message:t.passed?null:'Revised prototype browser smoke test failed'},'prototype_revising');
+  await update(proposal.id,{status:t.passed?'development_ready':'failed',...(t.passed?{prototype_html:h}:{}),prototype_revision_number:version,prototype_revision_request:null,prototype_revision_history:[...history,{version,feedback,passed:t.passed,at:new Date().toISOString()}].slice(-30),test_report:{passed:t.passed&&latestQuality?.passed===true,details:t,submission_quality:latestQuality,scope:'Desktop/mobile screenshots and core record workflow verified; real iOS and business-specific functions remain separate'},error_message:t.passed?null:'Revised prototype browser smoke test failed'},'prototype_revising');
   console.log('Prototype revision',proposal.id,version,'passed',t.passed);
 
  }else if(proposal.status==='awaiting_final_approval'){
