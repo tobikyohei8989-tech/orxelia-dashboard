@@ -34,6 +34,12 @@ const empty = () => ({version:1, projects:[], ledger:[], decisions:[]});
 let data = empty();
 let orxeliaTrialProposals = [];
 let orxeliaArchivedProposals = [];
+let proposalSync = { state: "pending", lastSuccess: null };
+function clearProposalSync() {
+  orxeliaTrialProposals = [];
+  orxeliaArchivedProposals = [];
+  proposalSync = { state: "pending", lastSuccess: null };
+}
 function activeProjects(){return data.projects.filter(p=>!p.deletedAt&&!orxeliaArchivedProposals.some(c=>c.brief?.legacy_id===p.id||c.title===p.name));}
 
 let orxeliaRevisionDrafts = {};
@@ -641,55 +647,9 @@ function importLogPanel() {
   const logs = (data.importLog || []).slice(-12).reverse();
   return panel('<h3>日次取り込み履歴</h3><p>追加実績のみ記録します。過去の取り込み分は自動復元されません。</p>' + (logs.length ? '<ol>' + logs.map(r => '<li>' + esc(r.at.slice(0,16).replace("T"," ")) + ' ／ 対象日 ' + esc(r.date) + ' ／ 候補 ' + r.projects + '件・判断 ' + r.decisions + '件</li>').join("") + '</ol>' : '<p>記録はありません。</p>'));
 }
-function retainQuoteProject() {
-  const keep = data.projects.filter(p => normalizedName(p.name) === normalizedName("見積もり催促・追客管理"));
-  if (keep.length !== 1) throw Error("残す事業が1件に特定できないため、削除を停止しました。");
-  const removed = data.projects.filter(p => p.id !== keep[0].id);
-  if (!removed.length) throw Error("削除対象の事業がありません。");
-  const tasks = loadTasks(), evidence = loadEvidence();
-  if (!readable || tasks === null || evidence === null || loadSales() === null) {
-    throw Error("既存データを読み込めないため、削除を停止しました。");
-  }
-  const ids = new Set(removed.map(p => p.id));
-  const names = new Set(removed.map(p => normalizedName(p.name)));
-  const ledger = data.ledger.filter(row => !ids.has(row.project));
-  const decisions = data.decisions.filter(row =>
-    !names.has(normalizedName(row.activity?.task || row.title)) &&
-    !(/^AI既存事業調査 /.test(row.source) && ids.has(row.source.replace(/^AI既存事業調査 \d{4}-\d{2}-\d{2} /,""))));
-  const next = {...data,projects:keep,ledger,decisions};
-  const nextTasks = tasks.filter(row => !ids.has(row.project));
-  const nextEvidence = evidence.filter(row => !ids.has(row.project));
-  if (!confirm("残す事業：見積もり催促・追客管理\n\n削除する事業 " + removed.length + "件\n" +
-    removed.map(p => p.name).join("、") + "\n\n収支 " + (data.ledger.length-ledger.length) +
-    "件 ／ 判断・進捗 " + (data.decisions.length-decisions.length) + "件 ／ タスク " +
-    (tasks.length-nextTasks.length) + "件 ／ 検証 " + (evidence.length-nextEvidence.length) +
-    "件\nバックアップを書き出しますか？")) return;
-  exportBundle();
-  if (!confirm("バックアップのダウンロードを確認したら削除を確定してください。同期済みの台帳にも削除が反映されます。")) return;
-  validate(next);
-  keepSafetyCopy("不要な事業の一括削除前");
-  const updates = [[tasksKey,nextTasks],[evidenceKey,nextEvidence],[key,next]];
-  const previous = updates.map(([storageKey]) => [storageKey,localStorage.getItem(storageKey)]);
-  try {
-    for (const [storageKey,value] of updates) localStorage.setItem(storageKey,JSON.stringify(value));
-  } catch (error) {
-    for (const [storageKey,value] of previous) {
-      if (value === null) localStorage.removeItem(storageKey);
-      else localStorage.setItem(storageKey,value);
-    }
-    throw error;
-  }
-  data = next;
-  tab = "portfolio";
-  filter = "すべて";
-  render();
-  $("notice").textContent = removed.length + "事業を削除しました。同期をご利用の場合は設定で同期状態を確認してください。";
-}
-
 function settings() {
   return heading("設定・データ管理") + (window.orxeliaSync?.view() || "") +
     panel('<h3>引き継ぎ事業台帳（19件）</h3><p>既存の事業を保持し、未登録の候補だけ追加します。類似名称は別名として残る場合があります。実績・開発状況は自動確定しません。</p>' + action("追加候補を確認して取り込む","mergeCatalog")) +
-    panel('<h3>事業の一括削除</h3><p>見積もり催促・追客管理だけを残します。削除対象とバックアップを確認してから確定できます。</p>' + action("削除対象を確認","retainQuoteProject")) +
     importLogPanel() +
     panel('<h3>初期データ・バックアップ</h3><p>初回は同梱の「初期データ.json」を読み込んでください。読み込みは現在の内容を全件置き換えます。</p>' +
       '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + action("端末内の復旧用データを書き出す","recoveryExport") + action("直近3世代の安全コピーを書き出す","safetyExport") + action("全データをまとめてJSON出力","bundleExport") + action("iPhone用：復旧データを画面に表示","recoveryView") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
@@ -1100,6 +1060,19 @@ function executiveQuickMatrix() {
     '<p class="quick-note">※当月の手動入力分。売上−費用は営業利益・純利益ではありません。契約数は未連携です。</p><details><summary>数値の見方</summary><p>売上と売上−費用は当月の手動入力データです。売上−費用は営業利益・純利益ではありません。契約数は事業別の確定データと紐付いていないため「未連携」と表示しています。「—」は0円を意味しません。</p></details></section>';
 }
 function home() {
+  const syncState = proposalSync.state;
+  const syncLabel = {
+    pending: "案件を取得するにはログインして同期してください。",
+    loading: "案件を読み込んでいます。",
+    failed: proposalSync.lastSuccess
+      ? "同期に失敗しました。最後に取得した案件を表示しています。"
+      : "案件を取得できませんでした。設定から同期を再試行してください。",
+    ready: ""
+  }[syncState];
+  const syncNote = syncLabel ? '<p role="status">'+esc(syncLabel)+'</p>' : "";
+  const syncTime = proposalSync.lastSuccess
+    ? '<p class="muted">案件の最終取得 '+esc(proposalSync.lastSuccess.toLocaleString("ja-JP",{timeZone:"Asia/Tokyo"}))+'</p>'
+    : "";
   const requiresAction=p=>!isPartnerLinkImplemented(p)&&(p.status==="awaiting_first_approval"||p.status==="development_ready"||(p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready_for_approval"));
   const owner=orxeliaTrialProposals.filter(requiresAction);
   const research=orxeliaTrialProposals.filter(p=>p.status==="awaiting_final_approval"&&!requiresAction(p));
@@ -1113,9 +1086,9 @@ function home() {
   }).join("");
   const researchRows=research.map(p=>'<article class="business-progress priority-card ai-review-card"><div class="priority-top"><span class="priority-state">販売保留・根拠不足</span></div><h3>'+cleanTitle(p)+'</h3><p><b>あなたの操作：</b>今は不要。需要・競合優位性・採算の証拠がそろうまで販売判断しません。</p></article>').join("");
   return implementedProductsPanel()+'<div class="home-intro"><span class="eyebrow">EXECUTIVE OVERVIEW</span><h2>今、あなたがやること</h2><p>操作が必要な案件だけをオレンジ色で表示します。調査不足の案件は別にまとめています。</p></div>'+
-    '<section class="priority-section"><div class="head"><h2>あなたの操作待ち</h2><span class="count-pill">'+owner.length+'件</span></div>'+(ownerRows?'<div class="priority-list">'+ownerRows+'</div>':'<div class="empty-state"><strong>今すぐ必要な操作はありません</strong><p>販売根拠が不足している案件は、承認せず保留します。</p></div>')+'</section>'+
+    syncNote+syncTime+'<section class="priority-section"><div class="head"><h2>あなたの操作待ち</h2><span class="count-pill">'+(proposalSync.lastSuccess?owner.length+'件':'未取得')+'</span></div>'+(ownerRows?'<div class="priority-list">'+ownerRows+'</div>':syncState==="ready"?'<div class="empty-state"><strong>今すぐ必要な操作はありません</strong><p>販売根拠が不足している案件は、承認せず保留します。</p></div>':"")+'</section>'+
     (researchRows?'<section class="priority-section"><div class="head"><h2>AI側の調査課題・販売保留</h2><span class="count-pill">'+research.length+'件</span></div><p>この欄はあなたへの承認依頼ではありません。調査が自動で完了することを保証する表示でもありません。</p><div class="priority-list">'+researchRows+'</div></section>':'')+
-    '<details class="home-stats"><summary>全体の数字・事業別状況を見る</summary><div class="metrics">'+metric("あなたの操作待ち",owner.length+"件","承認・試作品の判断")+metric("AI作業中・待機",running.length+"件","自動処理の進捗")+metric("販売根拠不足",research.length+"件","承認せず保留")+'</div>'+executiveQuickMatrix()+'</details>'+
+    '<details class="home-stats"><summary>全体の数字・事業別状況を見る</summary><div class="metrics">'+metric("あなたの操作待ち",proposalSync.lastSuccess?owner.length+"件":"未取得","承認・試作品の判断")+metric("AI作業中・待機",proposalSync.lastSuccess?running.length+"件":"未取得","自動処理の進捗")+metric("販売根拠不足",proposalSync.lastSuccess?research.length+"件":"未取得","承認せず保留")+'</div>'+executiveQuickMatrix()+'</details>'+
     '<div class="home-links"><button type="button" data-tab="portfolio">事業一覧を見る</button><button type="button" data-tab="verification">承認・販売画面へ</button></div>';
 }
 
@@ -1418,7 +1391,6 @@ document.addEventListener("click", event => {
     if (kind === "ideaAdopt") reviewIdea(dailyIdeas[Number(value)],"決定済み");
     if (kind === "ideaHold") reviewIdea(dailyIdeas[Number(value)],"保留");
     if (kind === "ideaReject") reviewIdea(dailyIdeas[Number(value)],"却下");
-    if (kind === "retainQuoteProject") retainQuoteProject();
     if (kind === "aiFeedRefresh") autoImportAiFeed();
     if (kind === "researchPrompt") researchPrompt();
     if (kind === "portfolioCsv") exportPortfolioCsv();
@@ -1633,6 +1605,7 @@ const sync = (() => {
     if (target) target.textContent = text;
   }
   function setSession(result) {
+    if (session?.user.id !== result.user.id) clearProposalSync();
     session = {...result,expires_at:result.expires_at || Date.now()/1000 + result.expires_in};
     localStorage.setItem(sessionKey,JSON.stringify(session));
   }
@@ -1762,12 +1735,22 @@ const sync = (() => {
         dailyReport = {owner,failed:true};
       }
       if (session?.user.id !== owner || $("editor").open) return;
+      proposalSync.state = "loading";
+      render();
       try{
         const [active,archived]=await Promise.all([
           request("/rest/v1/orxelia_proposals?select=id,title,status,brief,created_at,design_status,design_html,design_review,prototype_html,test_report,sales_review,error_message,revision_number,revision_summary,revision_history,prototype_revision_number,prototype_revision_request,prototype_revision_history&brief->>dashboard_deleted_at=is.null&order=created_at.desc&limit=1000"),
           request('/rest/v1/orxelia_proposals?select=id,title,status,brief&brief->>dashboard_deleted_at=not.is.null&order=updated_at.desc&limit=1000')
-        ]);orxeliaTrialProposals=active;orxeliaArchivedProposals=archived;
-      }catch(e){console.warn("Additional proposal sync failed:",e.message);orxeliaTrialProposals=[]}
+        ]);
+        if (session?.user.id !== owner) return;
+        orxeliaTrialProposals=active;
+        orxeliaArchivedProposals=archived;
+        proposalSync = { state: "ready", lastSuccess: new Date() };
+      }catch(e){
+        if (session?.user.id !== owner) return;
+        console.warn("Additional proposal sync failed:",e.message);
+        proposalSync.state = "failed";
+      }
       syncStep = "開発レポートの取得";
       const pipelineRows = await request('/rest/v1/orxelia_pipeline?select=report_date,project,phase,deliverables&order=report_date.desc&limit=30');
       pipelineRecords = pipelineRows;
@@ -1848,7 +1831,7 @@ const sync = (() => {
     dailyApprovalConflict=null;
     pipelineRecords=[];
     developmentJob=null;
-    orxeliaTrialProposals=[];
+    clearProposalSync();
     message="ログインを解除しました。事業データを保存したアカウントでログインしてください。";
     render();
   });
@@ -1910,6 +1893,7 @@ const sync = (() => {
         const email = user.email;
         recoveryToken = null;
         session = null;
+        clearProposalSync();
         localStorage.removeItem(sessionKey);
         status("パスワードを更新しました。同期に接続中…");
         render();

@@ -31,7 +31,34 @@ async function generateHtml(prompt,max,allowScripts=false){
 async function test(html,interactive=false){const browser=await chromium.launch({headless:true});try{const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const errors=[];page.on('pageerror',e=>errors.push(String(e)));await page.route('https://orxelia.test/**',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));await page.goto('https://orxelia.test/preview',{waitUntil:'load'});const result=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:innerWidth,text:document.body.innerText.length,buttons:document.querySelectorAll('button').length,inputs:document.querySelectorAll('input,textarea,select').length}));return {passed:result.text>100&&result.width<=result.viewport+10&&(!interactive||result.inputs>=2&&result.buttons>=1)&&!errors.length,...result,errors}}finally{await browser.close()}}
 const brief=p=>JSON.stringify({title:p.title,problem:p.brief?.problem,solution:p.brief?.solution,target:p.brief?.target,competitive_position:p.brief?.competitive_position});
 // Process pending proposal stages, including legacy dashboard projects migrated into the approval-gated workflow.
-const proposal=(await api('orxelia_proposals?select=*&status=in.(awaiting_selection,revision_requested,approved_for_development,prototype_revision_requested,sales_review_requested,awaiting_final_approval)&order=created_at.asc&limit=30')).find(p=>p.status==='prototype_revision_requested'||p.status==='approved_for_development'||p.status==='sales_review_requested'||(p.status==='awaiting_final_approval'&&p.sales_review?.recommendation==='needs_evidence'&&(!p.sales_review?.last_researched_at||Date.now()-Date.parse(p.sales_review.last_researched_at)>20*60*60*1000))||p.status==='revision_requested'||p.design_status==='pending');
+const readyStages = new Set(['prototype_revision_requested', 'approved_for_development', 'sales_review_requested', 'revision_requested']);
+function isReady(candidate, now) {
+ if (readyStages.has(candidate.status)) return true;
+ if (candidate.status === 'awaiting_selection') return candidate.design_status === 'pending';
+ if (candidate.status !== 'awaiting_final_approval' || candidate.recommendation !== 'needs_evidence') return false;
+ return !candidate.last_researched_at || now - Date.parse(candidate.last_researched_at) > 20 * 60 * 60 * 1000;
+}
+function rank(candidate) {
+ const value = Number(candidate.priority_rank);
+ return Number.isSafeInteger(value) && value > 0 ? value : 99;
+}
+async function selectProposal() {
+ const query = 'orxelia_proposals?select=id,status,design_status,priority_rank:brief->>priority_rank,recommendation:sales_review->>recommendation,last_researched_at:sales_review->>last_researched_at&brief->>dashboard_deleted_at=is.null&status=in.(awaiting_selection,revision_requested,approved_for_development,prototype_revision_requested,sales_review_requested,awaiting_final_approval)&order=created_at.asc,id.asc';
+ const now = Date.now();
+ let best;
+ const pageSize = 100;
+ for (let offset = 0; !best || rank(best) !== 1; offset += pageSize) {
+  const candidates = await api(`${query}&limit=${pageSize}&offset=${offset}`);
+  for (const candidate of candidates) {
+   if (isReady(candidate, now) && (!best || rank(candidate) < rank(best))) best = candidate;
+  }
+  if (candidates.length < pageSize) break;
+ }
+ if (!best) return undefined;
+ const [current] = await api(`${idFilter(best.id)}&status=eq.${encodeURIComponent(best.status)}&brief->>dashboard_deleted_at=is.null&select=*`);
+ return current;
+}
+const proposal=await selectProposal();
 if(!proposal){console.log('No proposal stage work pending');process.exit(0)}
 console.log('Processing proposal',proposal.id,'stage',proposal.status);
 try{
