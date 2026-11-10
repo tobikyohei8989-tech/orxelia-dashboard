@@ -1,3 +1,4 @@
+import {qualityBrief,checkPrototypeQuality} from './prototype-quality.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
@@ -129,10 +130,10 @@ if(!['development_requested','development_running'].includes(pipelines[0]?.phase
 const patch=async(table,data)=>rest(table+'?'+match,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(data)});
 await patch('orxelia_development_jobs',{status:'running',updated_at:new Date().toISOString()});
 await patch('orxelia_pipeline',{phase:'development_running',updated_at:new Date().toISOString()});
-const dir=path.resolve('build/orxelia-job');let last={passed:false,errors:['Not run']};let html='';let generationMethod='ai_generated';let designReview={status:'not_run'};let designRevision='not_run';
+const dir=path.resolve('build/orxelia-job');let last={passed:false,errors:['Not run']};let html='';let generationMethod='ai_generated';let designReview={status:'not_run'};let designRevision='not_run';let submissionQuality=null;
 try {
  const brief='Project: '+job.project+'\\nSummary: '+pipelines[0].summary;
- const designBrief='Design direction: ORXELIA clean Japanese iPhone UI. White/light gray background, clear blue gradient KPI summary, large legible totals, rounded white record cards, status pills, bottom navigation (Home, Records, Add), generous tap targets, high contrast, accessible labels. Prioritize clarity over decoration. Keep all data handling and legal disclaimers functional; never invent approval or payment status. Responsive and dependency-free.';
+ const designBrief=qualityBrief+'\nDesign direction: ORXELIA clean Japanese iPhone UI. White/light gray background, clear blue gradient KPI summary, large legible totals, rounded white record cards, status pills, bottom navigation (Home, Records, Add), generous tap targets, high contrast, accessible labels. Prioritize clarity over decoration. Keep all data handling and legal disclaimers functional; never invent approval or payment status. Responsive and dependency-free.';
  console.log('Design guidance enabled: ORXELIA mobile-first reference style.');
  let messages=[
  {role:'system',content:'Create a fully functional Japanese, mobile-first single-file HTML application. Output ONLY HTML. No network calls, external scripts, fonts, libraries, iframe, forms submitting to external URLs, credentials or paid APIs. Use browser localStorage for persistence. Include accessible controls, input validation, meaningful functionality, and on-page explanation that this is a prototype, not production.'},
@@ -166,6 +167,10 @@ try {
    }
   }
   await safeFile(html,dir);last=await testHTML(dir);
+  if(last.passed){
+   submissionQuality=await checkPrototypeQuality(html,{artifactDir:'build/prototype-quality/legacy-attempt-'+attempt});
+   if(!submissionQuality.passed)last={...last,passed:false,errors:[...last.errors,...submissionQuality.errors]};
+  }
   console.log('Attempt '+attempt,JSON.stringify(last));
   if(last.passed)break;
   if(generationMethod==='verified_template_fallback')throw new Error('Offline template failed browser test: '+JSON.stringify(last.errors));
@@ -173,6 +178,7 @@ try {
  }
  const deliverables=[
  {type:'prototype',title:generationMethod==='ai_generated'?'AI生成試作品（非公開HTML）':'既存テンプレートによる動作試作（AI生成ではありません）',generationMethod,status:last.passed?'generated_tested':'generated_unverified',html,generatedAt:new Date().toISOString()},
+ {type:'submission_quality',title:'提出前の画面・主要操作検証',status:submissionQuality?.passed?'passed':'failed',results:submissionQuality},
  {type:'functional_test',title:'ブラウザ自動スモークテスト',status:last.passed?'passed':'failed',results:last},
  {type:'design_review',title:'Geminiデザインレビュー・修正結果',status:designReview.status,feedback:designReview.feedback||null,revision:designRevision,reviewedAt:new Date().toISOString()},
  {type:'sales_assets',title:'販売ページ・決済・解約・法務',status:'not_started'}

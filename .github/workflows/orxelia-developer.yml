@@ -4,6 +4,10 @@ on:
   push:
     paths:
       - 'scripts/orxelia-proposal-pipeline.mjs'
+      - 'scripts/orxelia-developer.mjs'
+      - 'scripts/prototype-quality.mjs'
+      - 'scripts/test-prototype-quality.mjs'
+      - '.github/workflows/orxelia-developer.yml'
   schedule:
     - cron: '*/15 * * * *'
 permissions:
@@ -35,7 +39,18 @@ jobs:
         run: |
           npm install --no-save playwright@1.58.2
           npx playwright install --with-deps chromium
+      - name: Verify submission gate regression tests
+        run: node scripts/test-prototype-quality.mjs
       - name: Generate preapproval Gemini designs and approved prototypes by proposal ID
         run: node scripts/orxelia-proposal-pipeline.mjs
       - name: Process legacy date-based jobs without changing their history
         run: node scripts/orxelia-developer.mjs
+
+      - name: Retain private quality evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prototype-quality-${{ github.run_id }}
+          path: build/prototype-quality/
+          if-no-files-found: ignore
+          retention-days: 7

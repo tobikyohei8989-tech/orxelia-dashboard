@@ -1,3 +1,4 @@
+import {qualityBrief,checkPrototypeQuality} from './prototype-quality.mjs';
 import {chromium} from 'playwright';
 const base=process.env.SUPABASE_URL,secret=process.env.SUPABASE_SERVICE_ROLE_KEY,gemini=process.env.GEMINI_API_KEY;
 if(!base||!secret)throw Error('Supabase server secrets required');
@@ -8,11 +9,18 @@ const idFilter=id=>'orxelia_proposals?id=eq.'+encodeURIComponent(id);
 async function update(id,fields,expected){const rows=await api(idFilter(id)+'&status=eq.'+encodeURIComponent(expected),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({...fields,updated_at:new Date().toISOString()})});if(rows.length!==1)throw Error('Stage changed concurrently');return rows[0]}
 async function model(prompt,max=5500){if(!gemini)throw Error('Gemini key missing');const names=['gemini-flash-lite-latest','gemini-3.8-flash'];let failures=[];for(const name of names){for(let attempt=0;attempt<2;attempt++){try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+name+':generateContent',{method:'POST',headers:{'x-goog-api-key':gemini,'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.25,maxOutputTokens:max}}),signal:AbortSignal.timeout(45000)});const j=await r.json();if(!r.ok){failures.push(name+' HTTP '+r.status);if([429,500,503].includes(r.status)&&attempt===0)continue;break}if(j.candidates?.[0]?.finishReason==='MAX_TOKENS')throw Error('truncated');const text=j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('');if(text?.trim())return text;throw Error('empty model response')}catch(e){failures.push(name+' '+String(e).slice(0,90))}}}throw Error('Gemini unavailable: '+failures.join('; '))}
 const htmlFrom=(t,allowScripts=false)=>{const m=t.match(/<!doctype html[\s\S]*?<\/html>/i)||t.match(/<html[\s\S]*?<\/html>/i);if(!m)throw Error('AI did not return complete HTML');const h=m[0];if(h.length>120000)throw Error('HTML too large');if(new RegExp(allowScripts?'(<iframe\\b|<object\\b|<embed\\b|<form[^>]*action\\s*=|https?:\\/\\/)':'(<script\\b|<iframe\\b|<object\\b|<embed\\b|<form[^>]*action\\s*=|https?:\\/\\/)','i').test(h))throw Error(allowScripts?'Prototype must be offline: external URLs, embedded documents and form actions are forbidden':'Design preview must be static and offline: scripts, external URLs, embedded documents and form actions are forbidden');return h};
+let latestQuality=null;
 async function generateHtml(prompt,max,allowScripts=false){
  let reason='';
  for(let attempt=0;attempt<3;attempt++){
-  const output=await model(prompt+(reason?'\nPrevious output was rejected: '+reason+'. Regenerate the complete HTML. Use only inline CSS'+(allowScripts?' and inline JavaScript':' without JavaScript')+'; no CDN, web fonts, remote images, external URLs, iframe/object/embed or form actions.':''),max);
-  try{return htmlFrom(output,allowScripts)}catch(e){
+  const output=await model(prompt+'\n'+qualityBrief+(reason?'\nPrevious output was rejected: '+reason+'. Regenerate the complete HTML. Use only inline CSS'+(allowScripts?' and inline JavaScript':' without JavaScript')+'; no CDN, web fonts, remote images, external URLs, iframe/object/embed or form actions.':''),max);
+  try{
+   const html=htmlFrom(output,allowScripts);
+   const quality=await checkPrototypeQuality(html,{interactive:allowScripts,artifactDir:'build/prototype-quality/proposal-attempt-'+attempt});
+   if(!quality.passed)throw Error('Submission quality gate: '+JSON.stringify(quality.errors));
+   latestQuality=quality;
+   return html;
+  }catch(e){
    reason=String(e.message);
    if(attempt===2)throw e;
    console.warn('Generated HTML rejected; retrying',attempt+1,reason);
@@ -33,7 +41,7 @@ try{
   const t=await test(h);
   if(!t.passed)throw Error('Design browser check failed '+JSON.stringify(t));
   const feedback=await model('You are an independent Gemini UX reviewer. In Japanese give up to 5 concrete improvements to this mobile design; prioritize clarity and accessibility. No claim of functional testing. HTML: '+h.slice(0,18000),1100);
-  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:h,design_review:feedback.slice(0,3000),test_report:{design_preview:t}},'designing');
+  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:h,design_review:feedback.slice(0,3000),test_report:{design_preview:t,submission_quality:latestQuality}},'designing');
   console.log('Design preview saved, awaiting first approval');
  }else if(proposal.status==='revision_requested'){
   const feedback=(proposal.revision_request||'').trim();
@@ -46,13 +54,13 @@ try{
   const history=Array.isArray(proposal.revision_history)?proposal.revision_history:[];
   const revision=(proposal.revision_number||1)+1;
   const summary='修正指示：'+feedback.slice(0,700)+' / Geminiレビュー：'+review.slice(0,1200);
-  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:revised,design_review:review,revision_number:revision,revision_summary:summary,revision_request:null,revision_history:[...history,{revision,feedback,review,at:new Date().toISOString()}].slice(-30),test_report:{design_preview:checked}},'revising');
+  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:revised,design_review:review,revision_number:revision,revision_summary:summary,revision_request:null,revision_history:[...history,{revision,feedback,review,at:new Date().toISOString()}].slice(-30),test_report:{design_preview:checked,submission_quality:latestQuality}},'revising');
   console.log('Revised design submitted for approval',proposal.id,revision);
  }else if(proposal.status==='approved_for_development'){
   await update(proposal.id,{status:'developing'},'approved_for_development');
   const h=await generateHtml('You are ORXELIA engineer implementing the user-approved business. Produce ONLY complete standalone functional Japanese HTML, CSS and inline JS (no external dependencies or network). Mobile-first clear design inspired by this Gemini-reviewed visual mockup, preserve its visual hierarchy and make buttons actually work. Use localStorage, validated forms, list, delete confirmation, JSON backup and CSV export. Clearly label prototype, no real approval/contract or payment claims. Business: '+brief(proposal)+' DESIGN REVIEW: '+(proposal.design_review||'')+' DESIGN HTML: '+(proposal.design_html||'').slice(0,12000),16000,true);
   const t=await test(h,true);
-  await update(proposal.id,{status:t.passed?'development_ready':'failed',prototype_html:h,test_report:{passed:t.passed,details:t,scope:'basic layout and JS errors only; end-to-end interactions, iOS, security and user demand not verified'},error_message:t.passed?null:'Browser smoke test failed'},'developing');
+  await update(proposal.id,{status:t.passed?'development_ready':'failed',prototype_html:h,test_report:{passed:t.passed&&latestQuality?.passed===true,details:t,submission_quality:latestQuality,scope:'Desktop/mobile screenshots and core record workflow verified; business-specific functions, real iOS, security and demand remain separate'},error_message:t.passed?null:'Browser smoke test failed'},'developing');
   console.log('Prototype test',JSON.stringify(t));
  }else if(proposal.status==='prototype_revision_requested'){
   const feedback=(proposal.prototype_revision_request||'').trim();
@@ -62,7 +70,7 @@ try{
   const t=await test(h,true);
   const history=Array.isArray(proposal.prototype_revision_history)?proposal.prototype_revision_history:[];
   const version=(proposal.prototype_revision_number||1)+1;
-  await update(proposal.id,{status:t.passed?'development_ready':'failed',prototype_html:h,prototype_revision_number:version,prototype_revision_request:null,prototype_revision_history:[...history,{version,feedback,passed:t.passed,at:new Date().toISOString()}].slice(-30),test_report:{passed:t.passed,details:t,scope:'basic browser smoke test only; iOS and full end-to-end functions unverified'},error_message:t.passed?null:'Revised prototype browser smoke test failed'},'prototype_revising');
+  await update(proposal.id,{status:t.passed?'development_ready':'failed',prototype_html:h,prototype_revision_number:version,prototype_revision_request:null,prototype_revision_history:[...history,{version,feedback,passed:t.passed,at:new Date().toISOString()}].slice(-30),test_report:{passed:t.passed&&latestQuality?.passed===true,details:t,submission_quality:latestQuality,scope:'Desktop/mobile screenshots and core record workflow verified; real iOS and business-specific functions remain separate'},error_message:t.passed?null:'Revised prototype browser smoke test failed'},'prototype_revising');
   console.log('Prototype revision',proposal.id,version,'passed',t.passed);
 
  }else if(proposal.status==='awaiting_final_approval'){
