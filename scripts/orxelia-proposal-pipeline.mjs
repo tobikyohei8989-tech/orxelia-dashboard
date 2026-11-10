@@ -29,7 +29,15 @@ async function generateHtml(prompt,max,allowScripts=false){
 }
 
 async function test(html,interactive=false){const browser=await chromium.launch({headless:true});try{const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const errors=[];page.on('pageerror',e=>errors.push(String(e)));await page.route('https://orxelia.test/**',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));await page.goto('https://orxelia.test/preview',{waitUntil:'load'});const result=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:innerWidth,text:document.body.innerText.length,buttons:document.querySelectorAll('button').length,inputs:document.querySelectorAll('input,textarea,select').length}));return {passed:result.text>100&&result.width<=result.viewport+10&&(!interactive||result.inputs>=2&&result.buttons>=1)&&!errors.length,...result,errors}}finally{await browser.close()}}
-const brief=p=>JSON.stringify({title:p.title,problem:p.brief?.problem,solution:p.brief?.solution,target:p.brief?.target,competitive_position:p.brief?.competitive_position});
+const brief=p=>JSON.stringify({title:p.title,problem:p.brief?.problem,solution:p.brief?.solution,target:p.brief?.target,references:p.brief?.references,competitive_position:p.brief?.competitive_position});
+async function buildPreapprovalTrial(proposal, design, designRevision) {
+ const html = await generateHtml(
+  'Build an offline, private evaluation prototype in Japanese. Implement the main workflow using fictitious sample data, validated inputs and a working list. Label it 開発許可前の非公開試作. No network, real personal data, publication, payments or external dependencies. Output standalone HTML, CSS and inline JavaScript only. Request: '+brief(proposal)+' Design: '+design.slice(0,12000),
+  16000,true);
+ const check = await test(html,true);
+ if (!check.passed) throw Error('Private prototype browser test failed');
+ return {html,report:{passed:true,design_revision:designRevision,browser:check,submission_quality:latestQuality}};
+}
 // Process pending proposal stages, including legacy dashboard projects migrated into the approval-gated workflow.
 const readyStages = new Set(['prototype_revision_requested', 'approved_for_development', 'sales_review_requested', 'revision_requested']);
 function isReady(candidate, now) {
@@ -68,7 +76,9 @@ try{
   const t=await test(h);
   if(!t.passed)throw Error('Design browser check failed '+JSON.stringify(t));
   const feedback=await model('You are an independent Gemini UX reviewer. In Japanese give up to 5 concrete improvements to this mobile design; prioritize clarity and accessibility. No claim of functional testing. HTML: '+h.slice(0,18000),1100);
-  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:h,design_review:feedback.slice(0,3000),test_report:{design_preview:t,submission_quality:latestQuality}},'designing');
+  const designQuality = latestQuality;
+  const trial = await buildPreapprovalTrial(proposal,h,proposal.revision_number||1);
+  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:h,design_review:feedback.slice(0,3000),prototype_html:trial.html,test_report:{design_preview:t,submission_quality:designQuality,preapproval_trial:trial.report}},'designing');
   console.log('Design preview saved, awaiting first approval');
  }else if(proposal.status==='revision_requested'){
   const feedback=(proposal.revision_request||'').trim();
@@ -81,7 +91,9 @@ try{
   const history=Array.isArray(proposal.revision_history)?proposal.revision_history:[];
   const revision=(proposal.revision_number||1)+1;
   const summary='修正指示：'+feedback.slice(0,700)+' / Geminiレビュー：'+review.slice(0,1200);
-  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:revised,design_review:review,revision_number:revision,revision_summary:summary,revision_request:null,revision_history:[...history,{revision,feedback,review,at:new Date().toISOString()}].slice(-30),test_report:{design_preview:checked,submission_quality:latestQuality}},'revising');
+  const designQuality = latestQuality;
+  const trial = await buildPreapprovalTrial(proposal,revised,revision);
+  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:revised,design_review:review,revision_number:revision,revision_summary:summary,revision_request:null,revision_history:[...history,{revision,feedback,review,at:new Date().toISOString()}].slice(-30),prototype_html:trial.html,test_report:{design_preview:checked,submission_quality:designQuality,preapproval_trial:trial.report}},'revising');
   console.log('Revised design submitted for approval',proposal.id,revision);
  }else if(proposal.status==='approved_for_development'){
   await update(proposal.id,{status:'developing'},'approved_for_development');

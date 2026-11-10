@@ -130,6 +130,11 @@ begin
       or review.design_revision is distinct from coalesce(new.revision_number,1) then
       raise exception '現在のデザイン版の法務審査を完了してください。';
     end if;
+    if nullif(btrim(new.prototype_html),'') is null
+      or new.test_report #> '{preapproval_trial,passed}' is distinct from 'true'::jsonb
+      or new.test_report #> '{preapproval_trial,design_revision}' is distinct from to_jsonb(coalesce(new.revision_number,1)) then
+      raise exception '現在のデザイン版の非公開試作を作成し、検査を完了してください。';
+    end if;
     insert into public.orxelia_legal_development_approvals (proposal_id,review_version,approved_by)
       values (new.id,review.version,auth.uid());
   else
