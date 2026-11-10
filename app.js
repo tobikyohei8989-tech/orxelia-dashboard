@@ -35,6 +35,15 @@ let data = empty();
 let orxeliaTrialProposals = [];
 let orxeliaArchivedProposals = [];
 let proposalSync = { state: "pending", lastSuccess: null };
+const legalReviewFields = {
+  regulation: "規制・許認可",
+  trademark: "商標・名称・ロゴ",
+  copyright: "著作権・素材",
+  terms: "利用規約",
+  privacy: "個人情報",
+  sales: "販売表示",
+  security: "認証・権限・決済安全性"
+};
 function clearProposalSync() {
   orxeliaTrialProposals = [];
   orxeliaArchivedProposals = [];
@@ -90,7 +99,7 @@ function orxeliaTrialProposalPanel(){
  const chosen=sorted.find(p=>Number(p.brief?.priority_rank)===1);
  const priorityPicker=`<div class="proposal-priority-picker" style="padding:14px;border:1px solid #d3dce6;border-radius:12px;margin:12px 0"><label for="orxelia-priority-select"><b>最優先で開発する案件（経営者が選択）</b></label><select id="orxelia-priority-select" style="width:100%;padding:10px;margin:8px 0"><option value="">選択してください</option>${sorted.map(p=>`<option value="${esc(p.id)}" ${chosen?.id===p.id?"selected":""}>${esc(p.title)}</option>`).join("")}</select><small>AI推奨とは別に開発順を指定します。公開・販売の承認にはなりません。</small></div>`;
  const count=sorted.filter(p=>!isPartnerLinkImplemented(p)).filter(p=>p.status==="awaiting_first_approval"||p.status==="development_ready"||(p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready_for_approval")).length;
- return `<section class="proposal-workspace"><div class="proposal-intro"><h3>AI事業の承認・販売判断</h3><p>操作が必要な案件と、販売根拠不足で保留中の案件を分けて確認できます。販売根拠不足は承認依頼ではありません。</p><div class="proposal-summary"><span>あなたの操作待ち <b>${count}件</b></span><span>全案件 <b>${sorted.length}件</b></span></div>${priorityPicker}</div>${sorted.map(p=>isPartnerLinkImplemented(p)?partnerLinkProductPanel(p):`<details class="proposal-item" ${(p.status==="awaiting_first_approval"||p.status==="development_ready"||(p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready_for_approval"))?'open':''}><summary><span class="proposal-item-title">${esc(p.title)}</span><span class="proposal-item-status">${esc(names[p.status]||p.status)}</span></summary><div class="proposal-item-body"><p class="proposal-next"><b>今の段階：</b>${esc(proposalNext(p.status))}</p><details class="proposal-meta"><summary>事業内容・差別化・IDを見る</summary><small>事業ID：${esc(p.id)}</small><p>${esc(p.brief?.problem||"")}</p><p><b>提案：</b>${esc(p.brief?.solution||"")}</p><p><b>差別化仮説：</b>${esc(p.brief?.competitive_position||"")}</p></details><p class="proposal-version">デザイン第${Number(p.revision_number)||1}版 ／ 試作品第${Number(p.prototype_revision_number)||1}版</p>
+ return `<section class="proposal-workspace"><div class="proposal-intro"><h3>AI事業の承認・販売判断</h3><p>操作が必要な案件と、販売根拠不足で保留中の案件を分けて確認できます。販売根拠不足は承認依頼ではありません。</p><div class="proposal-summary"><span>あなたの操作待ち <b>${count}件</b></span><span>全案件 <b>${sorted.length}件</b></span></div>${priorityPicker}</div>${sorted.map(p=>isPartnerLinkImplemented(p)?partnerLinkProductPanel(p):`<details class="proposal-item" ${(p.status==="awaiting_first_approval"||p.status==="development_ready"||(p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready_for_approval"))?'open':''}><summary><span class="proposal-item-title">${esc(p.title)}</span><span class="proposal-item-status">${esc(names[p.status]||p.status)}</span></summary><div class="proposal-item-body"><p class="proposal-next"><b>今の段階：</b>${esc(proposalNext(p.status))}</p><details class="proposal-meta"><summary>事業内容・差別化・IDを見る</summary><small>事業ID：${esc(p.id)}</small><p>${esc(p.brief?.problem||"")}</p><p><b>提案：</b>${esc(p.brief?.solution||"")}</p><p><b>差別化仮説：</b>${esc(p.brief?.competitive_position||"")}</p></details><button type="button" data-legal-review="${esc(p.id)}">法務審査を確認・記録</button><p class="proposal-version">デザイン第${Number(p.revision_number)||1}版 ／ 試作品第${Number(p.prototype_revision_number)||1}版</p>
  ${p.design_html?`<details class="design-preview"><summary>Geminiのデザイン案を見る（操作不可）</summary><iframe title="Geminiデザインプレビュー" sandbox="" referrerpolicy="no-referrer" loading="lazy" style="width:100%;height:480px;border:1px solid #556579;border-radius:14px;background:white" srcdoc="${esc(p.design_html)}"></iframe><details><summary>Geminiのデザインレビュー</summary><p>${esc(p.design_review||"")}</p></details></details>`:"<p>デザインはまだ生成されていません。自動処理の完了をお待ちください。</p>"}
  ${p.status==="awaiting_first_approval"&&p.design_status==="ready"?`<label for="revision-${esc(p.id)}">修正したい内容・機能・画面への指示</label><textarea id="revision-${esc(p.id)}" data-revision-input="${esc(p.id)}" maxlength="3000" rows="4" style="display:block;width:100%;margin:8px 0" placeholder="例：返品期限を最上部に表示。材料名は選択式にして、入力を簡単にしてください。">${esc(orxeliaRevisionDrafts[p.id]||"")}</textarea><button type="button" data-proposal-action="request_revision" data-proposal-id="${esc(p.id)}">Geminiへ修正依頼・再提出</button> <button type="button" data-proposal-action="approve_development" data-proposal-id="${esc(p.id)}">第1承認：本格開発へ</button> <button type="button" data-proposal-action="hold" data-proposal-id="${esc(p.id)}">保留</button>`:""}
  ${p.prototype_html?`<details data-prototype-preview><summary>非公開の動作試作品を確認</summary><iframe title="開発試作品（隔離プレビュー）" sandbox="allow-scripts allow-modals" referrerpolicy="no-referrer" loading="lazy" class="prototype-live-frame" scrolling="auto" srcdoc="${esc(prototypeAutoHeightDocument(p.prototype_html))}"></iframe></details><p>自動テスト：${p.test_report?.passed===true?"基本スモークテスト合格":"未合格／未確認"}（実機・機能網羅は未検証）</p>`:""}
@@ -1486,15 +1495,20 @@ document.addEventListener("change", async event => {
   render();
 });
 $("cancel").addEventListener("click",() => $("editor").close());
-$("form").addEventListener("submit",event => {
+$("form").addEventListener("submit",async event => {
   event.preventDefault();
+  const saveButton = event.submitter || event.target.querySelector('button[type="submit"], button.primary');
+  if (!saveButton || saveButton.disabled) return;
+  saveButton.disabled = true;
   try {
-    submit(Object.fromEntries([...new FormData(event.target)].map(([k,v]) => [k,v.trim()])));
+    const message = await submit(Object.fromEntries([...new FormData(event.target)].map(([k,v]) => [k,v.trim()])));
     $("editor").close();
-    $("notice").textContent = "この端末に保存しました。";
+    $("notice").textContent = typeof message === "string" ? message : "この端末に保存しました。";
     render();
   } catch (error) {
     $("error").textContent = error.message;
+  } finally {
+    saveButton.disabled = false;
   }
 });
 let offlineStatus = "オフライン準備にはHTTPS（またはPCのlocalhost）が必要です。";
@@ -1639,6 +1653,54 @@ const sync = (() => {
       }
       render();
     }catch(error){alert("優先順位の保存に失敗しました。同期を再読み込みしてください。");console.error(error);render()}
+  });
+  document.addEventListener("click",async event=>{
+    const reviewButton = event.target.closest("[data-legal-review]");
+    if (!reviewButton) return;
+    const owner = session?.user?.id;
+    if (!owner) { $("notice").textContent = "ログインしてから法務審査を開いてください。"; return; }
+    const proposal = orxeliaTrialProposals.find(p => p.id === reviewButton.dataset.legalReview);
+    if (!proposal) return;
+    reviewButton.disabled = true;
+    try {
+      const [previous] = await request("/rest/v1/orxelia_legal_reviews?proposal_id=eq."+encodeURIComponent(proposal.id)+"&order=version.desc&limit=1");
+      if (session?.user?.id !== owner || $("editor").open) return;
+      const states = {unreviewed:"未審査",in_review:"確認中",expert_review:"専門家確認",blocked:"問題あり",passed:"確認済み"};
+      const fields = Object.entries(legalReviewFields).map(([id,label]) => {
+        const value = previous?.checks?.[id] || {};
+        const options = Object.entries(states).map(([key,text]) =>
+          '<option value="'+key+'"'+(value.status===key?' selected':'')+'>'+text+'</option>').join("");
+        return '<fieldset><legend>'+label+'</legend><label>状態<select name="'+id+'-status">'+options+'</select></label>'
+          +input(id+"-evidence","根拠URL・文書名","text",value.evidence,"maxlength=1000")
+          +input(id+"-reviewer","確認者","text",value.reviewer,"maxlength=100")
+          +input(id+"-reviewedAt","確認日","date",value.reviewedAt)
+          +input(id+"-assignee","担当","text",value.assignee,"maxlength=100")
+          +input(id+"-due","期限","date",value.due)
+          +input(id+"-next","次の行動","text",value.next,"maxlength=500")+'</fieldset>';
+      }).join("");
+      const risks = (previous?.risks || []).filter(r => r.status==="open").map(r => r.detail).join("\n");
+      const revision = Number(proposal.revision_number) || 1;
+      const previousStatus = !previous ? "未審査" : previous.design_revision !== revision
+        ? "デザイン変更後の再審査が必要です" : previous.eligible ? "前回の審査項目は確認済み" : "前回は保留";
+      editor("法務審査："+proposal.title, '<p>'+esc(previousStatus)+'</p>'+fields
+        +area("openRisks","重大な未解決事項（1行に1件）",risks), async values => {
+        if (session?.user?.id !== owner) throw Error("ログインが切り替わりました。");
+        const checks = Object.fromEntries(Object.keys(legalReviewFields).map(id =>
+          [id,Object.fromEntries(["status","evidence","reviewer","reviewedAt","assignee","due","next"].map(field => [field,values[id+"-"+field]]))]));
+        const openRisks = (values.openRisks || "").split("\n").map(s=>s.trim()).filter(Boolean)
+          .map(detail => ({severity:"high",status:"open",detail}));
+        const saved = await request("/rest/v1/rpc/orxelia_save_legal_review",{method:"POST",body:JSON.stringify({
+          p_proposal_id:proposal.id,p_previous_version:previous?.version ?? null,
+          p_design_revision:revision,p_checks:checks,p_risks:openRisks
+        })});
+        if (proposal.status === "approved_for_development") proposal.status = "awaiting_first_approval";
+        return saved?.eligible
+          ? "法務審査を保存しました。開発許可の判断に進めます。"
+          : "法務審査を保存しました。未確認事項があるため開発許可は保留です。";
+      });
+    } catch (error) {
+      $("notice").textContent = "法務審査を開けませんでした。"+error.message;
+    } finally { reviewButton.disabled = false; }
   });
   document.addEventListener("click",async event=>{
     const btn=event.target.closest("[data-proposal-action]");
