@@ -33,6 +33,9 @@ const activityStates = ["準備中", "調査中", "試作中", "検証中", "判
 const empty = () => ({version:1, projects:[], ledger:[], decisions:[]});
 let data = empty();
 let orxeliaTrialProposals = [];
+let orxeliaArchivedProposals = [];
+function activeProjects(){return data.projects.filter(p=>!p.deletedAt&&!orxeliaArchivedProposals.some(c=>c.brief?.legacy_id===p.id||c.title===p.name));}
+
 let orxeliaRevisionDrafts = {};
 const orxeliaDraftKey = "orxelia-revision-drafts-v1";
 try { const saved=JSON.parse(localStorage.getItem(orxeliaDraftKey)||"{}");if(saved&&typeof saved==="object"&&!Array.isArray(saved))orxeliaRevisionDrafts=saved; } catch {}
@@ -68,7 +71,7 @@ function isPartnerLinkImplemented(p){
 }
 function partnerLinkProductPanel(p){
   const release=p.brief.manual_implementation;
-  return '<article class="partner-product business-progress" aria-label="Partner Link 手配ボード"><div class="partner-product-top"><span class="partner-product-label">開発したシステム</span><span class="partner-product-status">社内運用中</span></div><h3>Partner Link <small>（手配ボード）</small></h3><p>協力職人の空き確認から、仕事の打診・承諾・成立までを管理します。</p><div class="partner-product-links"><a class="partner-open" href="https://phenomenal-basbousa-1200eb.netlify.app/experiments/tobita-partner-schedule/app.html" target="_blank" rel="noopener noreferrer">手配ボードを開く ↗</a><a href="https://phenomenal-basbousa-1200eb.netlify.app/products/partner-link/" target="_blank" rel="noopener noreferrer">商品紹介・デモを見る ↗</a></div><p class="partner-product-note">手配ボードは登録済みアカウントでログインしてください。一般販売の条件・料金は準備中です。</p><details><summary>開発状況・残っている確認事項</summary><ul><li>実装済み：ログイン、空き日程、仕事の打診・承諾・辞退、成立日の詳細表示、会社名・ロゴ設定</li><li>通知：端末の対応状況・ホーム画面追加・通知許可が必要です</li><li>修正済み：成立スタンプの位置ずれ、氏名の表示サイズ</li><li>公開済み：商品紹介ページとサンプル操作デモ</li><li>要確認：20日締めの人工集計、年間集計、請求照合の対応範囲</li></ul><p>反映日：'+esc(release.recorded_on||'2026-11-09')+'。売上・契約数はこの記録から自動計上しません。</p><p>以前のAI処理状態は履歴として保持し、現在の社内運用とは分けています。</p></details></article>';
+  return '<article class="partner-product business-progress" aria-label="Partner Link 手配ボード"><div class="partner-product-top"><span class="partner-product-label">開発したシステム</span><span class="partner-product-status">社内運用中</span></div><h3>Partner Link <small>（手配ボード）</small></h3><p>協力職人の空き確認から、仕事の打診・承諾・成立までを管理します。</p><div class="partner-product-links"><a class="partner-open" href="https://phenomenal-basbousa-1200eb.netlify.app/experiments/tobita-partner-schedule/app.html" target="_blank" rel="noopener noreferrer">手配ボードを開く ↗</a><a href="https://phenomenal-basbousa-1200eb.netlify.app/products/partner-link/" target="_blank" rel="noopener noreferrer">商品紹介・デモを見る ↗</a></div><p class="partner-product-note">手配ボードは登録済みアカウントでログインしてください。一般販売の条件・料金は準備中です。</p><details><summary>開発状況・残っている確認事項</summary><ul><li>実装済み：ログイン、空き日程、仕事の打診・承諾・辞退、成立日の詳細表示、会社名・ロゴ設定</li><li>通知：端末の対応状況・ホーム画面追加・通知許可が必要です</li><li>修正済み：成立スタンプの位置ずれ、氏名の表示サイズ</li><li>公開済み：商品紹介ページとサンプル操作デモ</li><li>要確認：20日締めの人工集計、年間集計、請求照合の対応範囲</li></ul><p>反映日：'+esc(release.recorded_on||'2026-11-09')+'。売上・契約数はこの記録から自動計上しません。</p><p>以前のAI処理状態は履歴として保持し、現在の社内運用とは分けています。</p></details>'+businessRemovalButton(null,p)+'</article>';
 }
 function implementedProductsPanel(){
   return orxeliaTrialProposals.filter(isPartnerLinkImplemented).map(partnerLinkProductPanel).join('');
@@ -258,7 +261,7 @@ function pendingDecisionSummary() {
 }
 
 function executiveOverview() {
-  const projects = data.projects;
+  const projects = activeProjects();
   const rows = data.ledger.filter(r => r.month === month);
   const sum = field => rows.reduce((total,r) => total + r[field], 0);
   const revenue = sum("revenue"), cost = sum("cost");
@@ -300,11 +303,11 @@ function portfolioProgress(project, evidence, stage) {
       businessSteps.map((step,i) => '<li' + (i === index ? ' aria-current="step"' : '') + '>' + step + '</li>').join("") + '</ol>') +
     '<p>' + (records ? (records.length ? '確認済み ' + confirmed + '件 ／ 未確認・仮説 ' + (records.length-confirmed) + '件' : '検証記録なし') : '検証記録を読み込めません') + '</p>' +
     '<p>次の行動　' + esc(project.next || "未設定") + '</p>' +
-    details("事業の詳細・編集",card(project)) + '</article>';
+    businessRemovalButton(project) + details("事業の詳細・編集",card(project)) + '</article>';
 }
 
 function portfolio(activities) {
-  const selected = data.projects.filter(p => filter === "すべて" || p.type === filter).sort((a,b) => ({"高":0,"中":1,"低":2,"未設定":3}[a.priority] - {"高":0,"中":1,"低":2,"未設定":3}[b.priority]));
+  const selected = activeProjects().filter(p => filter === "すべて" || p.type === filter).sort((a,b) => ({"高":0,"中":1,"低":2,"未設定":3}[a.priority] - {"高":0,"中":1,"低":2,"未設定":3}[b.priority]));
   const filters = ["すべて",...types].map(t => '<option' + (t === filter ? ' selected' : '') + '>' + t + '</option>').join("");
   const evidence = loadEvidence();
   const cloudByLegacy = new Map(orxeliaTrialProposals.filter(p=>p.brief?.legacy_id).map(p=>[p.brief.legacy_id,p]));
@@ -314,19 +317,19 @@ function portfolio(activities) {
     const cloud=cloudByLegacy.get(project.id)||cloudByName.get(project.name);
     if(isPartnerLinkImplemented(cloud))return partnerLinkProductPanel(cloud);
     if(!cloud)return portfolioProgress(project,evidence,displayedBusinessStage(project,activities));
-    return '<article class="business-progress portfolio-tile"><span class="portfolio-status">'+esc(statuses[cloud.status]||cloud.status)+'</span><h3>'+esc(project.name)+'</h3><p class="portfolio-next">'+esc(proposalNext(cloud.status))+'</p><button type="button" data-tab="verification">承認・詳細を見る</button>'+details("過去の記録・編集",card(project))+'</article>';
+    return '<article class="business-progress portfolio-tile"><span class="portfolio-status">'+esc(statuses[cloud.status]||cloud.status)+'</span><h3>'+esc(project.name)+'</h3><p class="portfolio-next">'+esc(proposalNext(cloud.status))+'</p><button type="button" data-tab="verification">承認・詳細を見る</button>'+businessRemovalButton(project,cloud) + details("過去の記録・編集",card(project))+'</article>';
   });
   const linked = new Set(selected.map(p=>(cloudByLegacy.get(p.id)||cloudByName.get(p.name))?.id).filter(Boolean));
-  const extra = filter==="すべて"?orxeliaTrialProposals.filter(p=>!linked.has(p.id)).map(p=>isPartnerLinkImplemented(p)?partnerLinkProductPanel(p):'<article class="business-progress portfolio-tile"><span class="portfolio-status">'+esc(statuses[p.status]||p.status)+'</span><h3>'+esc(p.title)+'</h3><p class="portfolio-next">'+esc(proposalNext(p.status))+'</p><button type="button" data-tab="verification">承認・詳細を見る</button></article>'):[];
+  const extra = filter==="すべて"?orxeliaTrialProposals.filter(p=>!linked.has(p.id)).map(p=>isPartnerLinkImplemented(p)?partnerLinkProductPanel(p):'<article class="business-progress portfolio-tile"><span class="portfolio-status">'+esc(statuses[p.status]||p.status)+'</span><h3>'+esc(p.title)+'</h3><p class="portfolio-next">'+esc(proposalNext(p.status))+'</p><button type="button" data-tab="verification">承認・詳細を見る</button>'+businessRemovalButton(null,p)+'</article>'):[];
   return heading("事業一覧",action("＋ 事業を登録","project","",true))+
     '<p class="portfolio-guide">事業ごとの現在地と、次に必要な行動をまとめました。承認・修正は「承認・販売」で操作できます。</p>'+
     '<label>表示する事業<select id="filter">'+filters+'</select></label>'+
-    (rows.length||extra.length?grid([...rows,...extra]):panel('<p>この区分の登録は0件です。</p>'));
+    (rows.length||extra.length?grid([...rows,...extra]):panel('<p>この区分の登録は0件です。</p>')) + removedBusinessesPanel();
 }
 
 function activeQueue() {
   const priority = ["高", "中", "低", "未設定"];
-  return data.projects.filter(p => ["検証中", "開発中"].includes(p.stage))
+  return activeProjects().filter(p => ["検証中", "開発中"].includes(p.stage))
     .sort((a,b) => (a.reviewBy || "9999").localeCompare(b.reviewBy || "9999") ||
       priority.indexOf(a.priority) - priority.indexOf(b.priority));
 }
@@ -352,7 +355,7 @@ function exportBrief() {
 }
 
 function daily() {
-  const ideas = data.projects.filter(p => p.type === types[0] && p.date === date);
+  const ideas = activeProjects().filter(p => p.type === types[0] && p.date === date);
   const top = ideas.filter(p => p.rank).sort((a,b) => a.rank - b.rank);
   const days = [...new Set(data.projects.map(p => p.date).filter(Boolean))].sort().reverse();
   const queue = activeQueue();
@@ -1083,7 +1086,7 @@ function executiveQuickMatrix() {
   }
   const cloudNames=new Set(orxeliaTrialProposals.map(p=>p.title));
   const projects=[...orxeliaTrialProposals.map(p=>({name:p.title,status:p.status,cloud:true})),
-    ...data.projects.filter(p=>!cloudNames.has(p.name)).map(p=>({name:p.name,status:p.stage,cloud:false}))];
+    ...activeProjects().filter(p=>!cloudNames.has(p.name)).map(p=>({name:p.name,status:p.stage,cloud:false}))];
   const awaiting=new Set(['awaiting_first_approval','development_ready','awaiting_final_approval']);
   const statusLabel={awaiting_first_approval:'デザイン承認待ち',development_ready:'試作品確認待ち',awaiting_final_approval:'販売判断待ち',awaiting_selection:'生成待ち',designing:'デザイン生成中',revision_requested:'修正待ち',revising:'修正中',approved_for_development:'開発待ち',developing:'開発中',prototype_revision_requested:'試作品修正待ち',prototype_revising:'試作品修正中',sales_review_requested:'販売審査中',final_approved:'販売方針承認済み',on_hold:'保留'};
   const rows=projects.map(p=>{
@@ -1194,7 +1197,7 @@ function render() {
     saveOrxeliaDraft(activeRevision.dataset.revisionInput,activeRevision.value);
     return;
   }
-  const projects = data.projects;
+  const projects = activeProjects();
   const activities = latestProjectActivities();
   const active = projects.filter(project => !["保留","終了"].includes(project.stage));
   const latest = active.map(project => ({project,activity:activities.get(normalizedName(project.name))}))
@@ -1244,27 +1247,35 @@ function editor(title,fields,onSubmit) {
   submit = onSubmit;
   $("editor").showModal();
 }
-function deleteSingleProject(id){
- const target=data.projects.find(p=>p.id===id);
- if(!target)throw Error("削除対象の事業が見つかりません。");
- const ledger=data.ledger.filter(r=>r.project===id);
- const decisions=data.decisions.filter(r=>r.project===id || r.projectId===id);
- const tasks=loadTasks();
- const evidence=loadEvidence();
- if(tasks===null || evidence===null)throw Error("関連データを確認できないため削除を中止しました。");
- const relatedTasks=tasks.filter(t=>t.project===id || t.projectId===id);
- const relatedEvidence=evidence.filter(e=>e.project===id || e.projectId===id);
- if(ledger.length||decisions.length||relatedTasks.length||relatedEvidence.length){
-  alert("この事業には収支・判断・タスク・検証記録が関連しています。安全のため個別削除を中止しました。");return;
- }
- if(!confirm("次の事業1件だけを削除します。\\n\\n"+target.name+"\\n\\nほかの事業は削除しません。続けますか？"))return;
- if(prompt("誤削除防止のため、削除する事業名を正確に入力してください。", "")!==target.name){alert("事業名が一致しないため削除しませんでした。");return;}
- exportBundle();
- if(!confirm("バックアップのダウンロードを確認しましたか？\\n確認できた場合のみOKを押してください。"))return;
- save({...data,projects:data.projects.filter(p=>p.id!==id)});
- render();
- $("notice").textContent="「"+target.name+"」を削除しました。設定から「今すぐ同期」を押してください。";
+function businessRemovalButton(project,cloud){
+ return '<button type="button" class="business-remove" data-business-remove="'+esc(project?.id||'')+'" data-business-cloud="'+esc(cloud?.id||'')+'">この事業を削除</button>';
 }
+function removedBusinessesPanel(){
+ const locals=data.projects.filter(p=>p.deletedAt||orxeliaArchivedProposals.some(c=>c.brief?.legacy_id===p.id||c.title===p.name));
+ const rows=locals.map(p=>({local:p,cloud:orxeliaArchivedProposals.find(c=>c.brief?.legacy_id===p.id||c.title===p.name)}));
+ rows.push(...orxeliaArchivedProposals.filter(c=>!locals.some(p=>c.brief?.legacy_id===p.id||c.title===p.name)).map(c=>({cloud:c})));
+ if(!rows.length)return '';
+ return '<details class="removed-businesses"><summary>削除した事業（'+rows.length+'件）</summary><p>一覧から削除した事業です。収支・判断・検証履歴は残っています。復元後のAI処理は保留のままです。</p>'+rows.map(({local,cloud})=>'<article><h3>'+esc(local?.name||cloud.title)+'</h3><button type="button" data-business-restore="'+esc(local?.id||'')+'" data-business-cloud="'+esc(cloud?.id||'')+'">事業一覧に戻す</button></article>').join('')+'</details>';
+}
+async function changeBusinessRemoval(localId,cloudId,removed){
+ const local=data.projects.find(p=>p.id===localId);
+ const cloud=[...orxeliaTrialProposals,...orxeliaArchivedProposals].find(p=>p.id===cloudId||local&&(p.brief?.legacy_id===local.id||p.title===local.name));
+ if(!local&&!cloud)throw Error('対象の事業が見つかりません。');
+ const name=local?.name||cloud.title;
+ const message=removed?'「'+name+'」を事業一覧から削除しますか？\n\n収支・判断・タスク・検証履歴は残します。削除した事業から元に戻せます。AI処理は保留にします。公開中のアプリは停止・削除しません。':'「'+name+'」を事業一覧に戻しますか？ AI処理は自動再開しません。';
+ if(!confirm(message))return;
+ keepSafetyCopy('事業の削除・復元前');
+ if(cloud)await sync.archiveProposal(cloud.id,removed);
+ if(local){const now=new Date().toISOString();save({...data,projects:data.projects.map(p=>p.id===local.id?(removed?{...p,deletedAt:now,stageBeforeRemoval:p.stage,stage:'終了',rank:0}:{...p,deletedAt:undefined,stageBeforeRemoval:undefined,stage:'保留',rank:0}):p)});}
+ render();$('notice').textContent='「'+name+'」を'+(removed?'一覧から削除しました。収支・履歴は保持しています。':'事業一覧に戻しました。AI処理は保留中です。');
+}
+function deleteSingleProject(id){changeBusinessRemoval(id,'',true).catch(e=>{$('notice').textContent='削除できませんでした：'+e.message;});}
+document.addEventListener('click',async event=>{
+ const button=event.target.closest('[data-business-remove],[data-business-restore]');if(!button)return;
+ const removed=button.hasAttribute('data-business-remove');button.disabled=true;
+ try{await changeBusinessRemoval(removed?button.dataset.businessRemove:button.dataset.businessRestore,button.dataset.businessCloud,removed)}catch(e){$('notice').textContent='変更できませんでした：'+e.message}finally{button.disabled=false}
+});
+
 function editProject(id, isDaily) {
   const old = data.projects.find(p => p.id === id);
   const p = old || {name:"",type:isDaily ? types[0] : types[2],stage:isDaily ? "未検証" : "未確認",priority:"未設定",date:"",rank:0,price:null,history:[]};
@@ -1752,7 +1763,10 @@ const sync = (() => {
       }
       if (session?.user.id !== owner || $("editor").open) return;
       try{
-        orxeliaTrialProposals=await request("/rest/v1/orxelia_proposals?select=id,title,status,brief,created_at,design_status,design_html,design_review,prototype_html,test_report,sales_review,error_message,revision_number,revision_summary,revision_history,prototype_revision_number,prototype_revision_request,prototype_revision_history&order=created_at.desc&limit=10");
+        const [active,archived]=await Promise.all([
+          request("/rest/v1/orxelia_proposals?select=id,title,status,brief,created_at,design_status,design_html,design_review,prototype_html,test_report,sales_review,error_message,revision_number,revision_summary,revision_history,prototype_revision_number,prototype_revision_request,prototype_revision_history&brief->>dashboard_deleted_at=is.null&order=created_at.desc&limit=1000"),
+          request('/rest/v1/orxelia_proposals?select=id,title,status,brief&brief->>dashboard_deleted_at=not.is.null&order=updated_at.desc&limit=1000')
+        ]);orxeliaTrialProposals=active;orxeliaArchivedProposals=archived;
       }catch(e){console.warn("Additional proposal sync failed:",e.message);orxeliaTrialProposals=[]}
       syncStep = "開発レポートの取得";
       const pipelineRows = await request('/rest/v1/orxelia_pipeline?select=report_date,project,phase,deliverables&order=report_date.desc&limit=30');
@@ -2004,7 +2018,21 @@ const sync = (() => {
   window.addEventListener("online",() => run());
   setInterval(() => { if (!document.hidden) run(); },15000);
   setInterval(() => { if (!document.hidden && tab === "home" && !$("editor").open && !$("view").contains(document.activeElement)) render(); },60000);
-  return {run,view,dailyReportView};
+  async function archiveProposal(id,removed){
+    if(!session?.user?.id)throw Error('設定からログインして同期してください。');
+    if(busy)throw Error('同期中です。数秒待ってからもう一度お試しください。');
+    busy=true;
+    try{
+      const result=await request('/rest/v1/rpc/orxelia_archive_proposal',{method:'POST',body:JSON.stringify({p_id:id,p_archived:removed})});
+      const existing=[...orxeliaTrialProposals,...orxeliaArchivedProposals].find(p=>p.id===id);
+      const updated={...existing,...result};
+      orxeliaTrialProposals=orxeliaTrialProposals.filter(p=>p.id!==id);
+      orxeliaArchivedProposals=orxeliaArchivedProposals.filter(p=>p.id!==id);
+      (removed?orxeliaArchivedProposals:orxeliaTrialProposals).push(updated);
+      return result;
+    }finally{busy=false;}
+  }
+  return {run,view,dailyReportView,archiveProposal};
 })();
 window.orxeliaSync = sync;
 render();
