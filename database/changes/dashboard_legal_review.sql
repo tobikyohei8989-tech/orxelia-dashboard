@@ -22,6 +22,18 @@ create policy legal_reviews_owner_select on public.orxelia_legal_reviews
     where p.id = proposal_id and p.owner_id = (select auth.uid())
   ));
 
+create function public.orxelia_list_legal_review_status()
+returns table (proposal_id uuid, version bigint, design_revision integer, eligible boolean)
+language sql stable security invoker set search_path = '' as $$
+  select distinct on (r.proposal_id) r.proposal_id, r.version, r.design_revision, r.eligible
+  from public.orxelia_legal_reviews r
+  join public.orxelia_proposals p on p.id = r.proposal_id
+  where p.owner_id = (select auth.uid()) and p.brief->>'dashboard_deleted_at' is null
+  order by r.proposal_id, r.version desc
+$$;
+revoke all on function public.orxelia_list_legal_review_status() from public, anon;
+grant execute on function public.orxelia_list_legal_review_status() to authenticated;
+
 create function public.orxelia_save_legal_review(
   p_proposal_id uuid, p_previous_version bigint, p_design_revision integer,
   p_checks jsonb, p_risks jsonb
