@@ -31,7 +31,7 @@ assert.ok(sync.includes('if(!confirm(messages[action]))return'),'missing explici
 assert.ok(sync.includes('btn.disabled=true'),'missing duplicate submission protection');
 assert.ok(sync.includes('catch(e){alert("処理できませんでした:'),'missing failure feedback');
 assert.ok(sync.includes('公開・決済開始は自動実行しません'),'missing sales safety boundary');
-assert.ok(js.includes('data-prototype-preview') && /sandbox="allow-scripts(?: allow-modals)?"/.test(js),'missing isolated prototype');
+assert.ok(js.includes('data-prototype-preview') && /sandbox="allow-scripts allow-modals allow-forms allow-downloads"/.test(js),'missing isolated prototype');
 assert.ok(js.includes('saveOrxeliaDraft') && js.includes('orxelia-revision-drafts-v1'),'missing draft persistence');
 assert.ok(js.includes('function home()') && js.includes('executiveQuickMatrix()'),'missing home overview');
 assert.ok(js.includes('taskSection.scrollIntoView'),'missing task navigation');
