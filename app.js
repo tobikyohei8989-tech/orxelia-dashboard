@@ -37,6 +37,7 @@ const empty = () => ({version:1, projects:[], ledger:[], decisions:[]});
 let data = empty();
 let orxeliaTrialProposals = [];
 let legalReviewStatuses = null;
+let billingOverview = null;
 let orxeliaArchivedProposals = [];
 let proposalSync = { state: "pending", lastSuccess: null };
 const legalReviewFields = {
@@ -51,6 +52,7 @@ const legalReviewFields = {
 function clearProposalSync() {
   orxeliaTrialProposals = [];
   legalReviewStatuses = null;
+  billingOverview = null;
   orxeliaArchivedProposals = [];
   proposalSync = { state: "pending", lastSuccess: null };
 }
@@ -519,6 +521,28 @@ function executiveInsights() {
     panel('<h3>収支がプラスの事業（参考順位）</h3><p>直近の入力済み月 '+esc(latest||'なし')+'。収支未登録の事業は順位に含みません。</p>'+
       (near.length ? '<div class="model-list">'+near.map(x=>'<p><strong>'+esc(x.p.name)+'</strong>：参考税引後 '+yen(Math.floor(estimate(x.r)))+' ／ 月額目標との差 '+yen(Math.max(0,targetPerBusiness-Math.floor(estimate(x.r))))+'</p>').join('')+'</div>':'<p>入力済みで収支がプラスの事業はありません。</p>'))+
     strategyAnalysis() + financeModel();
+}
+
+function customerManagement() {
+  const title = heading("顧客管理",'<button type="button" data-load-billing>顧客データを取得</button>');
+  if (!billingOverview?.data) return title + panel('<p role="status">'+esc(billingOverview?.message || "契約・決済データは未取得です。")+'</p>');
+  const {customers,contracts,payments} = billingOverview.data;
+  const names = new Map(customers.map(customer=>[customer.id,customer.name]));
+  const active = contracts.filter(contract=>contract.status==="active" && contract.access_state==="active");
+  const review = contracts.filter(contract=>contract.review_required || ["past_due","unpaid"].includes(contract.status));
+  const appName = appId => appId==="partner-link" ? "Partner Link" : appId;
+  const label = {trial:"試用中",active:"有効",grace:"猶予中",stopped:"停止",pending:"開通待ち"};
+  const contractStatus = {trialing:"試用中",active:"契約中",past_due:"支払遅延",unpaid:"未払い",incomplete:"初回支払待ち",incomplete_expired:"初回契約期限切れ",canceled:"解約済み",paused:"一時停止"};
+  return title+'<p role="status">'+esc(billingOverview.message)+'</p><div class="metrics">'+
+    metric("有効契約の顧客",new Set(active.map(contract=>contract.customer_id)).size+"社","支払済みの有効契約")+
+    metric("契約月額合計",yen(active.reduce((sum,contract)=>sum+contract.monthly_amount_jpy,0)),"支払済みの有効契約")+
+    metric("支払要確認",review.length+"件","遅延・未払い・要確認の契約")+'</div>'+
+    details("顧客一覧",customers.map(customer=>'<p><b>'+esc(customer.name)+'</b> '+esc(customer.contact_name||"")+' '+esc(customer.contact_email||"")+'</p>').join("")||'<p>登録済みの顧客は0社です。</p>')+
+    details("契約・売上",'<p>当月決済 '+yen(payments.paid_jpy)+' ／ 当月返金 '+yen(payments.refunded_jpy)+' ／ 差引 '+yen(payments.paid_jpy-payments.refunded_jpy)+'</p>'+
+      contracts.map(contract=>'<p>'+esc(names.get(contract.customer_id))+' ／ '+esc(appName(contract.app_id))+' ／ '+esc(contractStatus[contract.status])+' ／ '+yen(contract.monthly_amount_jpy)+'</p>').join(""))+
+    details("利用制御",'<p>契約ごとの利用判定と、会社・アプリ単位の例外を表示します。</p>'+contracts.map(contract=>'<p>'+esc(names.get(contract.customer_id))+' ／ '+esc(appName(contract.app_id))+' ／ '+esc(label[contract.access_state])+
+      (contract.access_override ? ' ／ 例外 '+(contract.access_override.action==="stop"?"停止":"許可")+'（'+esc(contract.access_override.reason)+'）' : '')+
+      (contract.cancel_at ? ' ／ 解約予定 '+esc(contract.cancel_at.slice(0,10)) : '')+'</p>').join(""));
 }
 
 function finance() {
@@ -1274,6 +1298,7 @@ function render() {
     home, portfolio:() => portfolio(activities) + details("日次候補",daily()),
     verification:() => heading("事業案・販売判断") + orxeliaTrialProposalPanel() + launchDecisions() + details("過去の経営判断",decisions()) + ideaReviewPanel() + existingResearchPanel() + details("検証記録・取り込み",verification()) + details("作業記録・タスク", (window.orxeliaSync?.dailyReportView()||"")+pendingDecisionSummary()+details("実行タスク",tasks())+details("作業進捗",progress())),
     finance:() => finance() + details("営業・販売の記録",sales()) + details("当月の事業別収支",businessRevenueOverview()),
+    customers:customerManagement,
     settings
   }[tab]();
   restoreDetailPaths($("view"),expandedPaths);
@@ -1705,6 +1730,29 @@ const sync = (() => {
     if (!response.ok) throw Error("HTTP " + response.status);
     return response.status === 204 ? null : response.json();
   }
+  document.addEventListener("click",async event=>{
+    const button=event.target.closest("[data-load-billing]");
+    if (!button) return;
+    const owner=session?.user?.id;
+    if (!owner) {
+      billingOverview={message:"設定からログインしてください。"};
+      render();
+      return;
+    }
+    button.disabled=true;
+    try {
+      const result=await request("/rest/v1/rpc/orxelia_billing_overview");
+      if (session?.user?.id !== owner) return;
+      billingOverview={data:result,message:"顧客管理データを取得しました。"};
+    } catch (error) {
+      if (session?.user?.id !== owner) return;
+      billingOverview=error.message==="HTTP 403" ? {message:"顧客管理のアクセス権がありません。"} :
+        {data:billingOverview?.data,message:"最新の顧客管理データを取得できませんでした。"};
+    } finally {
+      button.disabled=false;
+      render();
+    }
+  });
   document.addEventListener("change",async event=>{
     if(event.target.id!=="orxelia-priority-select")return;
     const selectedId=event.target.value;
