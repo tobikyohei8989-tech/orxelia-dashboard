@@ -44,7 +44,7 @@ export function makeSessionHandler({authenticate,loadCustomer,saveCheckout,strip
         locale:"ja",
         custom_text:{submit:{message:(subscription_data.trial_period_days
           ? "無料期間の終了時刻より前に、Partner Linkの「契約・支払情報を管理」から解約を完了すると、初回の月額料金は請求されません。"
-          : "")+"有料期間中に解約した場合、支払い済みの期間の終了まで利用できます。"}},
+          : "")+"有料期間中に解約した場合、支払い済みの期間の終了まで利用できます。お客様都合の途中解約による日割り返金は原則ありません。法令に基づく返金や、重複請求など当社の誤りによる返金はこの限りではありません。"}},
         success_url:accountPage+"?checkout=complete",
         cancel_url:accountPage+"?checkout=cancelled"
       },{idempotencyKey:"checkout:"+customer.id+":"+customer.checkout_attempt_id});
