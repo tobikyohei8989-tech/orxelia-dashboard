@@ -41,6 +41,10 @@ export function makeSessionHandler({authenticate,loadCustomer,saveCheckout,strip
         mode:"subscription",customer:customer.stripe_customer_id,
         line_items:[{price:priceId,quantity:1}],payment_method_collection:"always",
         automatic_tax:{enabled:false},metadata,subscription_data,
+        locale:"ja",
+        custom_text:{submit:{message:(subscription_data.trial_period_days
+          ? "無料期間の終了時刻より前に、Partner Linkの「契約・支払情報を管理」から解約を完了すると、初回の月額料金は請求されません。"
+          : "")+"有料期間中に解約した場合、支払い済みの期間の終了まで利用できます。"}},
         success_url:accountPage+"?checkout=complete",
         cancel_url:accountPage+"?checkout=cancelled"
       },{idempotencyKey:"checkout:"+customer.id+":"+customer.checkout_attempt_id});
