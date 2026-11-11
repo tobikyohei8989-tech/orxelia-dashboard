@@ -751,11 +751,12 @@ function importLogPanel() {
 }
 function settings() {
   return heading("設定・データ管理") + (window.orxeliaSync?.view() || "") +
+    panel('<h3>営業・タスク・検証記録の端末間同期</h3><p>この端末で編集した記録を、ログイン中のアカウントへまとめて保存します。別の端末ではクラウドから取得してください。取得は端末の記録を置き換えるため、先にバックアップを保存してください。</p><button type="button" data-aux-sync="upload">この端末の記録をクラウドへ保存</button> <button type="button" data-aux-sync="download">クラウドの記録をこの端末へ取得</button>')+
     panel('<h3>引き継ぎ事業台帳（19件）</h3><p>既存の事業を保持し、未登録の候補だけ追加します。類似名称は別名として残る場合があります。実績・開発状況は自動確定しません。</p>' + action("追加候補を確認して取り込む","mergeCatalog")) +
     importLogPanel() +
     panel('<h3>初期データ・バックアップ</h3><p>初回は同梱の「初期データ.json」を読み込んでください。読み込みは現在の内容を全件置き換えます。</p>' +
       '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + action("端末内の復旧用データを書き出す","recoveryExport") + action("直近3世代の安全コピーを書き出す","safetyExport") + action("全データをまとめてJSON出力","bundleExport") + action("iPhone用：復旧データを画面に表示","recoveryView") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
-    '<div class="head"><h3>運用条件</h3></div>' + panel('<p>初期予算上限 ¥3,000 ／ 新規固定費 ¥0。配布構成でのアプリ費用は初期・月額ともに ¥0。</p><p>ログインすると同じアカウントの端末間で同期します。毎朝7:30の定期作業は、このPCとCodexアプリの起動、ログイン済みブラウザーが必要です。工程ごとの報告はホームの「作業進捗」で確認できます。会計サービスは未連携です。</p><p id="offline">オフラインの状態を確認中…</p>');
+    '<div class="head"><h3>運用条件</h3></div>' + panel('<p>新規固定費の追加なしで開発・手元の検証を進めています。公開・外部サービスの利用費用は、実行前に確認します。</p><p>事業台帳・収支・判断はログイン後に同期します。営業・タスク・検証記録は上のボタンで手動同期します。GitHubの定期処理はPCの起動に依存しません。PC上で設定した定期作業にはPCとCodexアプリの起動が必要です。工程ごとの報告はホームの「作業進捗」で確認できます。会計サービスは未連携です。</p><p id="offline">オフラインの状態を確認中…</p>');
 }
 
 
@@ -780,7 +781,7 @@ function sales() {
   return heading("営業・収益化",action("営業CSVを書き出す","salesExport")) +
     panel('<h3>見積もり追客管理（事業仮説）</h3><p>月額1,480円は仮価格。決済手数料3.6%、税負担30%、固定費0円の単純試算で、その他の費用・税制・解約率は未反映です。</p>' +
     grid([metric("月額想定単価",yen(price),"仮説"),metric("目標契約数",needed+"社","税引後月10万円の概算"),metric("登録契約数",counts["契約"]+"社","手動登録のみ"),metric("想定月額売上",yen(counts["契約"]*price),"入金実績ではありません")])) +
-    panel('<h3>見込み客を登録</h3><p>この画面の情報は現在の端末内にのみ保存されます。端末間同期・通常のJSONバックアップには含まれません。個人情報や機密情報は入力しないでください。</p>' +
+    panel('<h3>見込み客を登録</h3><p>この画面の編集は端末内へ保存されます。設定の「営業・タスク・検証記録の端末間同期」で手動同期できます。通常のJSONバックアップの対象外です。個人情報や機密情報は入力しないでください。</p>' +
     '<form id="sales-form"><label>企業・案件名（識別用の略称）<input name="name" maxlength="100" required></label><label>段階<select name="stage">'+salesStages.map(x=>'<option>'+x+'</option>').join('')+'</select></label><label>次の行動・メモ<textarea name="note" maxlength="500"></textarea></label><button class="primary">登録する</button></form>') +
     panel('<h3>営業パイプライン</h3>'+grid(salesStages.map(x=>metric(x,counts[x]+"件","手動記録")))+
     (rows.length ? rows.map(r=>'<article><h3>'+esc(r.name)+'</h3><p>'+esc(r.note)+'</p><label>段階<select data-sales-id="'+esc(r.id)+'">'+salesStages.map(x=>'<option'+(x===r.stage?' selected':'')+'>'+x+'</option>').join('')+'</select></label>'+action('削除','salesDelete',r.id)+'</article>').join('') : '<p>登録はありません。</p>'));
@@ -827,7 +828,7 @@ function tasks() {
   return heading("実行タスク",action("タスクJSON出力","tasksExport"))+
     panel('<h3>行動の見える化</h3><p>経営判断から実行へ。タスクは手動で登録・更新します。AIによる自動実行や外部への連絡はありません。</p>'+grid([metric("登録タスク",rows.length+"件","端末内の記録"),metric("進行中",rows.filter(t=>t.state==="進行中").length+"件","手動更新"),metric("期限超過",overdue.length+"件","未完了のみ"),metric("完了",rows.filter(t=>t.state==="完了").length+"件","手動更新")]))+
     panel('<h3>タスクを追加</h3><form id="task-form"><label>やること<input name="title" maxlength="160" required></label><label>対象事業<select name="project"><option value="">共通・未指定</option>'+choices+'</select></label><label>期限<input name="due" type="date"></label><button class="primary">タスク登録</button></form>')+
-    panel('<h3>タスク一覧</h3><p>保存先はこの端末のみです。機密情報は登録しないでください。</p>'+(sorted.length?sorted.map(t=>'<article><h3>'+esc(t.title)+'</h3><p>'+esc(data.projects.find(p=>p.id===t.project)?.name||"共通")+' ／ 期限 '+esc(t.due||"未設定")+'</p><label>進捗<select data-task-id="'+esc(t.id)+'">'+taskStates.map(state=>'<option'+(state===t.state?' selected':'')+'>'+state+'</option>').join('')+'</select></label>'+action("削除","taskDelete",t.id)+'</article>').join(''):'<p>まだタスクがありません。</p>'));
+    panel('<h3>タスク一覧</h3><p>編集はこの端末へ保存されます。端末間で共有する場合は設定の手動同期を使ってください。機密情報は登録しないでください。</p>'+(sorted.length?sorted.map(t=>'<article><h3>'+esc(t.title)+'</h3><p>'+esc(data.projects.find(p=>p.id===t.project)?.name||"共通")+' ／ 期限 '+esc(t.due||"未設定")+'</p><label>進捗<select data-task-id="'+esc(t.id)+'">'+taskStates.map(state=>'<option'+(state===t.state?' selected':'')+'>'+state+'</option>').join('')+'</select></label>'+action("削除","taskDelete",t.id)+'</article>').join(''):'<p>まだタスクがありません。</p>'));
 }
 
 
@@ -1730,6 +1731,47 @@ const sync = (() => {
     if (!response.ok) throw Error("HTTP " + response.status);
     return response.status === 204 ? null : response.json();
   }
+  document.addEventListener("click",async event=>{
+    const button=event.target.closest("[data-aux-sync]");
+    if (!button) return;
+    const owner=session?.user?.id;
+    if (!owner) { alert("ログインしてから同期してください。"); return; }
+    const download=button.dataset.auxSync==="download";
+    if (!confirm(download ? "営業・タスク・検証記録をクラウドの内容へ置き換えますか？" : "この端末の営業・タスク・検証記録を、ログイン中のアカウントへ保存しますか？")) return;
+    button.disabled=true;
+    const baselineKey="orxelia-auxiliary-baseline-"+owner;
+    try {
+      const [remote]=await request("/rest/v1/orxelia_auxiliary_workspace?select=revision,snapshot&limit=1");
+      if (session?.user?.id !== owner) throw Error("ログインが切り替わりました。");
+      if (download) {
+        if (!remote) throw Error("クラウドの記録はまだありません。");
+        const value=remote.snapshot;
+        if (!value || !Array.isArray(value.sales) || !Array.isArray(value.tasks) || !Array.isArray(value.evidence)) throw Error("同期データの形式が不正です。");
+        const keys=[salesKey,tasksKey,evidenceKey];
+        const previous=keys.map(key=>localStorage.getItem(key));
+        keepSafetyCopy("端末間同期で取得する前");
+        try {
+          [value.sales,value.tasks,value.evidence].forEach((rows,index)=>localStorage.setItem(keys[index],JSON.stringify(rows)));
+          if (!loadSales() || !loadTasks() || !loadEvidence()) throw Error("同期データの内容が不正です。");
+          localStorage.setItem(baselineKey,String(remote.revision));
+        } catch (error) {
+          keys.forEach((key,index)=>previous[index]===null ? localStorage.removeItem(key) : localStorage.setItem(key,previous[index]));
+          throw error;
+        }
+      } else {
+        const previous=localStorage.getItem(baselineKey);
+        if (remote && String(remote.revision)!==previous) throw Error("他端末の記録があります。バックアップ後にクラウドから取得してください。");
+        const snapshot={sales:loadSales(),tasks:loadTasks(),evidence:loadEvidence()};
+        if (Object.values(snapshot).some(rows=>rows===null)) throw Error("この端末の記録を読み込めません。");
+        const revision=await request("/rest/v1/rpc/orxelia_save_auxiliary_workspace",{method:"POST",body:JSON.stringify({p_previous:remote?.revision??null,p_snapshot:snapshot})});
+        if (session?.user?.id !== owner) throw Error("ログインが切り替わりました。");
+        localStorage.setItem(baselineKey,String(revision));
+      }
+      $("notice").textContent=download ? "営業・タスク・検証記録をこの端末へ取得しました。" : "営業・タスク・検証記録をクラウドへ保存しました。";
+      render();
+    } catch(error) { alert("同期できませんでした。"+error.message); }
+    finally { button.disabled=false; }
+  });
   document.addEventListener("click",async event=>{
     const button=event.target.closest("[data-load-billing]");
     if (!button) return;
