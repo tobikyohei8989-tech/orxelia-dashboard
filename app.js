@@ -121,8 +121,39 @@ function isPartnerLinkImplemented(p){
   return p?.id === "9322fe5e-74a2-43dc-ae6e-b8615af4f455" && p.brief?.manual_implementation?.kind === "partner_link";
 }
 function partnerLinkProductPanel(p){
-  const release=p.brief.manual_implementation;
-  return '<article class="partner-product business-progress" aria-label="Partner Link 手配ボード"><div class="partner-product-top"><span class="partner-product-label">開発したシステム</span><span class="partner-product-status">社内運用中</span></div><h3>Partner Link <small>（手配ボード）</small></h3><p>協力職人の空き確認から、仕事の打診・承諾・成立までを管理します。</p><div class="partner-product-links"><a class="partner-open" href="https://phenomenal-basbousa-1200eb.netlify.app/experiments/tobita-partner-schedule/app.html" target="_blank" rel="noopener noreferrer">手配ボードを開く ↗</a><a href="https://phenomenal-basbousa-1200eb.netlify.app/products/partner-link/" target="_blank" rel="noopener noreferrer">商品紹介・デモを見る ↗</a></div><p class="partner-product-note">手配ボードは登録済みアカウントでログインしてください。一般販売の条件・料金は準備中です。</p><details><summary>開発状況・残っている確認事項</summary><ul><li>実装済み：ログイン、空き日程、仕事の打診・承諾・辞退、成立日の詳細表示、会社名・ロゴ設定</li><li>通知：端末の対応状況・ホーム画面追加・通知許可が必要です</li><li>修正済み：成立スタンプの位置ずれ、氏名の表示サイズ</li><li>公開済み：商品紹介ページとサンプル操作デモ</li><li>要確認：20日締めの人工集計、年間集計、請求照合の対応範囲</li></ul><p>反映日：'+esc(release.recorded_on||'2026-11-09')+'。売上・契約数はこの記録から自動計上しません。</p><p>以前のAI処理状態は履歴として保持し、現在の社内運用とは分けています。</p></details>'+businessRemovalButton(null,p)+'</article>';
+  const release = p.brief.manual_implementation;
+  const launch = salesLaunchStatus(p);
+  return `<article class="partner-product business-progress" aria-label="Partner Link 手配ボード">
+    <div class="partner-product-top"><span class="partner-product-label">開発したシステム</span><span class="partner-product-status">社内運用中</span></div>
+    <h3>Partner Link <small>（手配ボード）</small></h3>
+    <p>協力職人の空き確認から、仕事の打診・承諾・成立までを管理します。</p>
+    <div class="partner-product-links">
+      <a class="partner-open" href="https://phenomenal-basbousa-1200eb.netlify.app/experiments/tobita-partner-schedule/app.html" target="_blank" rel="noopener noreferrer">手配ボードを開く ↗</a>
+      <a href="https://phenomenal-basbousa-1200eb.netlify.app/products/partner-link/" target="_blank" rel="noopener noreferrer">商品紹介・デモを見る ↗</a>
+    </div>
+    <p class="partner-product-note">手配ボードは登録済みアカウントでログインしてください。</p>
+    <details>
+      <summary>実装・検証の状況を見る</summary>
+      <h4>実装済み</h4>
+      <p>ログイン、空き日程、仕事の打診・承諾・辞退、成立日の詳細、会社名・ロゴ設定、予定人工・実働人工の集計とCSV出力。</p>
+      <h4>架空データで検証済み</h4>
+      <p>20日締め、年をまたぐ年間集計、予定と実績の区別、CSV出力、当日と選択日の表示、仕事の進捗の時系列表示。</p>
+      <h4>実運用で要確認</h4>
+      <p>実際の招待・登録・打診から人工登録までの一連の操作、iPhone実機の通知、請求金額との照合。</p>
+      <small>社内運用の記録日 ${esc(release.recorded_on || "2026-11-09")}</small>
+    </details>
+    <details>
+      <summary>販売準備の状況を見る</summary>
+      <p>一般販売 ${esc(launch || "準備中")}</p>
+      <ul>
+        <li>会社ごとのデータと権限の分離を確認する。</li>
+        <li>申込・解約、支払い結果に応じた利用制御と復旧を検証する。</li>
+        <li>利用条件・個人情報の取扱い・問い合わせ対応を整える。</li>
+      </ul>
+      ${launch ? salesLaunchPanel(p) : '<p>次の作業は、テスト用の会社で登録・申込・解約を通して確認することです。</p>'}
+    </details>
+    ${businessRemovalButton(null,p)}
+  </article>`;
 }
 function implementedProductsPanel(){
   return orxeliaTrialProposals.filter(isPartnerLinkImplemented).map(partnerLinkProductPanel).join('');
