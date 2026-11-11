@@ -115,7 +115,7 @@ begin
       from public.orxelia_billing_customers c), '[]'::jsonb),
     'contracts', coalesce((select jsonb_agg((to_jsonb(c) - 'stripe_subscription_id') ||
       jsonb_build_object('access_state',public.orxelia_billing_access(c,now()),
-        'access_override', (select jsonb_build_object('action',o.action,'ends_at',o.ends_at,'reason',o.reason)
+        'access_override', (select jsonb_build_object('id',o.id,'action',o.action,'ends_at',o.ends_at,'reason',o.reason)
           from public.orxelia_billing_access_overrides o
           where o.customer_id=c.customer_id and o.app_id=c.app_id and o.starts_at<=now() and o.ends_at>now()
           order by o.id desc limit 1)) order by c.id)
@@ -129,5 +129,31 @@ begin
 end $$;
 revoke all on function public.orxelia_billing_overview() from public, anon;
 grant execute on function public.orxelia_billing_overview() to authenticated;
+
+create function public.orxelia_admin_set_access_override(
+  p_customer uuid,p_app text,p_previous bigint,p_action text,p_reason text,p_ends_at timestamptz
+) returns bigint language plpgsql security definer set search_path='' as $$
+declare latest bigint; saved bigint;
+begin
+  if not exists(select 1 from public.orxelia_billing_admins where user_id=auth.uid()) then
+    raise exception '顧客管理のアクセス権がありません。' using errcode='42501';
+  end if;
+  perform 1 from public.orxelia_billing_customers where id=p_customer for update;
+  if not found or not exists(select 1 from public.orxelia_billing_contracts where customer_id=p_customer and app_id=p_app) then
+    raise exception '対象の会社とアプリの契約が見つかりません。';
+  end if;
+  if p_action is null or p_action not in ('allow','stop') or
+    coalesce(length(btrim(p_reason)),0) not between 1 and 500 or p_ends_at is null or p_ends_at<=now() then
+    raise exception '操作・理由・未来の期限を入力してください。';
+  end if;
+  select max(id) into latest from public.orxelia_billing_access_overrides
+    where customer_id=p_customer and app_id=p_app and starts_at<=now() and ends_at>now();
+  if latest is distinct from p_previous then raise exception '利用状態が更新されました。顧客データを取得し直してください。'; end if;
+  insert into public.orxelia_billing_access_overrides(customer_id,app_id,action,reason,actor_id,ends_at)
+    values(p_customer,p_app,p_action,btrim(p_reason),auth.uid(),p_ends_at) returning id into saved;
+  return saved;
+end $$;
+revoke all on function public.orxelia_admin_set_access_override(uuid,text,bigint,text,text,timestamptz) from public,anon;
+grant execute on function public.orxelia_admin_set_access_override(uuid,text,bigint,text,text,timestamptz) to authenticated;
 
 commit;

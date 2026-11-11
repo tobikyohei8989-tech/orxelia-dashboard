@@ -16,7 +16,7 @@ function setup({customer={},subscriptions=[],price={},user={id:'owner'}}={}) {
   };
   return {calls,handler:makeSessionHandler({
     authenticate:async()=>user,loadCustomer:async id=>{assert.equal(id,'owner');return {id:'company',stripe_customer_id:'cus_fixture',checkout_attempt_id:'server-attempt',...customer}},
-    saveCheckout:async()=>{},stripe,priceId:'price_fixture',origin:'https://orxelia.example'
+    saveCheckout:async()=>{},stripe,priceId:'price_fixture',origin:'https://orxelia.example',checkoutEnabled:true
   })};
 }
 test('checkout uses server customer, inclusive 3980 JPY, 30-day trial and tax off',async()=>{
@@ -50,5 +50,5 @@ test('existing unpaid contract, incorrect price and anonymous requests are block
 test('portal uses authenticated company and fixed return URL',async()=>{
   const {handler,calls}=setup();
   assert.equal((await handler(request('portal',{customer:'attacker',return_url:'https://attacker.test'}))).status,200);
-  assert.deepEqual(calls[0].params,{customer:'cus_fixture',return_url:'https://orxelia.example/products/partner-link/'});
+  assert.deepEqual(calls[0].params,{customer:'cus_fixture',return_url:'https://orxelia.example/products/partner-link/account.html'});
 });

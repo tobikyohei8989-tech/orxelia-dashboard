@@ -34,7 +34,7 @@
 <header><div class="brand-header"><img id="brandLogo" class="brand-logo" alt="会社ロゴ" hidden><div id="brandFallback" class="brand-logo" style="display:grid;place-items:center;color:#152b49;font-weight:bold">社</div><div class="brand-copy"><div id="brandLine1" class="brand-line1">株式会社</div><div id="brandLine2" class="brand-line2">トビタ店舗設備</div><div id="brandRole" class="brand-role">パートナー用</div></div><div class="brand-product"><span class="brand-product-name"><svg class="partner-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><defs><linearGradient id="partnerGradient" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#38d9bf"/><stop offset="1" stop-color="#3694e9"/></linearGradient></defs><path d="M9 38V10h15c10 0 15 5 15 13S34 36 24 36h-6" fill="none" stroke="url(#partnerGradient)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M25 19v19h15" fill="none" stroke="#e6faff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg> Partner Link</span><span class="brand-powered">by <img src="../../assets/brand/orxelia-c-gold.png?v=20261109-c1" alt="ORXELIA MANAGEMENT STUDIO" width="55" height="40" style="width:55px;height:auto;vertical-align:middle"></span></div></div></header><main>
 <div id="message" role="status" aria-live="polite"></div>
 <section id="login" class="card"><h2>ログイン</h2><p class="muted">登録済みの管理者・パートナーアカウントのみ利用できます。新規登録は管理者の招待が必要です。</p><form id="loginForm"><label for="email">メールアドレス</label><input id="email" type="email" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required><label for="password">パスワード</label><input id="password" type="password" name="password" autocomplete="current-password" required><p class="muted" style="font-size:12px;margin:6px 0 12px">iPhoneではパスワードを保存すると、次回からFace IDで自動入力できます。</p><div class="login-actions"><button id="signIn" type="submit" class="primary">ログイン</button></div></form></section>
-<section id="inviteSignup" class="card" hidden><h2>パートナー登録（招待制）</h2><p class="muted">招待された方は、名前・メールアドレス・パスワードを入力してください。メール確認後に登録が完了します。</p><label>お名前</label><input id="inviteName" maxlength="60" autocomplete="name"><label>メールアドレス</label><input id="inviteEmail" type="email" autocomplete="email"><label for="invitePassword">パスワード（12文字以上）</label><input id="invitePassword" type="password" name="new-password" minlength="12" maxlength="128" autocomplete="new-password" aria-describedby="passwordHelp" required><p id="passwordHelp" class="muted" style="font-size:12px;margin:6px 0 10px">12文字以上で設定してください。英字・数字・記号を組み合わせた、他のサービスで使っていないパスワードをおすすめします。iPhoneの「強力なパスワードを使用」も利用できます。</p><div class="row"><button id="inviteSignupBtn" class="primary">アカウントを作成</button><button id="inviteClaimBtn">メール確認済み・登録を完了</button></div><p class="muted">確認メールが届いた場合はメール内のリンクを開き、このページに戻って「登録を完了」を押してください。既にアカウントがある場合は通常ログイン後に登録を完了できます。</p></section><div id="app" hidden><div class="card account-toolbar"><strong id="who"></strong><div class="account-actions"><button id="reload" class="account-btn">更新</button><button id="toggleBrandSettings" class="account-btn" type="button" aria-expanded="false" aria-controls="brandSettings" hidden>⚙ 設定</button><button id="logout" class="account-btn">ログアウト</button></div></div>
+<section id="inviteSignup" class="card" hidden><h2>パートナー登録（招待制）</h2><p class="muted">招待された方は、名前・メールアドレス・パスワードを入力してください。メール確認後に登録が完了します。</p><label>お名前</label><input id="inviteName" maxlength="60" autocomplete="name"><label>メールアドレス</label><input id="inviteEmail" type="email" autocomplete="email"><label for="invitePassword">パスワード（12文字以上）</label><input id="invitePassword" type="password" name="new-password" minlength="12" maxlength="128" autocomplete="new-password" aria-describedby="passwordHelp" required><p id="passwordHelp" class="muted" style="font-size:12px;margin:6px 0 10px">12文字以上で設定してください。英字・数字・記号を組み合わせた、他のサービスで使っていないパスワードをおすすめします。iPhoneの「強力なパスワードを使用」も利用できます。</p><div class="row"><button id="inviteSignupBtn" class="primary">アカウントを作成</button><button id="inviteClaimBtn">メール確認済み・登録を完了</button></div><p class="muted">確認メールが届いた場合はメール内のリンクを開き、このページに戻って「登録を完了」を押してください。既にアカウントがある場合は通常ログイン後に登録を完了できます。</p></section><section id="billingGate" class="card" hidden><h2>ご利用状況の確認</h2><p id="billingGateMessage" role="status"></p><p><a href="../../products/partner-link/account.html">会社登録・契約・支払情報の管理</a></p><button id="billingRetry" type="button">再確認する</button> <button id="billingLogout" type="button">ログアウト</button></section><div id="app" hidden><div class="card account-toolbar"><strong id="who"></strong><div class="account-actions"><button id="reload" class="account-btn">更新</button><button id="toggleBrandSettings" class="account-btn" type="button" aria-expanded="false" aria-controls="brandSettings" hidden>⚙ 設定</button><button id="logout" class="account-btn">ログアウト</button></div></div>
 <section class="card"><h2>お知らせ <span id="eventCount"></span></h2><div class="push-settings"><span id="notificationStatus" class="muted push-status"></span><button id="enableNotifications" class="push-button" type="button" hidden>🔔 通知を有効にする</button></div><div id="events"></div><p class="muted">画面を開いている間は定期的に同期します。iPhoneのプッシュ通知はSafariからホーム画面に追加し、アプリ内で通知を許可してください。</p></section>
 <section class="card"><div class="progress-heading"><h2>仕事の進捗</h2><button id="openWorkReport" type="button">人工集計</button></div><div class="row tabs"><button data-tab="pending" class="active">打診中 <span id="pendingCount"></span></button><button data-tab="confirmed">マッチング済み <span id="confirmedCount"></span></button><button data-tab="history">終了・取消 <span id="historyCount"></span></button></div><p id="pendingAttention" class="pending-attention" hidden></p><div id="requests"></div></section>
 <section class="card"><div class="calendar-heading"><h2 id="monthTitle"></h2></div><div class="row"><button id="prev">前月</button><button id="next">翌月</button><button id="clear">日付選択を解除</button></div><p id="copyDraftNotice" class="copy-draft" hidden></p><p id="chosen" class="muted">日付を選択してください</p><div class="calendar" id="calendar"></div><p class="muted capacity-guide">人数は残りの空きです。打診中も人数を確保し、辞退・取消で空きに戻ります。</p><div id="dayDetails" class="day-details" hidden></div><section id="adminPanel" class="card inline-job-form" hidden><h2>選択した日の仕事を打診</h2><p class="muted">複数日を選択すると、すべての日に空きがあるパートナーだけ表示されます。</p><label>パートナー</label><select id="workerChoice"></select><label for="requestHeadcount">必要人数</label><input id="requestHeadcount" type="number" inputmode="numeric" min="1" max="99" step="1" value="1" required><p class="muted" id="capacityHint"></p><label>現場名</label><input id="jobName" maxlength="80" placeholder="例：店舗エアコン工事"><label>時間帯</label><select id="slot"><option value="all">終日</option><option value="am">午前</option><option value="pm">午後</option></select><label>集合時間</label><input id="meetingTime" type="time" required value="07:30"><label>集合場所</label><input id="meetingPlace" maxlength="200" required placeholder="例：〇〇市〇〇町1-2 現場正面駐車場"><p class="muted" style="font-size:12px">住所・施設名を含めると、受け取った職人が地図で探しやすくなります。</p><div class="row"><button class="primary" id="send">選択した日をまとめて打診</button></div></section>
@@ -50,7 +50,7 @@ const supabase=createClient('https://yzlxcfncdtojajlhihap.supabase.co','sb_publi
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let brandSettingsOpen=false;let branding={company_line1:'株式会社',company_line2:'トビタ店舗設備',logo_data:null};let pendingLogo=null;
 function paintBrand(){ $('brandLine1').textContent=branding.company_line1||'';$('brandLine2').textContent=branding.company_line2||'';$('brandRole').textContent='';$('brandRole').hidden=true;const logo=branding.logo_data;$('brandLogo').hidden=!logo;$('brandFallback').hidden=!!logo;if(logo)$('brandLogo').src=logo;}
-async function loadBrand(){const {data,error}=await supabase.from('tobita_match_branding').select('company_line1,company_line2,logo_data').eq('id',1).maybeSingle();if(!error&&data){branding=data;pendingLogo=data.logo_data;}paintBrand();if(member?.role==='admin'){$('companyLine1').value=branding.company_line1||'';$('companyLine2').value=branding.company_line2||'';paintLogoPreview();}}
+async function loadBrand(){const {data,error}=await supabase.rpc('orxelia_partner_link_brand');if(!error&&data){branding=data;pendingLogo=data.logo_data;}paintBrand();if(member?.role==='admin'){$('companyLine1').value=branding.company_line1||'';$('companyLine2').value=branding.company_line2||'';paintLogoPreview();}}
 function paintLogoPreview(){const logo=pendingLogo;$('companyLogoPreview').hidden=!logo;if(logo)$('companyLogoPreview').src=logo;}
 async function optimizeLogo(file){
  if(file.size>15*1024*1024)throw Error('画像は15MB以内で選択してください。');
@@ -75,7 +75,7 @@ $('companyLogo').addEventListener('change',async e=>{
 });
 $('toggleBrandSettings').addEventListener('click',()=>{if(member?.role!=='admin')return;brandSettingsOpen=!brandSettingsOpen;render();if(brandSettingsOpen)$('brandSettings').scrollIntoView({behavior:'smooth',block:'start'});});
 $('removeCompanyLogo').addEventListener('click',()=>{pendingLogo=null;$('companyLogo').value='';paintLogoPreview();});
-$('saveCompanyBrand').addEventListener('click',async()=>{if(member?.role!=='admin')return;const company_line1=$('companyLine1').value.trim(),company_line2=$('companyLine2').value.trim();if(!company_line1&&!company_line2){$('brandSaveStatus').textContent='会社名を1段以上入力してください。';return;}const button=$('saveCompanyBrand');button.disabled=true;const {data,error}=await supabase.from('tobita_match_branding').update({company_line1,company_line2,logo_data:pendingLogo,updated_at:new Date().toISOString()}).eq('id',1).select('company_line1,company_line2,logo_data').single();button.disabled=false;if(error){$('brandSaveStatus').textContent='保存できませんでした：'+error.message;return;}branding=data;paintBrand();$('brandSaveStatus').textContent='会社設定を保存しました。';});
+$('saveCompanyBrand').addEventListener('click',async()=>{if(member?.role!=='admin')return;const company_line1=$('companyLine1').value.trim(),company_line2=$('companyLine2').value.trim();if(!company_line1&&!company_line2){$('brandSaveStatus').textContent='会社名を1段以上入力してください。';return;}const button=$('saveCompanyBrand');button.disabled=true;const {data,error}=await supabase.rpc('orxelia_save_partner_link_brand',{p_line1:company_line1,p_line2:company_line2,p_logo:pendingLogo});button.disabled=false;if(error){$('brandSaveStatus').textContent='保存できませんでした：'+error.message;return;}branding=data;paintBrand();$('brandSaveStatus').textContent='会社設定を保存しました。';});
 let lastNoticeIds=null;
 const pushEndpoint='https://yzlxcfncdtojajlhihap.supabase.co/functions/v1/tobita-match-push';
 let pushRegisteredUser=null;
@@ -133,6 +133,7 @@ async function notifyNewEvents(newEvents){
 }
 const inviteToken=new URLSearchParams(location.search).get('invite');let inviteClaiming=false;
 let detailDate=null;
+let billingState={allowed:false};
 let member=null,workers=[],availability=[],requests=[],events=[],month=new Date(),selected=new Set(),tab='pending',channel=null,loading=false;
 month.setDate(1);
 function note(s,error=false){$('message').textContent=s;$('message').className=error?'warn':''}
@@ -204,7 +205,7 @@ function downloadReport(kind){
 }
 
 function render(){
- $('login').hidden=!!member;$('app').hidden=!member;$('inviteSignup').hidden=!!member||!inviteToken;$('toggleBrandSettings').hidden=member?.role!=='admin';$('brandSettings').hidden=member?.role!=='admin'||!brandSettingsOpen;updateNotificationControls();$('toggleBrandSettings').setAttribute('aria-expanded',String(member?.role==='admin'&&brandSettingsOpen));paintBrand();if(!member)return;
+ $('login').hidden=!!member;$('app').hidden=!member||!billingState.allowed;$('billingGate').hidden=!member||billingState.allowed;$('billingGateMessage').textContent=billingState.message||'契約と利用期間をご確認ください。';$('inviteSignup').hidden=!!member||!inviteToken;$('toggleBrandSettings').hidden=member?.role!=='admin';$('brandSettings').hidden=member?.role!=='admin'||!brandSettingsOpen;updateNotificationControls();$('toggleBrandSettings').setAttribute('aria-expanded',String(member?.role==='admin'&&brandSettingsOpen));paintBrand();if(!member||!billingState.allowed)return;
  $('who').textContent=member.display_name|| (member.role==='admin'?'管理者':'パートナー');
  $('workerPanel').hidden=member.role!=='worker';$('adminPanel').hidden=member.role!=='admin'||!selected.size;$('inviteAdminPanel').hidden=member.role!=='admin';
  $('monthTitle').textContent=month.getFullYear()+'年'+(month.getMonth()+1)+'月';
@@ -280,7 +281,13 @@ async function fetchPaged(makeQuery,key){
 }
 async function refresh(){
  if(!member||loading)return;loading=true;
+ const userId=member.user_id,hadAccess=billingState.allowed;
  try{
+ const status=await supabase.rpc('orxelia_partner_link_billing_status');
+ if(member?.user_id!==userId)return;
+ if(status.error)throw Error('ご利用状況を確認できません。再確認してください。');
+ billingState=status.data;
+ if(!billingState.allowed){render();return;}
  const base=member.role==='admin'?['owner_id',member.user_id]:['worker_id',member.user_id];
  const [w,a,r,e,t]=await Promise.all([
  supabase.from('tobita_match_members').select('*').eq('owner_id',member.owner_id),
@@ -289,9 +296,11 @@ async function refresh(){
  supabase.from('tobita_match_events').select('*').eq('recipient_id',member.user_id).order('created_at',{ascending:false}).limit(30),
  fetchPaged(()=>supabase.from('tobita_match_attendance').select('*').order('request_id',{ascending:true}),'request_id')
  ]);
+ if(member?.user_id!==userId)return;
  for(const x of [w,a,r,e,t])if(x.error)throw x.error;
  workers=w.data.filter(x=>x.role==='worker');availability=a.data;requests=r.data;events=e.data;attendance=t.data;const currentIds=new Set(events.map(e=>e.id));if(lastNoticeIds){const fresh=events.filter(e=>!lastNoticeIds.has(e.id));/* プッシュ通知はサーバー側から配信し、端末での二重表示を防止します。 */}lastNoticeIds=currentIds;render();note('');
- }catch(e){note('同期に失敗しました：'+e.message,true)}finally{loading=false}
+ if(!hadAccess)registerPush().catch(e=>console.warn('通知の自動登録を確認できませんでした',e));
+ }catch(e){billingState={allowed:false,message:e.message};render();note('同期に失敗しました：'+e.message,true)}finally{loading=false}
 }
 async function mutate(name,args){try{const {error}=await supabase.rpc(name,args);if(error)throw error;note('保存しました');await refresh();return true}catch(e){note('操作できません：'+e.message,true);return false}}
 async function start(){lastNoticeIds=null;await loadBrand();
@@ -300,7 +309,8 @@ async function start(){lastNoticeIds=null;await loadBrand();
  let {data,error}=await supabase.from('tobita_match_members').select('*').eq('user_id',user.id).maybeSingle();
  if(!error&&!data&&user.email?.toLowerCase()==='tobikyohei8989@gmail.com'){const activation=await supabase.rpc('tobita_match_activate_admin');if(!activation.error){const lookup=await supabase.from('tobita_match_members').select('*').eq('user_id',user.id).maybeSingle();data=lookup.data;error=lookup.error;}else{note('管理者の認証が完了していません：'+activation.error.message,true)}}
  if(error||!data){member=null;render();if(inviteToken){await claimInvite();return}note('このアカウントはパートナーリンクに登録されていません。管理者による招待が必要です。',true);return}
- member=data;render();registerPush().catch(e=>console.warn('通知の自動登録を確認できませんでした',e));await loadBrand();await refresh();channel?.unsubscribe();
+ member=data;billingState={allowed:false,message:'ご利用状況を確認しています。'};render();await loadBrand();await refresh();channel?.unsubscribe();
+ if(!member)return;
  channel=supabase.channel('tobita-match-'+member.user_id).on('postgres_changes',{event:'*',schema:'public',table:'tobita_match_requests'},()=>refresh()).on('postgres_changes',{event:'*',schema:'public',table:'tobita_match_availability'},()=>refresh()).on('postgres_changes',{event:'*',schema:'public',table:'tobita_match_events'},()=>refresh()).subscribe();
 }
 
@@ -344,6 +354,8 @@ $('shareInvite').onclick=async()=>{const url=$('inviteUrl').value;if(navigator.s
 $('loginForm').onsubmit=async event=>{event.preventDefault();const button=$('signIn');button.disabled=true;try{const {error}=await supabase.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)note(error.message,true);else{ $('password').value='';await start();}}finally{button.disabled=false}};
 $('logout').onclick=async()=>{try{await unregisterPush()}catch(e){console.warn('通知の解除に失敗しました',e)}await supabase.auth.signOut();pushRegisteredUser=null;member=null;channel?.unsubscribe();channel=null;render()};
 
+$('billingRetry').onclick=()=>refresh();
+$('billingLogout').onclick=()=>{$('logout').click()};
 $('reportMonth').value=closingMonth();$('reportYear').value=tokyoDate().slice(0,4);
 for(const id of ['reportMode','reportMonth','reportYear'])$(id).onchange=renderWorkReport;
 $('openWorkReport').onclick=()=>{$('workReport').open=true;$('workReport').scrollIntoView({block:'start',behavior:'smooth'})};

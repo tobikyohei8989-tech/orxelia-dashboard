@@ -15,6 +15,7 @@ const start=html.indexOf('function render(){'),end=html.indexOf(" document.query
 const elements=new Map();const $=id=>{if(!elements.has(id))elements.set(id,{setAttribute(){}});return elements.get(id);};
 const current=tokyoDate();const [y,m]=current.split('-').map(Number);
 const ctx={$,member:{role:'admin'},selected:new Set([current]),inviteToken:null,brandSettingsOpen:false,updateNotificationControls(){},paintBrand(){},dates:()=>[current],month:new Date(y,m-1,1),jpHolidays:()=>new Map(),requests:[],dayRemaining:()=>1,esc:s=>String(s),tokyoDate:()=>current};
+ctx.billingState={allowed:true};
 vm.runInNewContext(html.slice(start,end)+'\n}\nrender();',ctx);
 const calendar=$('calendar').innerHTML;
 assert.ok(calendar.includes('aria-current="date"'));

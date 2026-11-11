@@ -1,5 +1,6 @@
 // All dependencies run server-side. The caller supplies only an action and a retry ID.
-export function makeSessionHandler({authenticate,loadCustomer,saveCheckout,stripe,priceId,origin}) {
+export function makeSessionHandler({authenticate,loadCustomer,saveCheckout,stripe,priceId,origin,checkoutEnabled=false}) {
+  const accountPage=origin+"/products/partner-link/account.html";
   return async request => {
     if (request.method!=="POST") return new Response(null,{status:405});
     try {
@@ -9,12 +10,14 @@ export function makeSessionHandler({authenticate,loadCustomer,saveCheckout,strip
       if (!["checkout","portal"].includes(action) ||
         !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId))
         return Response.json({error:"入力が不正です。"},{status:400});
+      if (action==="checkout" && !checkoutEnabled)
+        return Response.json({error:"申込受付は準備中です。"},{status:503});
       const customer=await loadCustomer(user.id);
       if (!customer?.stripe_customer_id) return Response.json({error:"会社の登録処理が必要です。"},{status:409});
       const options={idempotencyKey:action+":"+customer.id+":"+requestId};
       if (action==="portal") {
         const session=await stripe.billingPortal.sessions.create({
-          customer:customer.stripe_customer_id,return_url:origin+"/products/partner-link/"
+          customer:customer.stripe_customer_id,return_url:accountPage
         },options);
         return Response.json({url:session.url});
       }
@@ -38,8 +41,8 @@ export function makeSessionHandler({authenticate,loadCustomer,saveCheckout,strip
         mode:"subscription",customer:customer.stripe_customer_id,
         line_items:[{price:priceId,quantity:1}],payment_method_collection:"always",
         automatic_tax:{enabled:false},metadata,subscription_data,
-        success_url:origin+"/products/partner-link/?checkout=complete",
-        cancel_url:origin+"/products/partner-link/?checkout=cancelled"
+        success_url:accountPage+"?checkout=complete",
+        cancel_url:accountPage+"?checkout=cancelled"
       },{idempotencyKey:"checkout:"+customer.id+":"+customer.checkout_attempt_id});
       await saveCheckout(customer.id,customer.checkout_attempt_id,session.id);
       return Response.json({url:session.url});

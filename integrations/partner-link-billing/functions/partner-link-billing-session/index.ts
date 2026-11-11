@@ -12,16 +12,20 @@ if (!origin.startsWith('https://') || new URL(origin).origin!==origin || !key ||
 const stripe=new Stripe(key,{httpClient:Stripe.createFetchHttpClient()});
 const db=createClient(endpoint,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
 const handler=makeSessionHandler({
-  origin,priceId,stripe,
+  origin,priceId,stripe,checkoutEnabled:Deno.env.get('PARTNER_LINK_BILLING_ENABLED')==='true',
   authenticate:async(request:Request)=>{
     const token=request.headers.get('authorization')?.replace(/^Bearer /i,'');
     if (!token) return null;
     const {data,error}=await db.auth.getUser(token);
-    return error ? null : data.user;
+    return error || !data.user?.email_confirmed_at ? null : data.user;
   },
   loadCustomer:async(userId:string)=>{
     const {data:customer,error}=await db.from('orxelia_billing_customers').select('*').eq('registered_by',userId).single();
     if (error || !customer) return null;
+    const tenant=await db.from('orxelia_partner_link_tenants').select('owner_id')
+      .eq('owner_id',userId).eq('customer_id',customer.id).maybeSingle();
+    if (tenant.error) throw tenant.error;
+    if (!tenant.data) return null;
     if (!customer.stripe_customer_id) {
       const result=await stripe.customers.create({name:customer.name,metadata:{orxelia_customer_id:customer.id}},
         {idempotencyKey:'orxelia-customer:'+customer.id});

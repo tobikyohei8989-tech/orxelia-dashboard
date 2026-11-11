@@ -1,5 +1,11 @@
 {
   "dependencies": {
-    "stripe": "^23.0.0"
+    "stripe": "23.0.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.16"
+  },
+  "scripts": {
+    "test": "node --test"
   }
 }

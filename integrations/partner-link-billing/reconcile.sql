@@ -1,5 +1,7 @@
 begin;
 alter table public.orxelia_billing_contracts add column sync_revision bigint not null default 0;
+alter table public.orxelia_billing_contracts add column reconciled_at timestamptz;
+alter table public.orxelia_billing_contracts add column reconciliation_attempted_at timestamptz;
 
 create function public.orxelia_save_subscription_snapshot(
   p_contract_id uuid, p_expected_revision bigint, p_snapshot jsonb
@@ -15,6 +17,7 @@ begin
     trial_until=to_timestamp((p_snapshot->>'trial_until')::double precision),
     paid_until=to_timestamp((p_snapshot->>'paid_until')::double precision),
     cancel_at=to_timestamp((p_snapshot->>'cancel_at')::double precision),
+    reconciled_at=now(),
     sync_revision=sync_revision+1
     where id=p_contract_id and sync_revision=p_expected_revision returning id into saved_id;
   if saved_id is null then raise exception 'Subscription revision conflict'; end if;
