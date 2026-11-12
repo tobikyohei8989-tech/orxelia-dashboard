@@ -405,7 +405,7 @@ def research_idea():
         )}]}],
         "tools": [{"google_search": {}}],
     }
-    result = api_request(BASE + "/gemini-2.5-flash-lite:generateContent", payload, retries=1)
+    result = api_request(BASE + "/gemini-3.8-flash:generateContent", payload, retries=1)
     candidate = result["candidates"][0]
     chunks = candidate.get("groundingMetadata", {}).get("groundingChunks", [])
     sources = list(dict.fromkeys(
