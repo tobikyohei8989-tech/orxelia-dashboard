@@ -421,11 +421,16 @@ def research_idea(model):
         "顧客の課題、競合の公式価格、無料代替を比較し、出典のURLと確認事項をresearchに書く。"
         "資料で確認できない価格・需要・採算は未確認または仮説と記載。価格を捏造しない。"
         "researchに根拠資料ごとの確認事実と推測の限界、次の販売根拠の不足を記載。advantageに公式競合・無料代替と比較する具体的な操作・成果指標、nextにiPhone実機で試す主機能と成功・失敗条件、distributionに最初の顧客獲得経路と支払意思を測る方法・継続撤退基準、recurringに仮価格・変動費・限界利益・顧客獲得単価の上限と回収期間を記載。法務・個人情報・権限と申込から解約までの確認項目もresearchに含める。実機、顧客反応、販売、継続率は実測済みと扱わない。"
-        "JSONのみ。キーは name, customer, offer, next, distribution, advantage, recurring, selection, research。"
+        "公開一次資料から、具体的な顧客課題、競合の価格と無料代替の限界、差別化、"
+        "少人数で試作できる範囲、採算と最初の顧客獲得経路を審査する。"
+        "すべてに具体的な根拠または検証可能な仮説があり、検証コストに見合う場合だけ verdict を prototype にする。"
+        "資料不足、無料代替で十分、採算が成立しにくい場合は hold とし、selection に理由を書く。"
+        "prototype は試作着手の価値を示す。支払意思、継続率、法務・実機、販売可否は検証前と明記する。"
+        "JSONのみ。キーは name, customer, offer, next, distribution, advantage, recurring, selection, research, verdict。"
     )
     limits = {"name": 140, "customer": 300, "offer": 300, "next": 600,
               "distribution": 600, "advantage": 600, "recurring": 600,
-              "selection": 600, "research": 2500}
+              "selection": 600, "research": 2500, "verdict": 20}
     result = api_request(BASE + "/" + model + ":generateContent", {
         "contents": [{"parts": [{"text": instruction + "\n資料:\n" + json.dumps(evidence, ensure_ascii=False)}]}],
         "generationConfig": {"responseMimeType": "application/json", "maxOutputTokens": 6000,
@@ -439,6 +444,8 @@ def research_idea(model):
     if not all(isinstance(idea.get(key), str) and bool(idea[key].strip())
                for key, limit in limits.items()):
         raise ValueError("Invalid researched idea")
+    if idea["verdict"].strip() != "prototype":
+        raise ValueError("No researched candidate met the prototype threshold")
     return {**{key: idea[key].strip()[:limit] for key, limit in limits.items()}, "sources": sources[:10]}
 
 

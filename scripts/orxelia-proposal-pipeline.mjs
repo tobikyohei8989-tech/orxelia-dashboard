@@ -78,7 +78,7 @@ async function dailyPrototype() {
  const feed = JSON.parse(await readFile(new URL('../ai-reports/latest.json', import.meta.url), 'utf8'));
  const day = new Intl.DateTimeFormat('sv-SE', {timeZone:'Asia/Tokyo'}).format(new Date());
  const idea = feed.reports?.find(report => report.researchedAt === day && report.idea?.research)?.idea;
- if (!idea || !Array.isArray(idea.sources) || idea.sources.length < 2) return;
+ if (!idea || idea.verdict !== "prototype" || !Array.isArray(idea.sources) || idea.sources.length < 2) return;
  const hex = createHash('sha256').update(owner + ':' + day).digest('hex');
  const id = [hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20,32)].join('-');
  await api('orxelia_proposals?on_conflict=id', {
