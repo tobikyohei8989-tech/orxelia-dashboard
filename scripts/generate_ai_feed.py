@@ -423,17 +423,19 @@ def research_idea(model):
         "集客、継続課金、社内試作と購入件数による販売検証、撤退基準を含める。"
         "JSONのみ。キーは name, customer, offer, next, distribution, advantage, recurring, selection, research。"
     )
-    result = api_request(BASE + "/" + model + ":generateContent", {
-        "contents": [{"parts": [{"text": instruction + "\n資料:\n" + json.dumps(evidence, ensure_ascii=False)}]}],
-        "generationConfig": {"responseMimeType": "application/json", "maxOutputTokens": 5000},
-    }, retries=1)
-    parts = result["candidates"][0]["content"]["parts"]
-    idea = json.loads("".join(part.get("text", "") for part in parts))
-    sources = [item["url"] for item in evidence]
-
     limits = {"name": 140, "customer": 300, "offer": 300, "next": 300,
               "distribution": 600, "advantage": 600, "recurring": 600,
               "selection": 600, "research": 2500}
+    result = api_request(BASE + "/" + model + ":generateContent", {
+        "contents": [{"parts": [{"text": instruction + "\n資料:\n" + json.dumps(evidence, ensure_ascii=False)}]}],
+        "generationConfig": {"responseMimeType": "application/json", "maxOutputTokens": 6000,
+                             "responseSchema": {"type": "OBJECT", "required": list(limits),
+                                                "properties": {key: {"type": "STRING"} for key in limits}}},
+    }, retries=1)
+    parts = result["candidates"][0]["content"]["parts"]
+    idea = json.loads("".join(part.get("text", "") for part in parts if not part.get("thought")))
+    sources = [item["url"] for item in evidence]
+
     if not all(isinstance(idea.get(key), str) and bool(idea[key].strip())
                for key, limit in limits.items()):
         raise ValueError("Invalid researched idea")
