@@ -41,8 +41,8 @@ jobs:
             assert.ok(tab==='home'?js.includes('home, portfolio:'):tab==='settings'?js.includes('    settings'):js.includes(tab+':() =>'),'missing render handler '+tab);
           }
           for(const asset of ['style.css','app.js','business-economics.js'])assert.ok(html.includes(asset),'missing asset '+asset);
-          for(const token of ['function home()','function executiveQuickMatrix()','function orxeliaTrialProposalPanel()','function render()','data-tab="verification"','data-tab="finance"','taskSection.scrollIntoView'])assert.ok(js.includes(token),'missing workflow '+token);
-          for(const token of ['.priority-card','.quick-table','.home-links','nav button'])assert.ok(css.includes(token),'missing visual '+token);
+          for(const token of ['function home()','function executiveQuickMatrix(projects, title)','function orxeliaTrialProposalPanel()','function render()','data-tab="verification"','data-tab="finance"','taskSection.scrollIntoView'])assert.ok(js.includes(token),'missing workflow '+token);
+          for(const token of ['.priority-card','.quick-table','.overview-main','nav button'])assert.ok(css.includes(token),'missing visual '+token);
           assert.ok(!js.includes('tab = "home"; render(); $("view").querySelector("details").open = true;'),'stale task shortcut');
           console.log('PASS: syntax, 5 destinations, assets, approval/finance/task wiring, visual selectors');
           NODE
