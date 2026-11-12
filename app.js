@@ -237,7 +237,7 @@ function card(p) {
 
 
 // v12: opt-in catalog merge; never overwrites existing records.
-const initialCatalog = [{"id":"orxelia-catalog-01","name":"見積もり催促・追客管理","type":"過去の候補","stage":"未確認","priority":"高","date":"","rank":0,"price":1480,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"見積提出後の追客漏れを検証","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-02","name":"契約更新・解約期限アラート","type":"過去の候補","stage":"未確認","priority":"高","date":"","rank":0,"price":980,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"更新忘れの頻度と支払意思を調査","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-03","name":"定期点検・保守期限管理","type":"過去の候補","stage":"未確認","priority":"高","date":"","rank":0,"price":2480,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"点検期限管理の需要を検証","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-04","name":"顧客提出書類の回収管理","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1980,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"提出書類の回収負担を調査","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-05","name":"店舗の日次引継ぎノート","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1480,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"店舗担当者へ課題を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-06","name":"求人応募者への返信漏れ防止","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1980,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"採用担当者へ課題を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-07","name":"車両・工具の点検期限管理","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1480,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"対象事業者へ需要を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-08","name":"定期購入・サブスク支出監査","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":980,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"解約忘れの実態を調査","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-09","name":"講師向け月謝未納管理","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1480,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"講師へ課題を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-10","name":"納品後フォロー自動化","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1980,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"納品後対応の課題を調査","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-11","name":"入金漏れ・未回収チェッカー","type":"過去の候補","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"過去案の状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-12","name":"現場写真・工事記録整理ツール","type":"過去の候補","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"過去案の状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-13","name":"キャンセル待ち自動案内ツール","type":"過去の候補","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"過去案の状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-14","name":"LIFE EDIT","type":"既存プロジェクト","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"開発・公開状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-15","name":"FIT NOTE","type":"既存プロジェクト","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"開発・公開状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-16","name":"MOMENT","type":"既存プロジェクト","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"開発・公開状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-17","name":"SOBARIO","type":"既存プロジェクト","stage":"保留","priority":"低","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"中止中：再開には明示承認が必要","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-18","name":"START FIND","type":"既存プロジェクト","stage":"保留","priority":"低","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"保留中：再開には明示承認が必要","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-19","name":"SaaS向け紹介報酬管理サービス","type":"既存プロジェクト","stage":"保留","priority":"低","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"保留中：再開には明示承認が必要","source":"2026-11-05 引き継ぎプロンプト","history":[]}];
+const initialCatalog = [{"id":"orxelia-catalog-01","name":"見積もり催促・追客管理","type":"過去の候補","stage":"未確認","priority":"高","date":"","rank":0,"price":1480,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"見積提出後の追客漏れを検証","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-02","name":"契約更新・解約期限アラート","type":"過去の候補","stage":"未確認","priority":"高","date":"","rank":0,"price":980,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"更新忘れの頻度と支払意思を調査","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-03","name":"定期点検・保守期限管理","type":"過去の候補","stage":"未確認","priority":"高","date":"","rank":0,"price":2480,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"点検期限管理の需要を検証","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-04","name":"顧客提出書類の回収管理","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1980,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"提出書類の回収負担を調査","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-05","name":"店舗の日次引継ぎノート","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1480,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"店舗担当者へ課題を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-06","name":"求人応募者への返信漏れ防止","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1980,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"採用担当者へ課題を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-07","name":"車両・工具の点検期限管理","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1480,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"対象システム者へ需要を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-08","name":"定期購入・サブスク支出監査","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":980,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"解約忘れの実態を調査","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-09","name":"講師向け月謝未納管理","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1480,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"講師へ課題を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-10","name":"納品後フォロー自動化","type":"過去の候補","stage":"未確認","priority":"中","date":"","rank":0,"price":1980,"customer":"","note":"引き継ぎ台帳（実績未確認）。2026-11-05候補。","next":"納品後対応の課題を調査","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-11","name":"入金漏れ・未回収チェッカー","type":"過去の候補","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"過去案の状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-12","name":"現場写真・工事記録整理ツール","type":"過去の候補","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"過去案の状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-13","name":"キャンセル待ち自動案内ツール","type":"過去の候補","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"過去案の状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-14","name":"LIFE EDIT","type":"既存プロジェクト","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"開発・公開状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-15","name":"FIT NOTE","type":"既存プロジェクト","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"開発・公開状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-16","name":"MOMENT","type":"既存プロジェクト","stage":"未確認","priority":"未設定","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"開発・公開状況を確認","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-17","name":"SOBARIO","type":"既存プロジェクト","stage":"保留","priority":"低","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"中止中：再開には明示承認が必要","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-18","name":"START FIND","type":"既存プロジェクト","stage":"保留","priority":"低","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"保留中：再開には明示承認が必要","source":"2026-11-05 引き継ぎプロンプト","history":[]},{"id":"orxelia-catalog-19","name":"SaaS向け紹介報酬管理サービス","type":"既存プロジェクト","stage":"保留","priority":"低","date":"","rank":0,"price":null,"customer":"","note":"引き継ぎ台帳（実績未確認）。","next":"保留中：再開には明示承認が必要","source":"2026-11-05 引き継ぎプロンプト","history":[]}];
 const normalizedName = name => String(name).normalize("NFKC").toLowerCase().replace(/[\s\u3000・･_－ー-]/g, "");
 function catalogPreview() {
   const existingNames = new Set(data.projects.map(p => normalizedName(p.name)));
@@ -299,11 +299,11 @@ function portfolioProgress(project, evidence, stage) {
   const confirmed = records?.filter(row => ["資料確認済み","社内動作確認済み","販売実績確認済み"].includes(row.status)).length;
   return '<article class="business-progress"><h3>' + esc(project.name) + '</h3>' +
     badge(stage) + (project.priority === "未設定" ? "" : badge("優先度 " + project.priority)) +
-    (index === undefined ? "" : '<ol class="business-steps" aria-label="事業の段階">' +
+    (index === undefined ? "" : '<ol class="business-steps" aria-label="システムの段階">' +
       businessSteps.map((step,i) => '<li' + (i === index ? ' aria-current="step"' : '') + '>' + step + '</li>').join("") + '</ol>') +
     '<p>' + (records ? (records.length ? '確認済み ' + confirmed + '件 ／ 未確認・仮説 ' + (records.length-confirmed) + '件' : '検証記録なし') : '検証記録を読み込めません') + '</p>' +
     '<p>次の行動　' + esc(project.next || "未設定") + '</p>' +
-    businessRemovalButton(project) + details("事業の詳細・編集",card(project)) + '</article>';
+    businessRemovalButton(project) + details("システムの詳細・編集",card(project)) + '</article>';
 }
 
 function portfolio(activities) {
@@ -321,9 +321,9 @@ function portfolio(activities) {
   });
   const linked = new Set(selected.map(p=>(cloudByLegacy.get(p.id)||cloudByName.get(p.name))?.id).filter(Boolean));
   const extra = filter==="すべて"?orxeliaTrialProposals.filter(p=>!linked.has(p.id)).map(p=>isPartnerLinkImplemented(p)?partnerLinkProductPanel(p):'<article class="business-progress portfolio-tile"><span class="portfolio-status">'+esc(statuses[p.status]||p.status)+'</span><h3>'+esc(p.title)+'</h3><p class="portfolio-next">'+esc(proposalNext(p.status))+'</p><button type="button" data-tab="verification">承認・詳細を見る</button>'+businessRemovalButton(null,p)+'</article>'):[];
-  return heading("事業一覧",action("＋ 事業を登録","project","",true))+
-    '<p class="portfolio-guide">事業ごとの現在地と、次に必要な行動をまとめました。承認・修正は「承認・販売」で操作できます。</p>'+
-    '<label>表示する事業<select id="filter">'+filters+'</select></label>'+
+  return heading("システム一覧",action("＋ システムを登録","project","",true))+
+    '<p class="portfolio-guide">システムごとの現在地と、次に必要な行動をまとめました。承認・修正は「承認・販売」で操作できます。</p>'+
+    '<label>表示するシステム<select id="filter">'+filters+'</select></label>'+
     (rows.length||extra.length?grid([...rows,...extra]):panel('<p>この区分の登録は0件です。</p>')) + removedBusinessesPanel();
 }
 
@@ -613,7 +613,7 @@ function launchDecisions() {
       '</strong></p><div class="chips">' + scenarios + '</div>' +
       (plan ? details("試算条件",'<p>' + esc(plan.note) + '</p>') : "") + '</article>';
   });
-  return '<section id="launch-decisions" tabindex="-1">' + heading("事業別の販売判断") +
+  return '<section id="launch-decisions" tabindex="-1">' + heading("システム別の販売判断") +
     (projects.some(project => project.name === currentResearchProject) ?
       panel('<h3>見積もり催促・追客管理の自動テスト</h3><div id="quote-validation-status" role="status">確認中</div>' +
         '<p>模擬案件を使った動作テスト。市場調査・販売実績とは別の記録です。</p>') +
@@ -624,9 +624,9 @@ function launchDecisions() {
           '<li>競合には見積提出後の連絡時期を知らせる機能があります。 <a href="https://ai-dounyuu.com/quote-automation/" target="_blank" rel="noopener">競合の公式機能</a></li></ul>')) : "") +
     '<p>月間原価は固定費と契約ごとの原価の合計。売上と利益は基準シナリオ・税引前。</p>' +
     (rows.length ? '<div class="decision-table" tabindex="0" role="region" aria-label="全事業の月間採算"><table><thead><tr>' +
-      '<th scope="col">事業</th><th scope="col">月間原価</th><th scope="col">基準契約数（試算）</th><th scope="col">月間売上見込み</th><th scope="col">月間利益</th>' +
+      '<th scope="col">システム</th><th scope="col">月間原価</th><th scope="col">基準契約数（試算）</th><th scope="col">月間売上見込み</th><th scope="col">月間利益</th>' +
       '</tr></thead><tbody>' + rows.join("") + '</tbody></table></div>' :
-      panel('<p>登録事業がありません。</p>')) +
+      panel('<p>登録システムがありません。</p>')) +
     (cards.length ? details("契約数・損益分岐・試算の根拠",grid(cards)) : "") + '</section>';
 }
 
@@ -667,7 +667,7 @@ function retainQuoteProject() {
   exportBundle();
   if (!confirm("バックアップのダウンロードを確認したら削除を確定してください。同期済みの台帳にも削除が反映されます。")) return;
   validate(next);
-  keepSafetyCopy("不要な事業の一括削除前");
+  keepSafetyCopy("不要なシステムの一括削除前");
   const updates = [[tasksKey,nextTasks],[evidenceKey,nextEvidence],[key,next]];
   const previous = updates.map(([storageKey]) => [storageKey,localStorage.getItem(storageKey)]);
   try {
@@ -688,8 +688,9 @@ function retainQuoteProject() {
 
 function settings() {
   return heading("設定・データ管理") + (window.orxeliaSync?.view() || "") +
-    panel('<h3>引き継ぎ事業台帳（19件）</h3><p>既存の事業を保持し、未登録の候補だけ追加します。類似名称は別名として残る場合があります。実績・開発状況は自動確定しません。</p>' + action("追加候補を確認して取り込む","mergeCatalog")) +
-    panel('<h3>事業の一括削除</h3><p>見積もり催促・追客管理だけを残します。削除対象とバックアップを確認してから確定できます。</p>' + action("削除対象を確認","retainQuoteProject")) +
+    panel('<h3>iPhone通知</h3><p>ダッシュボードの更新をiPhoneで受け取ります。</p><div class="actions"><button type="button" id="orxelia-enable-push">iPhone通知を有効にする</button><button type="button" id="orxelia-test-local-push">通知表示テスト</button></div>') +
+    panel('<h3>引き継ぎシステム台帳（19件）</h3><p>既存の事業を保持し、未登録の候補だけ追加します。類似名称は別名として残る場合があります。実績・開発状況は自動確定しません。</p>' + action("追加候補を確認して取り込む","mergeCatalog")) +
+    panel('<h3>システムの一括削除</h3><p>見積もり催促・追客管理だけを残します。削除対象とバックアップを確認してから確定できます。</p>' + action("削除対象を確認","retainQuoteProject")) +
     importLogPanel() +
     panel('<h3>初期データ・バックアップ</h3><p>初回は同梱の「初期データ.json」を読み込んでください。読み込みは現在の内容を全件置き換えます。</p>' +
       '<label>日次リンクを貼り付け<textarea id="report-link" rows="2" placeholder="取り込みリンクをここに貼り付け"></textarea></label>' + action("日次レポートを追加","reportPaste","",true) + action("JSONを書き出す","export") + action("端末内の復旧用データを書き出す","recoveryExport") + action("直近3世代の安全コピーを書き出す","safetyExport") + action("全データをまとめてJSON出力","bundleExport") + action("iPhone用：復旧データを画面に表示","recoveryView") + '<label>JSONを読み込む<input type="file" id="import" accept=".json,application/json"></label>') +
@@ -764,7 +765,7 @@ function tasks() {
   const sorted=[...rows].sort((a,b)=>(a.state==="完了")-(b.state==="完了") || (a.due||"9999").localeCompare(b.due||"9999"));
   return heading("実行タスク",action("タスクJSON出力","tasksExport"))+
     panel('<h3>行動の見える化</h3><p>経営判断から実行へ。タスクは手動で登録・更新します。AIによる自動実行や外部への連絡はありません。</p>'+grid([metric("登録タスク",rows.length+"件","端末内の記録"),metric("進行中",rows.filter(t=>t.state==="進行中").length+"件","手動更新"),metric("期限超過",overdue.length+"件","未完了のみ"),metric("完了",rows.filter(t=>t.state==="完了").length+"件","手動更新")]))+
-    panel('<h3>タスクを追加</h3><form id="task-form"><label>やること<input name="title" maxlength="160" required></label><label>対象事業<select name="project"><option value="">共通・未指定</option>'+choices+'</select></label><label>期限<input name="due" type="date"></label><button class="primary">タスク登録</button></form>')+
+    panel('<h3>タスクを追加</h3><form id="task-form"><label>やること<input name="title" maxlength="160" required></label><label>対象システム<select name="project"><option value="">共通・未指定</option>'+choices+'</select></label><label>期限<input name="due" type="date"></label><button class="primary">タスク登録</button></form>')+
     panel('<h3>タスク一覧</h3><p>保存先はこの端末のみです。機密情報は登録しないでください。</p>'+(sorted.length?sorted.map(t=>'<article><h3>'+esc(t.title)+'</h3><p>'+esc(data.projects.find(p=>p.id===t.project)?.name||"共通")+' ／ 期限 '+esc(t.due||"未設定")+'</p><label>進捗<select data-task-id="'+esc(t.id)+'">'+taskStates.map(state=>'<option'+(state===t.state?' selected':'')+'>'+state+'</option>').join('')+'</select></label>'+action("削除","taskDelete",t.id)+'</article>').join(''):'<p>まだタスクがありません。</p>'));
 }
 
@@ -820,9 +821,9 @@ function evidenceFreshness(row) {
 // v40: explicit, local-only JSON report import. No network calls or autonomous AI.
 function normalizeResearchReport(raw) {
   if (!raw || raw.format!=="orxelia-research-v1" || !Array.isArray(raw.findings) || raw.findings.length<1 || raw.findings.length>100) throw Error("ORXELIA調査レポート形式ではありません（orxelia-research-v1）。");
-  if(typeof raw.project!=="string" || raw.project.length>160) throw Error("対象事業名が不正です。");
+  if(typeof raw.project!=="string" || raw.project.length>160) throw Error("対象システム名が不正です。");
   const project=data.projects.find(p=>p.id===raw.project || p.name===raw.project);
-  if(!project) throw Error("事業一覧に対象事業が見つかりません。事業名を正確に指定してください。");
+  if(!project) throw Error("システム一覧に対象システムが見つかりません。事業名を正確に指定してください。");
   const date=raw.researchedAt;
   if(typeof date!=="string" || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date+"T00:00:00Z"))) throw Error("調査日（YYYY-MM-DD）が不正です。");
   const findings=raw.findings.map((f,i)=>{
@@ -937,14 +938,14 @@ function exportTasksCalendar() {
 }
 function researchPrompt() {
   const names=data.projects.map(p=>p.name).join("、");
-  const prompt=`ORXELIAの事業候補について、公開一次資料・公式料金表・公開統計を中心に最新の市場調査をしてください。調査対象の事業名は「${data.projects[0]?.name||"事業名を指定"}」。他の候補は ${names||"未登録"} です。市場需要、競合実績・価格、税引後の収益試算、低コスト・一人運営、法務・技術リスクを検証。未確認の数字は推定と明記し、原典URLと調査日を記載してください。顧客ヒアリング・アンケート・モニター募集は提案しないでください。社内で試作・動作確認し、公開後の購入件数・売上で評価する手順を提案してください。出力はJSONのみ。形式: {"format":"orxelia-research-v1","project":"対象事業名","researchedAt":"YYYY-MM-DD","findings":[{"type":"公開市場データ","status":"仮説","summary":"根拠・限界・結論","source":"出典URL"}]}。typeは「公開市場データ」「競合実績・価格」「収益試算」「低コスト・一人運営」「法務・技術リスク」から選択。外部公開・費用発生・連絡は行わないでください。`;
+  const prompt=`ORXELIAの事業候補について、公開一次資料・公式料金表・公開統計を中心に最新の市場調査をしてください。調査対象の事業名は「${data.projects[0]?.name||"事業名を指定"}」。他の候補は ${names||"未登録"} です。市場需要、競合実績・価格、税引後の収益試算、低コスト・一人運営、法務・技術リスクを検証。未確認の数字は推定と明記し、原典URLと調査日を記載してください。顧客ヒアリング・アンケート・モニター募集は提案しないでください。社内で試作・動作確認し、公開後の購入件数・売上で評価する手順を提案してください。出力はJSONのみ。形式: {"format":"orxelia-research-v1","project":"対象システム名","researchedAt":"YYYY-MM-DD","findings":[{"type":"公開市場データ","status":"仮説","summary":"根拠・限界・結論","source":"出典URL"}]}。typeは「公開市場データ」「競合実績・価格」「収益試算」「低コスト・一人運営」「法務・技術リスク」から選択。外部公開・費用発生・連絡は行わないでください。`;
   if(navigator.clipboard?.writeText) navigator.clipboard.writeText(prompt).then(()=>$("notice").textContent="AI調査依頼文をコピーしました。ChatGPTへ貼り付けてください。").catch(()=>downloadText("ORXELIA-research-prompt.txt",prompt,"text/plain"));
   else downloadText("ORXELIA-research-prompt.txt",prompt,"text/plain");
 }
 function freeConnectionsPanel(){
   return panel('<h3>無料の外部連携・データ持ち出し（v45）</h3><p>外部アカウントへの直接同期ではありません。端末内の情報をCSV・カレンダー形式で出力し、必要に応じて各サービスに読み込ませる方式です。追加API契約・OAuth設定は不要です。</p>'+
     action("AI調査依頼文をコピー","researchPrompt")+
-    action("事業一覧CSV","portfolioCsv")+
+    action("システム一覧CSV","portfolioCsv")+
     action("検証記録CSV","evidenceCsv")+
     action("タスクCSV","tasksCsv")+
     action("期限付きタスクをカレンダー形式で出力","tasksIcs")+
@@ -973,12 +974,12 @@ function verification() {
     return {name:p.name,confirmed:done.length,missing:verificationWeights.filter(w=>!done.includes(w)).map(w=>w.label),stale:own.filter(r=>evidenceFreshness(r).startsWith("再調査")).length};
   }).sort((a,b)=>b.confirmed-a.confirmed);
   return heading("公開情報による事業検証",action("検証データJSON出力","evidenceExport"))+
-    panel('<h3>この端末の検証記録</h3><p>手動で登録した資料確認済み記録の件数です。販売判断に掲載した公開資料は、事業別の販売判断にまとまっています。</p>' +
+    panel('<h3>この端末の検証記録</h3><p>手動で登録した資料確認済み記録の件数です。販売判断に掲載した公開資料は、システム別の販売判断にまとまっています。</p>' +
       (scorecard.length ? scorecard.map(x=>'<p>' + esc(x.name) + ' ／ 資料の登録がある項目 ' +
         x.confirmed + ' / ' + verificationWeights.length + (x.stale ? ' ／ 再調査推奨 ' + x.stale + '件' : '') + '</p>').join("") :
-        '<p>対象事業がありません。</p>'))+
+        '<p>対象システムがありません。</p>'))+
     details("AIレポートの取り込み・データ出力",aiFeedPanel()+freeConnectionsPanel()+researchImportPanel())+
-    panel('<h3>検証結果を登録</h3><form id="evidence-form"><label>対象事業<select name="project" required><option value="">選択してください</option>'+opts+'</select></label><label>検証の種類<select name="type">'+newEvidenceTypes.map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認状況<select name="status">'+evidenceStatuses.filter(x=>x!=="顧客確認済み").map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認内容・未解決事項<textarea name="summary" maxlength="1000" required></textarea></label><label>出典URL・資料名（資料確認済みの場合は確認した一次資料）<input name="source" maxlength="500"></label><button class="primary">検証記録を保存</button></form>')+
+    panel('<h3>検証結果を登録</h3><form id="evidence-form"><label>対象システム<select name="project" required><option value="">選択してください</option>'+opts+'</select></label><label>検証の種類<select name="type">'+newEvidenceTypes.map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認状況<select name="status">'+evidenceStatuses.filter(x=>x!=="顧客確認済み").map(x=>'<option>'+x+'</option>').join("")+'</select></label><label>確認内容・未解決事項<textarea name="summary" maxlength="1000" required></textarea></label><label>出典URL・資料名（資料確認済みの場合は確認した一次資料）<input name="source" maxlength="500"></label><button class="primary">検証記録を保存</button></form>')+
     panel('<h3>検証履歴（出典と鮮度）</h3>'+(recent.length?recent.slice(0,100).map(r=>'<article><h3>'+esc(projectName(r.project))+'</h3><p>'+esc(r.type)+' ／ '+esc(r.status)+' ／ '+esc(r.date)+' ／ '+esc(evidenceFreshness(r))+'</p><p>'+esc(r.summary)+'</p><p>根拠：'+esc(r.source||"未記録")+'</p>'+action("削除","evidenceDelete",r.id)+'</article>').join(""):'<p>この端末に登録された検証履歴はありません。</p>'));
 }
 
@@ -1010,7 +1011,7 @@ function reviewIdea(idea, status) {
   const projects = [...data.projects];
   if (status === "決定済み" && !idea.project) {
     if (projects.some(p => normalizedName(p.name) === normalizedName(idea.name))) {
-      throw Error("同名の事業が登録済みです。事業一覧で確認してください。");
+      throw Error("同名の事業が登録済みです。システム一覧で確認してください。");
     }
     projects.push({id:crypto.randomUUID(), name:idea.name, type:types[2], stage:"検証中",
       priority:"未設定", date:"", rank:0, price:null, customer:idea.customer, next:idea.next,
@@ -1041,7 +1042,7 @@ function existingResearchPanel() {
           action("採用","researchAdopt",index) + action("保留","researchHold",index) + action("却下","researchReject",index) : "") +
         (status === "決定済み" ? action("事業の次の行動を編集","project",report.project) : "") +
         '</div></article>';
-    }).join("") : '<p>事業一覧に一致する公開レポートはありません。</p>')));
+    }).join("") : '<p>システム一覧に一致する公開レポートはありません。</p>')));
 }
 
 function businessRevenueOverview() {
@@ -1054,56 +1055,52 @@ function businessRevenueOverview() {
   const cost=ledger.reduce((sum,r)=>sum+r.cost,0);
   const rows=ledger.map(r=>{
     const project=byProject.get(r.project);
-    return '<article class="business-progress"><h3>'+esc(project?.name||"登録事業")+'</h3><div class="metrics">'+
-      metric("契約数","未連携","事業別契約台帳は未接続")+
+    return '<article class="business-progress"><h3>'+esc(project?.name||"登録システム")+'</h3><div class="metrics">'+
+      metric("契約数","未連携","システム別契約台帳は未接続")+
       metric("売上",yen(r.revenue),"当月入力実績")+
       metric("差引収支",yen(r.revenue-r.cost),"売上−費用・税引前")+
       '</div></article>';
   }).join("");
-  return panel('<h3>事業別の契約・売上・利益</h3><p>対象：'+esc(period)+' ／ 実績登録ベース。未登録を0円とは扱いません。</p>'+
+  return panel('<h3>システム別の契約・売上・利益</h3><p>対象：'+esc(period)+' ／ 実績登録ベース。未登録を0円とは扱いません。</p>'+
     '<div class="metrics">'+
-    metric("契約件数",contractCount===null?"確認不可":contractCount+"件","営業記録の契約段階・事業別未連携")+
+    metric("契約件数",contractCount===null?"確認不可":contractCount+"件","営業記録の契約段階・システム別未連携")+
     metric("売上合計",ledger.length?yen(revenue):"未登録","当月実績")+
     metric("差引収支",ledger.length?yen(revenue-cost):"未登録","税引前・営業利益ではありません")+
     '</div>'+
-    (rows||'<p>事業別の売上・費用はまだ登録されていません。販売開始後、実績を登録するとここに表示されます。</p>')+
-    '<p>※契約数は現在の営業記録に基づく件数で、事業別の正確な契約数や有効契約数ではありません。今後の契約・決済連携が必要です。</p>'+
+    (rows||'<p>システム別の売上・費用はまだ登録されていません。販売開始後、実績を登録するとここに表示されます。</p>')+
+    '<p>※契約数は現在の営業記録に基づく件数で、システム別の正確な契約数や有効契約数ではありません。今後の契約・決済連携が必要です。</p>'+
     '<button type="button" data-tab="finance">売上・費用を登録する</button>');
 }
-function executiveQuickMatrix() {
+function executiveQuickMatrix(projects, title) {
   const period=today().slice(0,7);
   const ledger=data.ledger.filter(r=>r.month===period);
-  const byId=new Map(data.projects.map(p=>[p.id,p]));
-  const byName=new Map();
-  for(const entry of ledger){
-    const name=byId.get(entry.project)?.name;
-    if(!name)continue;
-    const current=byName.get(name)||{revenue:0,cost:0,records:0};
-    current.revenue+=Number(entry.revenue)||0;
-    current.cost+=Number(entry.cost)||0;
-    current.records++;
-    byName.set(name,current);
-  }
-  const cloudNames=new Set(orxeliaTrialProposals.map(p=>p.title));
-  const projects=[...orxeliaTrialProposals.map(p=>({name:p.title,status:p.status,cloud:true})),
-    ...activeProjects().filter(p=>!cloudNames.has(p.name)).map(p=>({name:p.name,status:p.stage,cloud:false}))];
+  const byProject=new Map(ledger.map(entry=>[entry.project,entry]));
   const awaiting=new Set(['awaiting_first_approval','development_ready','awaiting_final_approval']);
   const statusLabel={awaiting_first_approval:'デザイン承認待ち',development_ready:'試作品確認待ち',awaiting_final_approval:'販売判断待ち',awaiting_selection:'生成待ち',designing:'デザイン生成中',revision_requested:'修正待ち',revising:'修正中',approved_for_development:'開発待ち',developing:'開発中',prototype_revision_requested:'試作品修正待ち',prototype_revising:'試作品修正中',sales_review_requested:'販売審査中',final_approved:'販売方針承認済み',on_hold:'保留'};
   const rows=projects.map(p=>{
-    const actual=byName.get(p.name);
+    const actual=byProject.get(p.projectId);
     const state=statusLabel[p.status]||p.status||'未設定';
     const label=awaiting.has(p.status)?'<strong class="quick-attention">'+esc(state)+'</strong>':esc(state);
     return '<tr'+(awaiting.has(p.status)?' class="needs-action"':'')+'><th scope="row">'+esc(p.name)+'</th><td data-label="進捗">'+label+'</td><td data-label="売上">'+ (actual?yen(actual.revenue):'—')+'</td><td data-label="売上−費用">'+(actual?yen(actual.revenue-actual.cost):'—')+'</td><td data-label="契約数">—</td></tr>';
   }).join('');
-  return '<section class="quick-overview" aria-label="事業別30秒サマリー"><div class="head"><h2>事業別の状況</h2><small>'+esc(period)+' 実績入力分</small></div>'+
-    (rows?'<div class="quick-table-scroll" tabindex="0" role="region" aria-label="事業別ステータスと入力実績"><table class="quick-table"><thead><tr><th scope="col">事業</th><th scope="col">進捗・確認</th><th scope="col">売上</th><th scope="col">売上−費用</th><th scope="col">契約数</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p>登録事業はまだありません。</p>')+
-    '<p class="quick-note">※当月の手動入力分。売上−費用は営業利益・純利益ではありません。契約数は未連携です。</p><details><summary>数値の見方</summary><p>売上と売上−費用は当月の手動入力データです。売上−費用は営業利益・純利益ではありません。契約数は事業別の確定データと紐付いていないため「未連携」と表示しています。「—」は0円を意味しません。</p></details></section>';
+  return '<section class="quick-overview" aria-label="システム別30秒サマリー"><div class="head"><h2>'+esc(title)+'</h2><small>'+esc(period)+' 実績入力分</small></div>'+
+    (rows?'<div class="quick-table-scroll" tabindex="0" role="region" aria-label="システム別ステータスと入力実績"><table class="quick-table"><thead><tr><th scope="col">システム</th><th scope="col">進捗・確認</th><th scope="col">売上</th><th scope="col">売上−費用</th><th scope="col">契約数</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p>該当するシステムはありません。</p>')+
+    '<p class="quick-note">※当月の手動入力分。売上−費用は営業利益・純利益ではありません。契約数は未連携です。</p><details><summary>数値の見方</summary><p>売上と売上−費用は当月の手動入力データです。売上−費用は営業利益・純利益ではありません。契約数はシステム別の確定データと紐付いていないため「未連携」と表示しています。「—」は0円を意味しません。</p></details></section>';
 }
+let overviewSelection="";
+document.addEventListener("click",event=>{
+  const button=event.target.closest("[data-overview]");
+  if(!button)return;
+  const id=button.dataset.overview;
+  overviewSelection=overviewSelection===id?"":id;
+  render();
+  document.querySelector('[data-overview="'+id+'"]')?.focus({preventScroll:true});
+});
 function home() {
   const requiresAction=p=>!isPartnerLinkImplemented(p)&&(p.status==="awaiting_first_approval"||p.status==="development_ready"||(p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready_for_approval"));
   const owner=orxeliaTrialProposals.filter(requiresAction);
-  const research=orxeliaTrialProposals.filter(p=>p.status==="awaiting_final_approval"&&!requiresAction(p));
-  const running=orxeliaTrialProposals.filter(p=>["awaiting_selection","designing","revision_requested","revising","approved_for_development","developing","prototype_revision_requested","prototype_revising","sales_review_requested"].includes(p.status));
+  const research=orxeliaTrialProposals.filter(p=>!isPartnerLinkImplemented(p)&&p.status==="awaiting_final_approval"&&!requiresAction(p));
+  const running=orxeliaTrialProposals.filter(p=>!isPartnerLinkImplemented(p)&&["awaiting_selection","designing","revision_requested","revising","approved_for_development","developing","prototype_revision_requested","prototype_revising","sales_review_requested"].includes(p.status));
   const cleanTitle=p=>esc(p.title.replace(/（自動開発動作検証）/g,"").replace(/^【第2件・本番検証】/,""));
   const ownerRows=owner.map(p=>{
     const design=p.status==="awaiting_first_approval",prototype=p.status==="development_ready";
@@ -1111,12 +1108,50 @@ function home() {
     const label=design?"デザインを確認":prototype?"試作品を確認":"販売判断を確認";
     return '<article class="business-progress priority-card owner-action-card"><div class="priority-top"><span class="priority-label">あなたの操作が必要</span><span class="priority-state">'+esc(label)+'</span></div><h3>'+cleanTitle(p)+'</h3><p><b>やること：</b>'+esc(task)+'</p><button class="primary" type="button" data-tab="verification">承認・販売画面で操作する →</button></article>';
   }).join("");
-  const researchRows=research.map(p=>'<article class="business-progress priority-card ai-review-card"><div class="priority-top"><span class="priority-state">販売保留・根拠不足</span></div><h3>'+cleanTitle(p)+'</h3><p><b>あなたの操作：</b>今は不要。需要・競合優位性・採算の証拠がそろうまで販売判断しません。</p></article>').join("");
-  return implementedProductsPanel()+'<div class="home-intro"><span class="eyebrow">EXECUTIVE OVERVIEW</span><h2>今、あなたがやること</h2><p>操作が必要な案件だけをオレンジ色で表示します。調査不足の案件は別にまとめています。</p></div>'+
-    '<section class="priority-section"><div class="head"><h2>あなたの操作待ち</h2><span class="count-pill">'+owner.length+'件</span></div>'+(ownerRows?'<div class="priority-list">'+ownerRows+'</div>':'<div class="empty-state"><strong>今すぐ必要な操作はありません</strong><p>販売根拠が不足している案件は、承認せず保留します。</p></div>')+'</section>'+
-    (researchRows?'<section class="priority-section"><div class="head"><h2>AI側の調査課題・販売保留</h2><span class="count-pill">'+research.length+'件</span></div><p>この欄はあなたへの承認依頼ではありません。調査が自動で完了することを保証する表示でもありません。</p><div class="priority-list">'+researchRows+'</div></section>':'')+
-    '<details class="home-stats"><summary>全体の数字・事業別状況を見る</summary><div class="metrics">'+metric("あなたの操作待ち",owner.length+"件","承認・試作品の判断")+metric("AI作業中・待機",running.length+"件","自動処理の進捗")+metric("販売根拠不足",research.length+"件","承認せず保留")+'</div>'+executiveQuickMatrix()+'</details>'+
-    '<div class="home-links"><button type="button" data-tab="portfolio">事業一覧を見る</button><button type="button" data-tab="verification">承認・販売画面へ</button></div>';
+  const savedTasks=loadTasks();
+  const openTasks=(savedTasks||[]).filter(task=>task.state!=="完了")
+    .sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"));
+  const taskRows=openTasks.map(task=>'<article class="business-progress priority-card"><h3>'+esc(task.title)+'</h3><p>'+esc(data.projects.find(p=>p.id===task.project)?.name||"共通")+' ／ '+esc(task.state)+(task.due?' ／ 期限 '+esc(task.due):'')+'</p><button type="button" data-tab="verification" data-open-tasks>実行タスクを開く</button></article>').join("");
+  const proposals=orxeliaTrialProposals.map(p=>({
+    name:p.title, status:isPartnerLinkImplemented(p)?"社内運用中・販売準備中":p.status, proposal:p
+  }));
+  const projects=activeProjects();
+  const matched=new Set();
+  const systems=projects.map(project=>{
+    const proposal=proposals.find(row=>row.proposal.brief?.legacy_id===project.id)||
+      proposals.find(row=>normalizedName(row.name)===normalizedName(project.name));
+    if(proposal)matched.add(proposal);
+    const stage=project.stage;
+    const status=["販売中","収益化済み","終了","保留"].includes(stage)?stage:proposal?.status||stage;
+    return {name:project.name,projectId:project.id,status,proposal:proposal?.proposal};
+  }).concat(proposals.filter(row=>!matched.has(row)));
+  const selling=systems.filter(row=>["販売中","収益化済み"].includes(row.status));
+  const developing=systems.filter(row=>["開発中","approved_for_development","developing","development_ready","prototype_revision_requested","prototype_revising"].includes(row.status));
+  const preparing=systems.filter(row=>["社内運用中・販売準備中","販売準備中","sales_review_requested","awaiting_final_approval","final_approved"].includes(row.status));
+  const period=today().slice(0,7);
+  const ledger=data.ledger.filter(r=>r.month===period);
+  const revenue=ledger.reduce((sum,row)=>sum+row.revenue,0);
+  const financialRows=systems.filter(row=>ledger.some(entry=>entry.project===row.projectId));
+  const cards=[
+    ["selling","販売中",selling.length+"件","販売中・収益化済み",selling],
+    ["developing","開発中",developing.length+"件","開発待ち・試作品確認を含む",developing],
+    ["preparing","販売準備中",preparing.length+"件","販売審査・販売保留を含む",preparing],
+    ["contracts","月間契約数","未連携","契約日・システムの記録が必要",null],
+    ["revenue","月間売上",ledger.length?yen(revenue):"未登録",period+" 入力実績",financialRows],
+    ["owner","あなたの操作待ち",owner.length+"件","承認・試作品の判断",systems.filter(row=>owner.includes(row.proposal))],
+    ["running","AI作業中・待機",running.length+"件","自動処理の進捗",systems.filter(row=>running.includes(row.proposal))],
+    ["research","販売根拠不足",research.length+"件","販売判断を保留中",systems.filter(row=>research.includes(row.proposal))]
+  ];
+  const card=(id,label,value,note)=>'<button type="button" class="metric overview-card" data-overview="'+id+'" aria-expanded="'+(overviewSelection===id)+'" aria-controls="overview-detail"><small>'+esc(label)+'</small><b>'+esc(value)+'</b><span>'+esc(note)+'</span></button>';
+  const selected=cards.find(([id])=>id===overviewSelection);
+  const breakdown=selected ? selected[4] ? executiveQuickMatrix(selected[4],selected[1]+'｜システム別の状況') :
+    '<div class="panel"><h2>月間契約数</h2><p>契約日とシステムが紐付いた記録が必要です。</p><button type="button" data-tab="finance">営業・収支の記録を見る</button></div>' : '';
+  return '<section class="overview"><div class="head"><h2>全体の状況</h2><small>'+esc(period)+'</small></div>'+
+    '<div class="overview-main">'+cards.slice(0,5).map(row=>card(...row)).join('')+'</div>'+
+    '<div class="overview-secondary">'+cards.slice(5).map(row=>card(...row)).join('')+'</div>'+
+    '<section id="overview-detail" aria-live="polite"'+(selected?'':' hidden')+'>'+breakdown+'</section></section>'+
+    '<section class="priority-section"><div class="head"><h2>あなたがやること</h2><span class="count-pill">'+(owner.length+openTasks.length)+'件</span></div>'+
+    (ownerRows||taskRows?'<div class="priority-list">'+ownerRows+taskRows+'</div>':savedTasks===null?'':'<div class="empty-state"><strong>今すぐ必要な操作はありません</strong></div>')+(savedTasks===null?'<p role="status">端末の実行タスクを読み込めませんでした。</p>':'')+'</section>';
 }
 
 function expandedDetailPaths(root){
@@ -1197,31 +1232,17 @@ function render() {
     saveOrxeliaDraft(activeRevision.dataset.revisionInput,activeRevision.value);
     return;
   }
-  const projects = activeProjects();
   const activities = latestProjectActivities();
-  const active = projects.filter(project => !["保留","終了"].includes(project.stage));
-  const latest = active.map(project => ({project,activity:activities.get(normalizedName(project.name))}))
-    .filter(({activity}) => activity).sort((a,b) => Date.parse(b.activity.updatedAt)-Date.parse(a.activity.updatedAt))[0];
-  $("work-now").innerHTML = latest ?
-    '<span class="eyebrow">最新の作業報告</span><strong>' + esc(latest.project.name) + '</strong>' +
-    badge(latest.project.name === currentResearchProject && latest.activity.state === "判断待ち" ? "販売保留・根拠確認中" : latest.activity.state) + (latest.activity.current ? '<span class="work-note">' + esc(latest.activity.current) + '</span>' : "") :
-    '<span class="eyebrow">最新の作業報告</span><span>同期された報告はまだありません。</span>';
-  $("metrics").innerHTML = [
-    metric("事業総数", projects.length, "登録済み"),
-    metric("検証中", active.filter(p => displayedBusinessStage(p, activities) === "検証中").length, "試作テスト・販売前の根拠確認"),
-    metric("開発中", active.filter(p => displayedBusinessStage(p, activities) === "開発中").length, "最新の試作報告を反映"),
-    metric("収益化済み", projects.filter(p => p.stage === "収益化済み").length, "登録ステータスの集計")
-  ].join("");
   document.body.classList.toggle("is-home",tab==="home");
   document.querySelectorAll("[data-tab]").forEach(button => {
     if (button.dataset.tab === tab) button.setAttribute("aria-current","page");
     else button.removeAttribute("aria-current");
   });
-  const expandedPaths = expandedDetailPaths($("view"));
+  const expandedPaths = tab==="home"?[]:expandedDetailPaths($("view"));
   $("view").innerHTML = {
     home, portfolio:() => portfolio(activities) + details("日次候補",daily()),
-    verification:() => heading("事業案・販売判断") + orxeliaTrialProposalPanel() + launchDecisions() + details("過去の経営判断",decisions()) + ideaReviewPanel() + existingResearchPanel() + details("検証記録・取り込み",verification()) + details("作業記録・タスク", (window.orxeliaSync?.dailyReportView()||"")+pendingDecisionSummary()+details("実行タスク",tasks())+details("作業進捗",progress())),
-    finance:() => finance() + details("営業・販売の記録",sales()) + details("当月の事業別収支",businessRevenueOverview()),
+    verification:() => heading("承認・販売") + orxeliaTrialProposalPanel() + launchDecisions() + details("過去の経営判断",decisions()) + ideaReviewPanel() + existingResearchPanel() + details("検証記録・取り込み",verification()) + details("作業記録・タスク", (window.orxeliaSync?.dailyReportView()||"")+pendingDecisionSummary()+'<details id="execution-tasks" class="panel"><summary>実行タスク</summary>'+tasks()+'</details>'+details("作業進捗",progress())),
+    finance:() => finance() + details("営業・販売の記録",sales()) + details("当月のシステム別収支",businessRevenueOverview()),
     settings
   }[tab]();
   restoreDetailPaths($("view"),expandedPaths);
@@ -1255,19 +1276,19 @@ function removedBusinessesPanel(){
  const rows=locals.map(p=>({local:p,cloud:orxeliaArchivedProposals.find(c=>c.brief?.legacy_id===p.id||c.title===p.name)}));
  rows.push(...orxeliaArchivedProposals.filter(c=>!locals.some(p=>c.brief?.legacy_id===p.id||c.title===p.name)).map(c=>({cloud:c})));
  if(!rows.length)return '';
- return '<details class="removed-businesses"><summary>削除した事業（'+rows.length+'件）</summary><p>一覧から削除した事業です。収支・判断・検証履歴は残っています。復元後のAI処理は保留のままです。</p>'+rows.map(({local,cloud})=>'<article><h3>'+esc(local?.name||cloud.title)+'</h3><button type="button" data-business-restore="'+esc(local?.id||'')+'" data-business-cloud="'+esc(cloud?.id||'')+'">事業一覧に戻す</button></article>').join('')+'</details>';
+ return '<details class="removed-businesses"><summary>削除したシステム（'+rows.length+'件）</summary><p>一覧から削除したシステムです。収支・判断・検証履歴は残っています。復元後のAI処理は保留のままです。</p>'+rows.map(({local,cloud})=>'<article><h3>'+esc(local?.name||cloud.title)+'</h3><button type="button" data-business-restore="'+esc(local?.id||'')+'" data-business-cloud="'+esc(cloud?.id||'')+'">システム一覧に戻す</button></article>').join('')+'</details>';
 }
 async function changeBusinessRemoval(localId,cloudId,removed){
  const local=data.projects.find(p=>p.id===localId);
  const cloud=[...orxeliaTrialProposals,...orxeliaArchivedProposals].find(p=>p.id===cloudId||local&&(p.brief?.legacy_id===local.id||p.title===local.name));
  if(!local&&!cloud)throw Error('対象の事業が見つかりません。');
  const name=local?.name||cloud.title;
- const message=removed?'「'+name+'」を事業一覧から削除しますか？\n\n収支・判断・タスク・検証履歴は残します。削除した事業から元に戻せます。AI処理は保留にします。公開中のアプリは停止・削除しません。':'「'+name+'」を事業一覧に戻しますか？ AI処理は自動再開しません。';
+ const message=removed?'「'+name+'」をシステム一覧から削除しますか？\n\n収支・判断・タスク・検証履歴は残します。削除したシステムから元に戻せます。AI処理は保留にします。公開中のアプリは停止・削除しません。':'「'+name+'」をシステム一覧に戻しますか？ AI処理は自動再開しません。';
  if(!confirm(message))return;
  keepSafetyCopy('事業の削除・復元前');
  if(cloud)await sync.archiveProposal(cloud.id,removed);
  if(local){const now=new Date().toISOString();save({...data,projects:data.projects.map(p=>p.id===local.id?(removed?{...p,deletedAt:now,stageBeforeRemoval:p.stage,stage:'終了',rank:0}:{...p,deletedAt:undefined,stageBeforeRemoval:undefined,stage:'保留',rank:0}):p)});}
- render();$('notice').textContent='「'+name+'」を'+(removed?'一覧から削除しました。収支・履歴は保持しています。':'事業一覧に戻しました。AI処理は保留中です。');
+ render();$('notice').textContent='「'+name+'」を'+(removed?'一覧から削除しました。収支・履歴は保持しています。':'システム一覧に戻しました。AI処理は保留中です。');
 }
 function deleteSingleProject(id){changeBusinessRemoval(id,'',true).catch(e=>{$('notice').textContent='削除できませんでした：'+e.message;});}
 document.addEventListener('click',async event=>{
@@ -1279,8 +1300,8 @@ document.addEventListener('click',async event=>{
 function editProject(id, isDaily) {
   const old = data.projects.find(p => p.id === id);
   const p = old || {name:"",type:isDaily ? types[0] : types[2],stage:isDaily ? "未検証" : "未確認",priority:"未設定",date:"",rank:0,price:null,history:[]};
-  editor(old ? "事業を編集" : "事業を登録",
-    input("name","事業名","text",p.name,'required maxlength="140"') +
+  editor(old ? "事業を編集" : "システムを登録",
+    input("name","システム名","text",p.name,'required maxlength="140"') +
     select("type","区分",types,p.type) + select("stage","ステータス",stages,p.stage) +
     select("priority","優先度",priorities,p.priority) +
     '<div id="daily-fields">' + input("date","日次レポートの日付","date",p.date || date) +
@@ -1357,6 +1378,12 @@ document.addEventListener("click", event => {
     $("notice").textContent = "";
     render();
     if(changed)window.scrollTo({top:0,behavior:"instant"});
+    if(button.hasAttribute("data-open-tasks")){
+      const tasksPanel=$("execution-tasks");
+      tasksPanel.parentElement.open=true;
+      tasksPanel.open=true;
+      tasksPanel.scrollIntoView({block:"center"});
+    }
   }
   try {
     if (kind === "salesExport") salesExport();
@@ -1427,7 +1454,7 @@ document.addEventListener("click", event => {
     if (kind === "tasksIcs") exportTasksCalendar();
     if (kind === "researchTemplate") {
       const project=data.projects[0];
-      downloadJson("ORXELIA-research-template.json",{format:"orxelia-research-v1",project:project?.name||"事業一覧の事業名",researchedAt:today(),findings:[{type:"公開市場データ",status:"仮説",summary:"ここに調査結果と未確認事項を記載",source:"原典URLまたは資料名"},{type:"競合実績・価格",status:"仮説",summary:"競合の価格・差別化を記載",source:"競合公式サイトURL"}]});
+      downloadJson("ORXELIA-research-template.json",{format:"orxelia-research-v1",project:project?.name||"システム一覧の事業名",researchedAt:today(),findings:[{type:"公開市場データ",status:"仮説",summary:"ここに調査結果と未確認事項を記載",source:"原典URLまたは資料名"},{type:"競合実績・価格",status:"仮説",summary:"競合の価格・差別化を記載",source:"競合公式サイトURL"}]});
     }
     if (kind === "researchCancel") {pendingResearch=null; if($("research-preview")) $("research-preview").textContent="取り込みを中止しました。";}
     if (kind === "researchCommit") {
@@ -2075,7 +2102,7 @@ document.addEventListener("submit",event=>{
   try {const rows=loadTasks();if(rows===null)throw Error("タスクを読み込めません。");
     const v=Object.fromEntries(new FormData(event.target));
     const title=String(v.title||"").trim();if(!title||title.length>160)throw Error("タスク名を確認してください。");
-    if(v.project&&!data.projects.some(p=>p.id===v.project))throw Error("対象事業を確認してください。");
+    if(v.project&&!data.projects.some(p=>p.id===v.project))throw Error("対象システムを確認してください。");
     saveTasks([...rows,{id:crypto.randomUUID(),title,project:String(v.project||""),due:String(v.due||""),state:"未着手"}]);render();
   }catch(e){$("notice").textContent=e.message||"保存できませんでした。";}
 });
