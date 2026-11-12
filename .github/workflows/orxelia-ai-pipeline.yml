@@ -1,5 +1,9 @@
 name: ORXELIA AI proposal development (manual fallback)
 on:
+  workflow_run:
+    workflows: [ORXELIA AI research feed]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: '15 23 * * *'
@@ -10,6 +14,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   process-next-proposal:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
