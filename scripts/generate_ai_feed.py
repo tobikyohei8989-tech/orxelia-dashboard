@@ -394,7 +394,8 @@ def research_idea():
     if os.getenv("ORXELIA_FREE_GROUNDING") != "true":
         return None
     payload = {
-        "contents": [{"parts": [{"text": (
+        "model": "gemini-3.8-flash",
+        "input": (
             "日本向けの新規事業案を1件だけ選定してください。初期投資5万円以内、原則1人。"
             "Google検索で顧客の課題、公的統計や業界資料、公式競合価格、無料代替を調べてから選ぶこと。"
             "見積追客、見積承認、予約ページ、招待状、施工事例、写真共有、家計、コーデは除外。"
@@ -402,19 +403,23 @@ def research_idea():
             "社内試作と公開後の販売検証、撤退基準を記載する。顧客への連絡は提案しない。"
             "JSONのみ。キーは name, customer, offer, next, distribution, advantage, recurring, selection, research。"
             "researchには出典と照合できる事実および未確認事項を書く。"
-        )}]}],
-        "tools": [{"google_search": {}}],
+        ),
+        "tools": [{"type": "google_search"}],
     }
-    result = api_request(BASE + "/gemini-3.8-flash:generateContent", payload, retries=1)
-    candidate = result["candidates"][0]
-    chunks = candidate.get("groundingMetadata", {}).get("groundingChunks", [])
-    sources = list(dict.fromkeys(
-        chunk["web"]["uri"] for chunk in chunks
-        if chunk.get("web", {}).get("uri", "").startswith("https://")
-    ))
+    result = api_request(BASE + "/interactions", payload, retries=1)
+    outputs = result.get("outputs") or result.get("output") or []
+    steps = result.get("steps") or []
+    parts = [part for item in outputs + steps
+             for part in [item, *(item.get("content") or []), *(item.get("output") or [])]
+             if isinstance(part, dict)]
+    citations = [citation for part in parts for citation in part.get("annotations", [])]
+    urls = [c.get("url_citation", {}).get("url") or c.get("url") or c.get("uri") for c in citations]
+    urls.extend(item.get("url") for step in steps for item in step.get("results", []))
+    sources = list(dict.fromkeys(url for url in urls if isinstance(url, str) and url.startswith("https://")))
     if len(sources) < 2:
         raise ValueError("Insufficient search sources")
-    raw = "".join(part.get("text", "") for part in candidate["content"]["parts"]).strip()
+    raw = result.get("output_text") or "".join(part.get("text", "") for part in parts if isinstance(part.get("text"), str))
+    raw = raw.strip()
     idea = json.loads(raw.removeprefix("```json").removesuffix("```").strip())
     limits = {"name": 140, "customer": 300, "offer": 300, "next": 300,
               "distribution": 600, "advantage": 600, "recurring": 600,
