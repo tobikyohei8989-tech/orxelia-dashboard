@@ -55,7 +55,11 @@ async function buildPreapprovalTrial(proposal, design, designRevision) {
 }
 // Process pending proposal stages, including legacy dashboard projects migrated into the approval-gated workflow.
 const readyStages = new Set(['prototype_revision_requested', 'approved_for_development', 'sales_review_requested', 'revision_requested']);
+const revisionRetryPrefix = 'Gemini revision retry scheduled: ';
 function isReady(candidate, now) {
+ if (candidate.status === 'revision_requested' && candidate.error_message?.startsWith(revisionRetryPrefix)) {
+  return now - Date.parse(candidate.updated_at) >= 30 * 60 * 1000;
+ }
  if (readyStages.has(candidate.status)) return true;
  if (candidate.status === 'awaiting_selection') return candidate.design_status === 'pending';
  if (candidate.status !== 'awaiting_final_approval' || candidate.recommendation !== 'needs_evidence') return false;
@@ -66,7 +70,7 @@ function rank(candidate) {
  return Number.isSafeInteger(value) && value > 0 ? value : 99;
 }
 async function selectProposal() {
- const query = 'orxelia_proposals?select=id,status,design_status,priority_rank:brief->>priority_rank,recommendation:sales_review->>recommendation,last_researched_at:sales_review->>last_researched_at&brief->>dashboard_deleted_at=is.null&status=in.(awaiting_selection,revision_requested,approved_for_development,prototype_revision_requested,sales_review_requested,awaiting_final_approval)&order=created_at.asc,id.asc';
+ const query = 'orxelia_proposals?select=id,status,design_status,updated_at,error_message,priority_rank:brief->>priority_rank,recommendation:sales_review->>recommendation,last_researched_at:sales_review->>last_researched_at&brief->>dashboard_deleted_at=is.null&status=in.(awaiting_selection,revision_requested,approved_for_development,prototype_revision_requested,sales_review_requested,awaiting_final_approval)&order=created_at.asc,id.asc';
  const now = Date.now();
  let best;
  const pageSize = 100;
@@ -169,4 +173,26 @@ try{
   await update(proposal.id,{status:'awaiting_final_approval',sales_review:{...proposal.sales_review,recommendation:'needs_evidence',items:['Distribution channel evidence and low-cost acquisition experiment','CAC, retention, payback and stop conditions','iPhone real-device tests','end-to-end functional testing','customer demand and competitive advantage','legal and privacy review','payment, cancellation and support design','pricing and margin verification'],note:'Sales is NOT ready. Final approval button remains disabled until verified evidence exists.'}},'sales_review_requested');
   console.log('Sales review saved: evidence missing, not ready for final approval');
  }
-}catch(e){console.error('Proposal stage failed',String(e).slice(0,350));const state=(await api(idFilter(proposal.id)+'&select=status'))[0]?.status;if(['designing','revising','developing','prototype_revising'].includes(state))await update(proposal.id,{status:'failed',design_status:state==='designing'||state==='revising'?'failed':proposal.design_status,error_message:String(e).slice(0,350)},state);process.exitCode=1}
+} catch (error) {
+ const message = String(error);
+ console.error('Proposal stage failed', message.slice(0,350));
+ const [current] = await api(idFilter(proposal.id)+'&select=status');
+ const state = current?.status;
+ if (state === 'revising' && proposal.status === 'revision_requested'
+     && !proposal.error_message?.startsWith(revisionRetryPrefix)
+     && (/^Error: Gemini unavailable:/.test(message) || message.includes('Visual review unavailable'))
+     && /HTTP 50[0234]|timeout/i.test(message)) {
+  await update(proposal.id,{
+   status:'revision_requested',
+   error_message:(revisionRetryPrefix+message).slice(0,350)
+  },'revising');
+  console.log('Revision queued for one retry after 30 minutes');
+ } else if (['designing','revising','developing','prototype_revising'].includes(state)) {
+  await update(proposal.id,{
+   status:'failed',
+   design_status:state==='designing'||state==='revising'?'failed':proposal.design_status,
+   error_message:message.slice(0,350)
+  },state);
+ }
+ process.exitCode=1;
+}
