@@ -15,6 +15,7 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.ORXELIA_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.ORXELIA_SUPABASE_SERVICE_ROLE_KEY }}
+      ORXELIA_DAILY_PROPOSAL_OWNER_ID: ${{ vars.ORXELIA_DAILY_PROPOSAL_OWNER_ID }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
     steps:
       - uses: actions/checkout@v4

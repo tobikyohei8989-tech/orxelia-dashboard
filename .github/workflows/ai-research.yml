@@ -34,6 +34,7 @@ jobs:
           python -m py_compile scripts/generate_ai_feed.py
       - name: Generate research feed
         env:
+          ORXELIA_FREE_GROUNDING: ${{ vars.ORXELIA_FREE_GROUNDING }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python scripts/generate_ai_feed.py
       - name: Commit changed report

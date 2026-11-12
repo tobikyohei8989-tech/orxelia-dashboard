@@ -1,0 +1,86 @@
+create or replace function public.orxelia_check_development_legal_review()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if tg_op = 'INSERT' then
+    if new.status in ('approved_for_development','developing') then
+      raise exception '案件を作成してから開発承認を行ってください。';
+    end if;
+    return new;
+  end if;
+  if new.status is not distinct from old.status then return new; end if;
+  if new.status not in ('approved_for_development','developing') then return new; end if;
+
+  if new.status = 'approved_for_development' then
+    if old.status <> 'awaiting_first_approval' or auth.uid() is distinct from old.owner_id then
+      raise exception '案件所有者による開発承認が必要です。';
+    end if;
+    if nullif(btrim(new.prototype_html),'') is null
+      or new.test_report #> '{preapproval_trial,passed}' is distinct from 'true'::jsonb
+      or new.test_report #> '{preapproval_trial,design_revision}' is distinct from to_jsonb(coalesce(new.revision_number,1)) then
+      raise exception '現在のデザイン版の非公開試作を作成し、検査を完了してください。';
+    end if;
+  else
+    if old.status <> 'approved_for_development' then
+      raise exception '開発承認が必要です。';
+    end if;
+  end if;
+  return new;
+end $$;
+
+create or replace function public.orxelia_save_legal_review(
+  p_proposal_id uuid, p_previous_version bigint, p_design_revision integer,
+  p_checks jsonb, p_risks jsonb
+) returns public.orxelia_legal_reviews
+language plpgsql security definer set search_path = '' as $$
+declare
+  proposal public.orxelia_proposals;
+  saved public.orxelia_legal_reviews;
+  latest_version bigint;
+  check_id text;
+  item jsonb;
+  can_apply boolean := true;
+begin
+  select * into proposal from public.orxelia_proposals
+    where id = p_proposal_id and owner_id = auth.uid() for update;
+  if not found then raise exception '案件が見つかりません。'; end if;
+  if coalesce(proposal.revision_number, 1) is distinct from p_design_revision then
+    raise exception 'デザインが更新されました。再読み込みしてください。';
+  end if;
+  select max(version) into latest_version from public.orxelia_legal_reviews
+    where proposal_id = p_proposal_id;
+  if latest_version is distinct from p_previous_version then
+    raise exception '別の端末で審査が更新されました。再読み込みしてください。';
+  end if;
+  if jsonb_typeof(p_checks) is distinct from 'object'
+    or jsonb_typeof(p_risks) is distinct from 'array'
+    or octet_length(p_checks::text) + octet_length(p_risks::text) > 40000 then
+    raise exception '審査の入力形式またはサイズが不正です。';
+  end if;
+  foreach check_id in array array['regulation','trademark','copyright','terms','privacy','sales','security'] loop
+    item := p_checks -> check_id;
+    if coalesce(item->>'status','') not in ('unreviewed','in_review','passed','blocked','expert_review') then
+      raise exception '審査項目の状態が不正です。';
+    end if;
+    if item->>'status' <> 'passed'
+      or nullif(btrim(item->>'evidence'),'') is null
+      or nullif(btrim(item->>'reviewer'),'') is null
+      or coalesce(item->>'reviewedAt','') !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' then
+      can_apply := false;
+    end if;
+  end loop;
+  if exists (select 1 from jsonb_array_elements(p_risks) risk
+    where coalesce(risk->>'severity','') not in ('critical','high','medium','low')
+      or coalesce(risk->>'status','') not in ('open','resolved')
+      or nullif(btrim(risk->>'detail'),'') is null) then
+    raise exception 'リスクの入力内容を確認してください。';
+  end if;
+  if exists (select 1 from jsonb_array_elements(p_risks) risk
+    where risk->>'severity' in ('critical','high') and risk->>'status' = 'open') then
+    can_apply := false;
+  end if;
+  insert into public.orxelia_legal_reviews
+    (proposal_id, reviewer_id, design_revision, checks, risks, eligible)
+  values (p_proposal_id, auth.uid(), p_design_revision, p_checks, p_risks, can_apply)
+  returning * into saved;
+  return saved;
+end $$;

@@ -1,3 +1,5 @@
+import {createHash} from "node:crypto";
+import {readFile} from "node:fs/promises";
 import {qualityBrief,checkPrototypeQuality} from './prototype-quality.mjs';
 import {chromium} from 'playwright';
 const base=process.env.SUPABASE_URL,secret=process.env.SUPABASE_SERVICE_ROLE_KEY,gemini=process.env.GEMINI_API_KEY;
@@ -29,9 +31,69 @@ async function generateHtml(prompt,max,allowScripts=false){
 }
 
 async function test(html,interactive=false){const browser=await chromium.launch({headless:true});try{const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const errors=[];page.on('pageerror',e=>errors.push(String(e)));await page.route('https://orxelia.test/**',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));await page.goto('https://orxelia.test/preview',{waitUntil:'load'});const result=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:innerWidth,text:document.body.innerText.length,buttons:document.querySelectorAll('button').length,inputs:document.querySelectorAll('input,textarea,select').length}));return {passed:result.text>100&&result.width<=result.viewport+10&&(!interactive||result.inputs>=2&&result.buttons>=1)&&!errors.length,...result,errors}}finally{await browser.close()}}
-const brief=p=>JSON.stringify({title:p.title,problem:p.brief?.problem,solution:p.brief?.solution,target:p.brief?.target,competitive_position:p.brief?.competitive_position});
+const brief=p=>JSON.stringify({title:p.title,problem:p.brief?.problem,solution:p.brief?.solution,target:p.brief?.target,references:p.brief?.references,competitive_position:p.brief?.competitive_position});
+async function buildPreapprovalTrial(proposal, design, designRevision) {
+ const html = await generateHtml(
+  'Build an offline, private evaluation prototype in Japanese. Implement the main workflow using fictitious sample data, validated inputs and a working list. Label it 開発許可前の非公開試作. No network, real personal data, publication, payments or external dependencies. Output standalone HTML, CSS and inline JavaScript only. Request: '+brief(proposal)+' Design: '+design.slice(0,12000),
+  16000,true);
+ const check = await test(html,true);
+ if (!check.passed) throw Error('Private prototype browser test failed');
+ return {html,report:{passed:true,design_revision:designRevision,browser:check,submission_quality:latestQuality}};
+}
 // Process pending proposal stages, including legacy dashboard projects migrated into the approval-gated workflow.
-const proposal=(await api('orxelia_proposals?select=*&status=in.(awaiting_selection,revision_requested,approved_for_development,prototype_revision_requested,sales_review_requested,awaiting_final_approval)&order=created_at.asc&limit=30')).find(p=>p.status==='prototype_revision_requested'||p.status==='approved_for_development'||p.status==='sales_review_requested'||(p.status==='awaiting_final_approval'&&p.sales_review?.recommendation==='needs_evidence'&&(!p.sales_review?.last_researched_at||Date.now()-Date.parse(p.sales_review.last_researched_at)>20*60*60*1000))||p.status==='revision_requested'||p.design_status==='pending');
+const readyStages = new Set(['prototype_revision_requested', 'approved_for_development', 'sales_review_requested', 'revision_requested']);
+function isReady(candidate, now) {
+ if (readyStages.has(candidate.status)) return true;
+ if (candidate.status === 'awaiting_selection') return candidate.design_status === 'pending';
+ if (candidate.status !== 'awaiting_final_approval' || candidate.recommendation !== 'needs_evidence') return false;
+ return !candidate.last_researched_at || now - Date.parse(candidate.last_researched_at) > 20 * 60 * 60 * 1000;
+}
+function rank(candidate) {
+ const value = Number(candidate.priority_rank);
+ return Number.isSafeInteger(value) && value > 0 ? value : 99;
+}
+async function selectProposal() {
+ const query = 'orxelia_proposals?select=id,status,design_status,priority_rank:brief->>priority_rank,recommendation:sales_review->>recommendation,last_researched_at:sales_review->>last_researched_at&brief->>dashboard_deleted_at=is.null&status=in.(awaiting_selection,revision_requested,approved_for_development,prototype_revision_requested,sales_review_requested,awaiting_final_approval)&order=created_at.asc,id.asc';
+ const now = Date.now();
+ let best;
+ const pageSize = 100;
+ for (let offset = 0; !best || !readyStages.has(best.status) || rank(best) !== 1; offset += pageSize) {
+  const candidates = await api(`${query}&limit=${pageSize}&offset=${offset}`);
+  for (const candidate of candidates) {
+   if (!isReady(candidate, now)) continue;
+   const tier = candidate.status === 'awaiting_final_approval' ? 1 : 0;
+   const bestTier = best?.status === 'awaiting_final_approval' ? 1 : 0;
+   if (!best || tier < bestTier || (tier === bestTier && rank(candidate) < rank(best))) best = candidate;
+  }
+  if (candidates.length < pageSize) break;
+ }
+ if (!best) return undefined;
+ const [current] = await api(`${idFilter(best.id)}&status=eq.${encodeURIComponent(best.status)}&brief->>dashboard_deleted_at=is.null&select=*`);
+ return current;
+}
+async function dailyPrototype() {
+ const owner = process.env.ORXELIA_DAILY_PROPOSAL_OWNER_ID;
+ if (!owner) return;
+ if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(owner)) throw Error('Invalid daily proposal owner ID');
+ const feed = JSON.parse(await readFile(new URL('../ai-reports/latest.json', import.meta.url), 'utf8'));
+ const day = new Intl.DateTimeFormat('sv-SE', {timeZone:'Asia/Tokyo'}).format(new Date());
+ const idea = feed.reports?.find(report => report.researchedAt === day && report.idea?.research)?.idea;
+ if (!idea || !Array.isArray(idea.sources) || idea.sources.length < 2) return;
+ const hex = createHash('sha256').update(owner + ':' + day).digest('hex');
+ const id = [hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20,32)].join('-');
+ await api('orxelia_proposals?on_conflict=id', {
+  method:'POST', headers:{Prefer:'resolution=ignore-duplicates,return=minimal'},
+  body:JSON.stringify({
+   id,owner_id:owner,title:idea.name,status:'awaiting_selection',design_status:'pending',
+   brief:{source:'daily_researched_idea',research_date:day,problem:idea.customer,target:idea.customer,
+    solution:[idea.offer,idea.next].join('\n'),competitive_position:idea.advantage,
+    references:[idea.research,...idea.sources].join('\n').slice(0,3000)}
+  })
+ });
+ const [queued] = await api(idFilter(id)+'&owner_id=eq.'+owner+'&status=eq.awaiting_selection&design_status=eq.pending&brief->>dashboard_deleted_at=is.null&select=*');
+ return queued;
+}
+const proposal = await dailyPrototype() ?? await selectProposal();
 if(!proposal){console.log('No proposal stage work pending');process.exit(0)}
 console.log('Processing proposal',proposal.id,'stage',proposal.status);
 try{
@@ -41,7 +103,9 @@ try{
   const t=await test(h);
   if(!t.passed)throw Error('Design browser check failed '+JSON.stringify(t));
   const feedback=await model('You are an independent Gemini UX reviewer. In Japanese give up to 5 concrete improvements to this mobile design; prioritize clarity and accessibility. No claim of functional testing. HTML: '+h.slice(0,18000),1100);
-  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:h,design_review:feedback.slice(0,3000),test_report:{design_preview:t,submission_quality:latestQuality}},'designing');
+  const designQuality = latestQuality;
+  const trial = await buildPreapprovalTrial(proposal,h,proposal.revision_number||1);
+  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:h,design_review:feedback.slice(0,3000),prototype_html:trial.html,test_report:{design_preview:t,submission_quality:designQuality,preapproval_trial:trial.report}},'designing');
   console.log('Design preview saved, awaiting first approval');
  }else if(proposal.status==='revision_requested'){
   const feedback=(proposal.revision_request||'').trim();
@@ -54,7 +118,9 @@ try{
   const history=Array.isArray(proposal.revision_history)?proposal.revision_history:[];
   const revision=(proposal.revision_number||1)+1;
   const summary='修正指示：'+feedback.slice(0,700)+' / Geminiレビュー：'+review.slice(0,1200);
-  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:revised,design_review:review,revision_number:revision,revision_summary:summary,revision_request:null,revision_history:[...history,{revision,feedback,review,at:new Date().toISOString()}].slice(-30),test_report:{design_preview:checked,submission_quality:latestQuality}},'revising');
+  const designQuality = latestQuality;
+  const trial = await buildPreapprovalTrial(proposal,revised,revision);
+  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:revised,design_review:review,revision_number:revision,revision_summary:summary,revision_request:null,revision_history:[...history,{revision,feedback,review,at:new Date().toISOString()}].slice(-30),prototype_html:trial.html,test_report:{design_preview:checked,submission_quality:designQuality,preapproval_trial:trial.report}},'revising');
   console.log('Revised design submitted for approval',proposal.id,revision);
  }else if(proposal.status==='approved_for_development'){
   await update(proposal.id,{status:'developing'},'approved_for_development');
@@ -75,9 +141,9 @@ try{
 
  }else if(proposal.status==='awaiting_final_approval'){
   // Research triage is NOT a verified sales approval. Never manufacture evidence.
-  const missing=Array.isArray(proposal.sales_review?.items)?proposal.sales_review.items:[];
+  const missing=Array.isArray(proposal.sales_review?.items)?[...proposal.sales_review.items]:[];
   missing.push('顧客獲得経路の一次情報（SEO、SNS、紹介、直販）とその再現性','顧客獲得単価CAC、継続率、解約率、回収期間の実測または明示した仮説','競合の販売導線・無料代替・販売困難時の撤退条件');
-  const guidance=await model('You are an internal research planner for ORXELIA. Business: '+brief(proposal)+' Missing evidence: '+JSON.stringify(missing)+'. Return a concise Japanese checklist for each gap: specific primary sources to verify, reproducible tests, and next steps. Also propose 2 low-cost acquisition experiments with measurable success and stop conditions, distinguishing facts from hypotheses. Do NOT claim web browsing, tests, customers, legal clearance, or verification. No invented URLs. Do not approve sales.',2500);
+  const guidance=await model('You are an internal research planner for ORXELIA. Business: '+brief(proposal)+' Missing evidence: '+JSON.stringify(missing)+'. Return a concise Japanese checklist for each gap: specific primary sources to verify, reproducible tests, and next steps. Include a Japanese pre-sale legal checklist tailored to the proposal: permissions, trademark, copyright, terms, personal data, sales disclosures and security. For each, identify draft documents, official authorities or evidence to check, and unresolved questions. Then propose 2 low-cost acquisition experiments with measurable success and stop conditions, distinguishing facts from hypotheses. Do NOT claim web browsing, tests, customers, legal clearance, or verification. No invented URLs. Do not approve sales.',2500);
   await update(proposal.id,{sales_review:{...proposal.sales_review,recommendation:'needs_evidence',last_researched_at:new Date().toISOString(),research_plan:guidance.slice(0,6000),note:'AIが不足根拠の調査計画を更新しました。実証資料・実機テストは未完了のため販売承認不可。'}},'awaiting_final_approval');
   console.log('Research plan refreshed; sales remains blocked',proposal.id);
  }else if(proposal.status==='sales_review_requested'){

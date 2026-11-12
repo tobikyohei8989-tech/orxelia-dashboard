@@ -390,6 +390,41 @@ def save_feed(new_report):
     return output, len(reports)
 
 
+def research_idea():
+    if os.getenv("ORXELIA_FREE_GROUNDING") != "true":
+        return None
+    payload = {
+        "contents": [{"parts": [{"text": (
+            "日本向けの新規事業案を1件だけ選定してください。初期投資5万円以内、原則1人。"
+            "Google検索で顧客の課題、公的統計や業界資料、公式競合価格、無料代替を調べてから選ぶこと。"
+            "見積追客、見積承認、予約ページ、招待状、施工事例、写真共有、家計、コーデは除外。"
+            "確認できた事実と価格・需要・採算の仮説を分け、集客経路、継続課金理由、"
+            "社内試作と公開後の販売検証、撤退基準を記載する。顧客への連絡は提案しない。"
+            "JSONのみ。キーは name, customer, offer, next, distribution, advantage, recurring, selection, research。"
+            "researchには出典と照合できる事実および未確認事項を書く。"
+        )}]}],
+        "tools": [{"google_search": {}}],
+    }
+    result = api_request(BASE + "/gemini-2.5-flash-lite:generateContent", payload, retries=1)
+    candidate = result["candidates"][0]
+    chunks = candidate.get("groundingMetadata", {}).get("groundingChunks", [])
+    sources = list(dict.fromkeys(
+        chunk["web"]["uri"] for chunk in chunks
+        if chunk.get("web", {}).get("uri", "").startswith("https://")
+    ))
+    if len(sources) < 2:
+        raise ValueError("Insufficient search sources")
+    raw = "".join(part.get("text", "") for part in candidate["content"]["parts"]).strip()
+    idea = json.loads(raw.removeprefix("```json").removesuffix("```").strip())
+    limits = {"name": 140, "customer": 300, "offer": 300, "next": 300,
+              "distribution": 600, "advantage": 600, "recurring": 600,
+              "selection": 600, "research": 2500}
+    if not all(isinstance(idea.get(key), str) and 0 < len(idea[key].strip()) <= limit
+               for key, limit in limits.items()):
+        raise ValueError("Invalid researched idea")
+    return {**{key: idea[key].strip() for key in limits}, "sources": sources[:10]}
+
+
 def main():
     models = get_models()
     models.sort(key=priority)
@@ -480,6 +515,11 @@ def main():
         "findings": findings,
     }
 
+    try:
+        idea = research_idea()
+    except (ValueError, KeyError, IndexError, TypeError, TimeoutError, urllib.error.URLError) as error:
+        print("Researched idea unavailable:", type(error).__name__, flush=True)
+        idea = None
     if idea:
         report["idea"] = idea
 
