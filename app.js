@@ -85,6 +85,12 @@ function implementedProductsPanel(){
   return orxeliaTrialProposals.filter(isPartnerLinkImplemented).map(partnerLinkProductPanel).join('');
 }
 
+function canApproveDevelopment(proposal){
+  const trial=proposal.test_report?.preapproval_trial;
+  return Boolean(proposal.prototype_html?.trim() && trial?.passed===true &&
+    trial.design_revision===(proposal.revision_number??1));
+}
+
 function orxeliaTrialProposalPanel(){
  if(!orxeliaTrialProposals.length)return "";
  const names={awaiting_selection:"Geminiデザイン作成待ち",designing:"Geminiデザイン作成中",awaiting_first_approval:"第1承認待ち",revision_requested:"修正指示受付済み",revising:"Gemini再デザイン中",approved_for_development:"開発待ち",developing:"開発・テスト中",development_ready:"動作試作品完成・操作確認待ち",prototype_revision_requested:"試作品の修正指示受付済み",prototype_revising:"AIが試作品を修正中",sales_review_requested:"販売審査中",awaiting_final_approval:"販売審査：根拠確認中",final_approved:"販売方針承認済み（公開・決済未実行）",on_hold:"保留",failed:"処理失敗"};
@@ -94,7 +100,7 @@ function orxeliaTrialProposalPanel(){
  const count=sorted.filter(p=>!isPartnerLinkImplemented(p)).filter(p=>p.status==="awaiting_first_approval"||p.status==="development_ready"||(p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready_for_approval")).length;
  return `<section class="proposal-workspace"><div class="proposal-intro"><h3>AI事業の承認・販売判断</h3><p>操作が必要な案件と、販売根拠不足で保留中の案件を分けて確認できます。販売根拠不足は承認依頼ではありません。</p><div class="proposal-summary"><span>あなたの操作待ち <b>${count}件</b></span><span>全案件 <b>${sorted.length}件</b></span></div>${priorityPicker}</div>${sorted.map(p=>isPartnerLinkImplemented(p)?partnerLinkProductPanel(p):`<details class="proposal-item" ${(p.status==="awaiting_first_approval"||p.status==="development_ready"||(p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready_for_approval"))?'open':''}><summary><span class="proposal-item-title">${esc(p.title)}</span><span class="proposal-item-status">${esc(names[p.status]||p.status)}</span></summary><div class="proposal-item-body"><p class="proposal-next"><b>今の段階：</b>${esc(proposalNext(p.status))}</p><details class="proposal-meta"><summary>事業内容・差別化・IDを見る</summary><small>事業ID：${esc(p.id)}</small><p>${esc(p.brief?.problem||"")}</p><p><b>提案：</b>${esc(p.brief?.solution||"")}</p><p><b>差別化仮説：</b>${esc(p.brief?.competitive_position||"")}</p></details><p class="proposal-version">デザイン第${Number(p.revision_number)||1}版 ／ 試作品第${Number(p.prototype_revision_number)||1}版</p>
  ${p.design_html?`<details class="design-preview"><summary>Geminiのデザイン案を見る（操作不可）</summary><iframe title="Geminiデザインプレビュー" sandbox="" referrerpolicy="no-referrer" loading="lazy" style="width:100%;height:480px;border:1px solid #556579;border-radius:14px;background:white" srcdoc="${esc(p.design_html)}"></iframe><details><summary>Geminiのデザインレビュー</summary><p>${esc(p.design_review||"")}</p></details></details>`:"<p>デザインはまだ生成されていません。自動処理の完了をお待ちください。</p>"}
- ${p.status==="awaiting_first_approval"&&p.design_status==="ready"?`<label for="revision-${esc(p.id)}">修正したい内容・機能・画面への指示</label><textarea id="revision-${esc(p.id)}" data-revision-input="${esc(p.id)}" maxlength="3000" rows="4" style="display:block;width:100%;margin:8px 0" placeholder="例：返品期限を最上部に表示。材料名は選択式にして、入力を簡単にしてください。">${esc(orxeliaRevisionDrafts[p.id]||"")}</textarea><button type="button" data-proposal-action="request_revision" data-proposal-id="${esc(p.id)}">Geminiへ修正依頼・再提出</button> <button type="button" data-proposal-action="approve_development" data-proposal-id="${esc(p.id)}">第1承認：本格開発へ</button> <button type="button" data-proposal-action="hold" data-proposal-id="${esc(p.id)}">保留</button>`:""}
+ ${p.status==="awaiting_first_approval"&&p.design_status==="ready"?`<label for="revision-${esc(p.id)}">修正したい内容・機能・画面への指示</label><textarea id="revision-${esc(p.id)}" data-revision-input="${esc(p.id)}" maxlength="3000" rows="4" style="display:block;width:100%;margin:8px 0" placeholder="例：返品期限を最上部に表示。材料名は選択式にして、入力を簡単にしてください。">${esc(orxeliaRevisionDrafts[p.id]||"")}</textarea><button type="button" data-proposal-action="request_revision" data-proposal-id="${esc(p.id)}">Geminiへ修正依頼・再提出</button> ${canApproveDevelopment(p)?`<button type="button" data-proposal-action="approve_development" data-proposal-id="${esc(p.id)}">第1承認：本格開発へ</button>`:"<p>第1承認には、現在のデザイン版の非公開試作と検査合格が必要です。</p>"} <button type="button" data-proposal-action="hold" data-proposal-id="${esc(p.id)}">保留</button>`:""}
  ${p.prototype_html?`<details data-prototype-preview><summary>非公開の動作試作品を確認</summary><template><iframe title="開発試作品（隔離プレビュー）" sandbox="allow-scripts allow-modals" referrerpolicy="no-referrer" loading="lazy" class="prototype-live-frame" scrolling="auto" srcdoc="${esc(prototypeAutoHeightDocument(p.prototype_html))}"></iframe></template></details><p>自動テスト：${p.test_report?.passed===true?"基本スモークテスト合格":"未合格／未確認"}（実機・機能網羅は未検証）</p>`:""}
  ${p.status==="development_ready"&&p.prototype_html?`<label for="prototype-feedback-${esc(p.id)}">動作試作品を実際に使って気づいた不具合・改善点</label><textarea id="prototype-feedback-${esc(p.id)}" data-revision-input="${esc(p.id)}" maxlength="3000" rows="4" style="display:block;width:100%;margin:8px 0" placeholder="例：入力中に文字が消える。登録したデータが消えないようにしてほしい。">${esc(orxeliaRevisionDrafts[p.id]||"")}</textarea><button type="button" data-proposal-action="request_prototype_revision" data-proposal-id="${esc(p.id)}">動作試作品をAIへ修正依頼・再テスト</button><p>試作品第${Number(p.prototype_revision_number)||1}版。修正後は再度こちらで操作確認できます。</p>`:""}
  ${p.status==="development_ready"&&p.brief?.classification!=="internal_validation_not_commercial_proposal"&&p.test_report?.passed===true?`<button type="button" data-proposal-action="request_sales_review" data-proposal-id="${esc(p.id)}">販売審査へ進む</button>`:""}
@@ -1680,7 +1686,12 @@ const sync = (() => {
     const headers = {apikey:window.ORXELIA_PUBLISHABLE_KEY,"Content-Type":"application/json",...options.headers};
     if (authenticated) headers.Authorization = "Bearer " + session.access_token;
     const response = await fetch(endpoint + path,{...options,headers,cache:"no-store"});
-    if (!response.ok) throw Error("HTTP " + response.status);
+    if (!response.ok) {
+      const error = Error("HTTP " + response.status);
+      error.httpStatus = response.status;
+      error.apiError = await response.json().catch(() => null);
+      throw error;
+    }
     return response.status === 204 ? null : response.json();
   }
   document.addEventListener("change",async event=>{
@@ -1718,7 +1729,26 @@ const sync = (() => {
       const item=orxeliaTrialProposals.find(p=>p.id===id);if(item)item.status=result.status;
       if(["request_revision","request_prototype_revision"].includes(action)){delete orxeliaRevisionDrafts[id];try{localStorage.setItem(orxeliaDraftKey,JSON.stringify(orxeliaRevisionDrafts))}catch{}}
       status("事業IDごとの判断をクラウドに保存しました。");document.querySelectorAll("details[data-prototype-preview][open]").forEach(d=>d.open=false);render();
-    }catch(e){alert("処理できませんでした: "+e.message+"。承認条件とログイン状態を確認してください。");btn.disabled=false}
+    }catch(error){
+      const knownMessages = new Set([
+        "ログインが必要です。",
+        "対象の案件が見つかりません。",
+        "修正指示は3〜3000文字で入力してください。",
+        "現在のデザイン版の法務審査を完了してください。",
+        "現在のデザイン版の非公開試作を作成し、検査を完了してください。",
+        "案件所有者による開発承認が必要です。",
+        "現在の段階ではこの操作を行えません。"
+      ]);
+      const message = error.apiError?.message;
+      const reason = knownMessages.has(message) ? message :
+        error.httpStatus === 401 ? "ログインの有効期限が切れました。再度ログインしてください。" :
+        error.httpStatus === 403 ? "この操作を行う権限を確認してください。" :
+        error.httpStatus ? "処理が拒否されました（HTTP " + error.httpStatus +
+          (/^[A-Z0-9]{5,12}$/.test(error.apiError?.code || "") ? " / " + error.apiError.code : "") + "）。" :
+          "通信に失敗しました。接続を確認してから案件の状態を再確認してください。";
+      alert(reason);
+      btn.disabled=false;
+    }
   });
   function remember(revision, snapshot) {
     baseline = {owner:session.user.id,revision,snapshot:signature(snapshot)};

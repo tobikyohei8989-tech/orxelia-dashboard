@@ -29,13 +29,13 @@ assert.ok(sync.includes('p_id:id,p_action:action,p_feedback:feedback'),'missing 
 assert.ok(sync.includes('if(!session?.user?.id)'),'missing authentication guard');
 assert.ok(sync.includes('if(!confirm(messages[action]))return'),'missing explicit confirmation');
 assert.ok(sync.includes('btn.disabled=true'),'missing duplicate submission protection');
-assert.ok(sync.includes('catch(e){alert("処理できませんでした:'),'missing failure feedback');
+assert.ok(sync.includes('alert(reason)'),'missing failure feedback');
 assert.ok(sync.includes('公開・決済開始は自動実行しません'),'missing sales safety boundary');
 assert.ok(js.includes('data-prototype-preview') && /sandbox="allow-scripts(?: allow-modals)?"/.test(js),'missing isolated prototype');
 assert.ok(js.includes('saveOrxeliaDraft') && js.includes('orxelia-revision-drafts-v1'),'missing draft persistence');
-assert.ok(js.includes('function home()') && js.includes('executiveQuickMatrix()'),'missing home overview');
+assert.ok(js.includes('function home()') && js.includes('executiveQuickMatrix(selected[4]') && js.includes('data-overview='),'missing home overview');
 assert.ok(js.includes('taskSection.scrollIntoView'),'missing task navigation');
 for(const asset of ['style.css','app.js','business-economics.js'])assert.ok(html.includes(asset),'missing linked asset '+asset);
-for(const selector of ['.priority-card','.quick-table','.home-links'])assert.ok(css.includes(selector),'missing style '+selector);
+for(const selector of ['.priority-card','.quick-table','.overview-main'])assert.ok(css.includes(selector),'missing style '+selector);
 console.log('PASS: five routes, five staged actions, Supabase RPC wiring, confirmation, auth, safe sales boundary, draft preservation, prototype isolation, assets');
 console.log('NOTE: Static contract checks only. No actual Supabase/Gemini requests or browser interaction were performed.');
