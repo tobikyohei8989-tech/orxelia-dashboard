@@ -295,7 +295,7 @@ def validate(result):
 
     # A malformed idea must not interrupt the existing-business feed.
     idea = parsed.get("idea")
-    limits = {"name": 140, "customer": 300, "offer": 300, "next": 300}
+    limits = {"name": 140, "customer": 300, "offer": 300, "next": 600}
     if not isinstance(idea, dict) or not all(
         isinstance(idea.get(field), str)
         and 0 < len(idea[field].strip()) <= limit
@@ -420,10 +420,10 @@ def research_idea(model):
         "初期投資5万円以内、原則1人。既出の見積追客・予約・招待・家計・写真共有は除外。"
         "顧客の課題、競合の公式価格、無料代替を比較し、出典のURLと確認事項をresearchに書く。"
         "資料で確認できない価格・需要・採算は未確認または仮説と記載。価格を捏造しない。"
-        "集客、継続課金、社内試作と購入件数による販売検証、撤退基準を含める。"
+        "researchに根拠資料ごとの確認事実と推測の限界、次の販売根拠の不足を記載。advantageに公式競合・無料代替と比較する具体的な操作・成果指標、nextにiPhone実機で試す主機能と成功・失敗条件、distributionに最初の顧客獲得経路と支払意思を測る方法・継続撤退基準、recurringに仮価格・変動費・限界利益・顧客獲得単価の上限と回収期間を記載。法務・個人情報・権限と申込から解約までの確認項目もresearchに含める。実機、顧客反応、販売、継続率は実測済みと扱わない。"
         "JSONのみ。キーは name, customer, offer, next, distribution, advantage, recurring, selection, research。"
     )
-    limits = {"name": 140, "customer": 300, "offer": 300, "next": 300,
+    limits = {"name": 140, "customer": 300, "offer": 300, "next": 600,
               "distribution": 600, "advantage": 600, "recurring": 600,
               "selection": 600, "research": 2500}
     result = api_request(BASE + "/" + model + ":generateContent", {

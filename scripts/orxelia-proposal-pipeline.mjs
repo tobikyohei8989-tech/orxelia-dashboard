@@ -86,7 +86,7 @@ async function dailyPrototype() {
   body:JSON.stringify({
    id,owner_id:owner,title:idea.name,status:'awaiting_selection',design_status:'pending',
    brief:{source:'daily_researched_idea',research_date:day,problem:idea.customer,target:idea.customer,
-    solution:[idea.offer,idea.next].join('\n'),competitive_position:idea.advantage,
+    solution:[idea.offer,idea.next,idea.distribution,idea.recurring].filter(Boolean).join('\n'),competitive_position:idea.advantage,
     references:[idea.research,...idea.sources].join('\n').slice(0,3000)}
   })
  });
