@@ -56,8 +56,18 @@ async function buildPreapprovalTrial(proposal, design, designRevision) {
 // Process pending proposal stages, including legacy dashboard projects migrated into the approval-gated workflow.
 const readyStages = new Set(['prototype_revision_requested', 'approved_for_development', 'sales_review_requested', 'revision_requested']);
 const revisionRetryPrefix = 'Gemini revision retry scheduled: ';
+const designRetryPrefix = 'Gemini design retry scheduled: ';
+function retryPrefix(candidate) {
+ return candidate.status === 'revision_requested' ? revisionRetryPrefix :
+   candidate.status === 'awaiting_selection' ? designRetryPrefix : null;
+}
+function isTransientGeminiError(message) {
+ return (/^Error: Gemini unavailable:/.test(message) || message.includes('Visual review unavailable')) &&
+   /HTTP 50[0234]|timeout/i.test(message) && !/HTTP (?!50[0234])\d{3}/.test(message);
+}
 function isReady(candidate, now) {
- if (candidate.status === 'revision_requested' && candidate.error_message?.startsWith(revisionRetryPrefix)) {
+ const prefix = retryPrefix(candidate);
+ if (prefix && candidate.error_message?.startsWith(prefix)) {
   return now - Date.parse(candidate.updated_at) >= 30 * 60 * 1000;
  }
  if (readyStages.has(candidate.status)) return true;
@@ -86,7 +96,8 @@ async function selectProposal() {
  }
  if (!best) return undefined;
  const [current] = await api(`${idFilter(best.id)}&status=eq.${encodeURIComponent(best.status)}&brief->>dashboard_deleted_at=is.null&select=*`);
- return current;
+ return current && isReady({...current,recommendation:current.sales_review?.recommendation,
+   last_researched_at:current.sales_review?.last_researched_at}, Date.now()) ? current : undefined;
 }
 async function dailyPrototype() {
  const owner = process.env.ORXELIA_DAILY_PROPOSAL_OWNER_ID;
@@ -108,7 +119,7 @@ async function dailyPrototype() {
   })
  });
  const [queued] = await api(idFilter(id)+'&owner_id=eq.'+owner+'&status=eq.awaiting_selection&design_status=eq.pending&brief->>dashboard_deleted_at=is.null&select=*');
- return queued;
+ return queued && isReady(queued, Date.now()) ? queued : undefined;
 }
 const proposal = await dailyPrototype() ?? await selectProposal();
 if(!proposal){console.log('No proposal stage work pending');process.exit(0)}
@@ -122,7 +133,7 @@ try{
   const feedback=await model('You are an independent Gemini UX reviewer. In Japanese give up to 5 concrete improvements to this mobile design; prioritize clarity and accessibility. No claim of functional testing. HTML: '+h.slice(0,18000),1100);
   const designQuality = latestQuality;
   const trial = await buildPreapprovalTrial(proposal,h,proposal.revision_number||1);
-  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:h,design_review:feedback.slice(0,3000),prototype_html:trial.html,test_report:{design_preview:t,submission_quality:designQuality,preapproval_trial:trial.report}},'designing');
+  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',error_message:null,design_html:h,design_review:feedback.slice(0,3000),prototype_html:trial.html,test_report:{design_preview:t,submission_quality:designQuality,preapproval_trial:trial.report}},'designing');
   console.log('Design preview saved, awaiting first approval');
  }else if(proposal.status==='revision_requested'){
   const feedback=(proposal.revision_request||'').trim();
@@ -137,7 +148,7 @@ try{
   const summary='修正指示：'+feedback.slice(0,700)+' / Geminiレビュー：'+review.slice(0,1200);
   const designQuality = latestQuality;
   const trial = await buildPreapprovalTrial(proposal,revised,revision);
-  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:revised,design_review:review,revision_number:revision,revision_summary:summary,revision_request:null,revision_history:[...history,{revision,feedback,review,at:new Date().toISOString()}].slice(-30),prototype_html:trial.html,test_report:{design_preview:checked,submission_quality:designQuality,preapproval_trial:trial.report}},'revising');
+  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',error_message:null,design_html:revised,design_review:review,revision_number:revision,revision_summary:summary,revision_request:null,revision_history:[...history,{revision,feedback,review,at:new Date().toISOString()}].slice(-30),prototype_html:trial.html,test_report:{design_preview:checked,submission_quality:designQuality,preapproval_trial:trial.report}},'revising');
   console.log('Revised design submitted for approval',proposal.id,revision);
  }else if(proposal.status==='approved_for_development'){
   await update(proposal.id,{status:'developing'},'approved_for_development');
@@ -178,15 +189,18 @@ try{
  console.error('Proposal stage failed', message.slice(0,350));
  const [current] = await api(idFilter(proposal.id)+'&select=status');
  const state = current?.status;
- if (state === 'revising' && proposal.status === 'revision_requested'
-     && !proposal.error_message?.startsWith(revisionRetryPrefix)
-     && (/^Error: Gemini unavailable:/.test(message) || message.includes('Visual review unavailable'))
-     && /HTTP 50[0234]|timeout/i.test(message)) {
+ const prefix = retryPrefix(proposal);
+ const designStage = state === 'designing' && proposal.status === 'awaiting_selection';
+ const revisionStage = state === 'revising' && proposal.status === 'revision_requested';
+ if ((designStage || revisionStage) && prefix
+     && !proposal.error_message?.startsWith(prefix)
+     && isTransientGeminiError(message)) {
   await update(proposal.id,{
-   status:'revision_requested',
-   error_message:(revisionRetryPrefix+message).slice(0,350)
-  },'revising');
-  console.log('Revision queued for one retry after 30 minutes');
+   status:proposal.status,
+   ...(designStage ? {design_status:'pending'} : {}),
+   error_message:(prefix+message).slice(0,350)
+  },state);
+  console.log('Design stage queued for one retry after 30 minutes');
  } else if (['designing','revising','developing','prototype_revising'].includes(state)) {
   await update(proposal.id,{
    status:'failed',
