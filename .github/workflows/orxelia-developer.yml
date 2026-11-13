@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   develop:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       SUPABASE_URL: ${{ secrets.ORXELIA_SUPABASE_URL }}
