@@ -15,7 +15,7 @@ concurrency:
 jobs:
   process-next-proposal:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     env:
       SUPABASE_URL: ${{ secrets.ORXELIA_SUPABASE_URL }}
@@ -35,7 +35,7 @@ jobs:
           test -n "$GEMINI_API_KEY" || { echo "GEMINI_API_KEY missing"; exit 1; }
       - name: Install isolated browser test dependencies
         run: |
-          npm install --no-save --no-package-lock playwright@1.56.1
+          npm install --no-save --no-package-lock playwright@1.58.2
           npx playwright install --with-deps chromium
       - name: Process one queued proposal
         run: node scripts/orxelia-proposal-pipeline.mjs
