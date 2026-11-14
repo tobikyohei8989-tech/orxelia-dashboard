@@ -5,6 +5,11 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      browser_only:
+        description: Verify Chromium installation and launch only
+        type: boolean
+        default: false
   schedule:
     - cron: '15 23 * * *'
 permissions:
@@ -28,6 +33,7 @@ jobs:
         with:
           node-version: '22'
       - name: Check required secrets
+        if: ${{ !inputs.browser_only }}
         shell: bash
         run: |
           test -n "$SUPABASE_URL" || { echo "SUPABASE_URL missing"; exit 1; }
@@ -37,5 +43,19 @@ jobs:
         run: |
           npm install --no-save --no-package-lock playwright@1.58.2
           npx playwright install --with-deps chromium
+      - name: Verify Chromium launch
+        if: ${{ inputs.browser_only }}
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch();
+            await browser.close();
+          })().catch(error => {
+            console.error(error);
+            process.exitCode = 1;
+          });
+          NODE
       - name: Process one queued proposal
+        if: ${{ !inputs.browser_only }}
         run: node scripts/orxelia-proposal-pipeline.mjs
