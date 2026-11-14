@@ -1,6 +1,11 @@
 name: ORXELIA grounded evidence audit
 on:
   workflow_dispatch:
+    inputs:
+      browser_only:
+        description: Verify Chromium installation and launch only
+        type: boolean
+        default: false
   schedule:
     - cron: '17 */2 * * *'
 permissions:
@@ -10,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   audit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       SUPABASE_URL: ${{ secrets.ORXELIA_SUPABASE_URL }}
@@ -22,15 +27,30 @@ jobs:
         with:
           node-version: '22'
       - name: Validate secrets
+        if: ${{ !inputs.browser_only }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_SERVICE_ROLE_KEY"
           test -n "$GEMINI_API_KEY"
       - name: Install browser
         run: |
-          npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install chromium
+          npm install --no-save --no-package-lock playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Verify Chromium launch
+        if: ${{ inputs.browser_only }}
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch();
+            await browser.close();
+          })().catch(error => {
+            console.error(error);
+            process.exitCode = 1;
+          });
+          NODE
       - name: Collect evidence and smoke-test prototypes
+        if: ${{ !inputs.browser_only }}
         run: |
           set +e
           node scripts/orxelia-evidence-audit.mjs
