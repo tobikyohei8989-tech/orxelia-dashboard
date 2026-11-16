@@ -1,0 +1,29 @@
+name: Quote follow-up isolated E2E
+on:
+  push:
+    branches:
+      - 'review/quote-followup-backup-20261107'
+  pull_request:
+    paths:
+      - 'prototypes/quote-followup-review.html'
+      - 'scripts/test-quote-followup.mjs'
+      - '.github/workflows/quote-followup-e2e.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --no-package-lock playwright@1.58.2
+      - run: npx playwright install --with-deps chromium
+      - run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/quote-http.log 2>&1 &
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:8765/ >/dev/null && exit 0; sleep 1; done
+          exit 1
+      - run: node scripts/test-quote-followup.mjs

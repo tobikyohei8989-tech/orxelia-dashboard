@@ -1,0 +1,76 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+const browser=await chromium.launch({headless:true});
+const page=await browser.newPage({viewport:{width:390,height:844},acceptDownloads:true});
+const errors=[];const dialogs=[];page.on('pageerror',e=>errors.push(e.message));const pendingDialogs=new Set();
+page.on('dialog',dialog=>{
+ dialogs.push({type:dialog.type(),message:dialog.message()});
+ const pending=dialog.accept().catch(error=>{
+   if (!/Target page, context or browser has been closed/.test(error.message)) throw error;
+ }).finally(()=>pendingDialogs.delete(pending));
+ pendingDialogs.add(pending);
+});
+try{
+ await page.goto('http://127.0.0.1:8765/prototypes/quote-followup-review.html');
+ await page.locator('#kpi-total').waitFor();
+ assert.match(await page.locator('#kpi-total').innerText(),/0/);
+ await page.getByText('＋ 新規見積りを登録').click();
+ await page.locator('#inputClient').fill('株式会社 テスト工務店');
+ await page.locator('#inputProject').fill('見積テスト');
+ await page.locator('#inputAmount').fill('100000');
+ await page.locator('#inputSubmitted').fill('2026-11-01');
+ await page.locator('#inputNext').fill('2026-11-07');
+ await page.getByText('登録する').click();
+ assert.match(await page.locator('#kpi-total').innerText(),/1/);
+ await page.reload();
+ assert.match(await page.locator('#kpi-total').innerText(),/1/);
+ await page.locator('.record-card').first().click();
+ await page.getByText('📞 連絡したことを記録').click();
+ assert.match(await page.locator('#actionHistory').innerText(),/連絡済み/);
+ await page.locator('#actionStatus').selectOption('won');
+ await page.getByText('✅ 状況・確認日を保存').click();
+ assert.match(await page.locator('.record-card').first().innerText(),/受注/);
+ await page.reload();assert.match(await page.locator('.record-card').first().innerText(),/受注/);
+ await page.locator('.bottom-nav .nav-item').last().click();
+ const [download]=await Promise.all([page.waitForEvent('download'),page.getByText('📥 JSONバックアップ出力').click()]);
+ const file=await download.path();assert.ok(file);
+ const {readFileSync}=await import('node:fs');const data=JSON.parse(readFileSync(file,'utf8'));console.log('Exported backup schema:',JSON.stringify(data.map(r=>Object.fromEntries(Object.entries(r).map(([k,v])=>[k,k==='client'||k==='project'?'[redacted]':v])))));assert.equal(data[0].status,'won');assert.equal(data[0].history.length,1);
+ await page.getByText('🗑️ 全データ初期化（リセット）').click();
+ assert.match(await page.locator('#kpi-total').innerText(),/0/);
+ await page.locator('input[type=file]').setInputFiles(file);
+ await page.waitForFunction(()=>JSON.parse(localStorage.getItem('orx_estimates')||'[]').length===1,{},{timeout:5000}).catch(async e=>{throw new Error('Restore failed; dialogs='+JSON.stringify(dialogs)+' data='+JSON.stringify(await page.evaluate(()=>localStorage.getItem('orx_estimates')))+' reason='+e.message)});
+ assert.match(await page.locator('#kpi-total').innerText(),/1/);
+ assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('orx_estimates'))),data);
+ // Invalid restore must preserve saved data.
+ const before=await page.evaluate(()=>localStorage.getItem('orx_estimates'));
+ await page.locator('input[type=file]').setInputFiles({name:'broken.json',mimeType:'application/json',buffer:Buffer.from('{broken')});
+ assert.equal(await page.evaluate(()=>localStorage.getItem('orx_estimates')),before);
+ await page.locator('input[type=file]').setInputFiles({name:'invalid.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify([{id:'bad'}]))});
+ assert.equal(await page.evaluate(()=>localStorage.getItem('orx_estimates')),before);
+ // Backup date field is untrusted and must not create DOM nodes.
+ const malicious=structuredClone(data);
+ malicious[0].nextAt='<img src=x onerror=alert(1)>';
+ await page.locator('input[type=file]').setInputFiles({name:'malicious.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(malicious))});
+ assert.equal(await page.evaluate(()=>localStorage.getItem('orx_estimates')),before);
+ // XSS payloads must be displayed as text, never executed.
+ await page.locator('.bottom-nav .nav-item').first().click();
+ await page.getByText('＋ 新規見積りを登録').click();
+ await page.locator('#inputClient').fill('<img src=x onerror=alert(1)>');
+ await page.locator('#inputProject').fill('=SUM(1,2)');
+ await page.locator('#inputSubmitted').fill('2026-11-01');
+ await page.locator('#inputNext').fill('2026-11-07');
+ await page.getByText('登録する').click();
+ assert.equal(await page.locator('.record-card img').count(),0);
+ assert.match(await page.locator('.record-card').first().innerText(),/<img src=x onerror=alert\(1\)>/);
+ // CSV must escape spreadsheet formula strings.
+ await page.locator('.bottom-nav .nav-item').last().click();
+ const [csvDownload]=await Promise.all([page.waitForEvent('download'),page.getByText('📊 案件一覧CSVエクスポート').click()]);
+ const csv=readFileSync(await csvDownload.path(),'utf8');
+ assert.ok(csv.includes("'=SUM(1,2)"));
+ assert.ok(csv.includes('提出日,次回確認日,状況'));
+ assert.deepEqual(errors,[]);
+ console.log('PASS: Chromium 390px create, persistence, contact, status, backup, reset, restore');
+}finally{
+ await Promise.all([...pendingDialogs]);
+ await browser.close();
+}
