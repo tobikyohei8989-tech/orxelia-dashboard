@@ -1,6 +1,6 @@
 {
   "format": "orxelia-auto-feed-v1",
-  "generatedAt": "2026-11-15T22:58:46.048657+00:00",
+  "generatedAt": "2026-11-16T23:09:49.502712+00:00",
   "reports": [
     {
       "format": "orxelia-research-v1",
@@ -506,6 +506,61 @@
         "recurring": "仮価格は無料（将来的に個別コンサルティングや有料ツールへの導線を想定）。変動費はほぼ0円（静的ホスティング利用）。限界利益は売上から変動費を引いた額。顧客獲得単価の上限は0円（オーガニック集客）。回収期間は無料のため該当せず",
         "selection": "prototype",
         "research": "確認事実: IPA公開資料（https://www.ipa.go.jp/digital/chousa/dx-trend/）では日本企業のDX推進状況や課題に関する調査が公表されている。kintone公式価格（https://kintone.cybozu.co.jp/price/）ではライトコース月額1,000円/1ユーザー（税抜、最低10ユーザー）等のプランが確認できる。Googleスプレッドシート（https://workspace.google.com/intl/ja/products/sheets/）およびMicrosoft 365 Online（https://www.microsoft.com/ja-jp/microsoft-365/free-office-online-for-the-web）は無料で利用可能。推測の限界と販売根拠の不足: 需要や実際の支払意思、継続率は未検証の仮説であり、実測データは存在しない。法務・個人情報・権限管理の要件、および申込から解約までのフローは本試作段階では未実装。価格、需要、採算の多くは未確認または仮説である",
+        "verdict": "prototype",
+        "sources": [
+          "https://www.ipa.go.jp/digital/chousa/dx-trend/",
+          "https://kintone.cybozu.co.jp/price/",
+          "https://workspace.google.com/intl/ja/products/sheets/",
+          "https://www.microsoft.com/ja-jp/microsoft-365/free-office-online-for-the-web"
+        ]
+      }
+    },
+    {
+      "format": "orxelia-research-v1",
+      "project": "見積もり催促・追客管理",
+      "researchedAt": "2026-11-17",
+      "findings": [
+        {
+          "type": "公開市場データ",
+          "summary": "提出済み見積からの追客管理に関する公的な網羅的統計データは存在しないため、中小企業庁の小規模事業者白書等におけるITツール導入率の傾向を参照しつつ、実際の需要は未検証の仮説として扱う。",
+          "source": "",
+          "status": "仮説"
+        },
+        {
+          "type": "競合実績・価格",
+          "summary": "同種の小規模事業者向け見積もり追客特化型ツールの販売実績や具体的な契約数・価格帯の市場データは未確認。一般的なSFAやCRMは月額数千円〜数万円規模であるが、本事業の月額1,480円という価格設定は検証前の仮説に過ぎない。",
+          "source": "",
+          "status": "仮説"
+        },
+        {
+          "type": "収益試算",
+          "summary": "【仮定】月額単価1,480円、解約率月10%とする。【計算式】初月契約数をX件とした場合、売上予測＝X × 1,480円。3ヶ月継続時のLTV＝1,480 × (1 / 0.1) の簡易試算。実績値はゼロであり、これらはすべて未検証の予測である。",
+          "source": "",
+          "status": "仮説"
+        },
+        {
+          "type": "低コスト・一人運営",
+          "summary": "原則1人での運営を前提とし、開発・保守・サポートを自動化することで固定費を極小化する。支出や外部委託を行わず、初期投資を5万円以内に抑える計画だが、実際の運用負荷やトラブル発生時の工数は未検証である。",
+          "source": "",
+          "status": "仮説"
+        },
+        {
+          "type": "法務・技術リスク",
+          "summary": "顧客の顧客情報（見積金額や担当者名等）を扱うため、データ漏洩時の責任や利用規約・プライバシーポリシーの不備に関する法務リスクが存在する。また、メール送信機能等の技術的不具合による機会損失のリスクは未検証である。",
+          "source": "",
+          "status": "仮説"
+        }
+      ],
+      "idea": {
+        "name": "IPA DX動向を踏まえた中小企業向けDX・AI活用ロードマップ作成ツール",
+        "customer": "DX推進白書の公開やリスキリングの必要性を認識しつつも、自社で何から着手すべきか迷っている日本の中小企業の経営者および現場責任者",
+        "offer": "IPA等の公開一次資料の分類フレームワーク（戦略・技術・人材）に基づき、数問の入力で自社のDX・AI推進状況の現在地を診断し、最短のステップと具体的な無料代替・クラウドツールの活用方針を提示するWebアプリ",
+        "next": "iPhone実機ブラウザにて、1. 設問項目の入力画面、2. 現在地診断ロジックの動作、3. 診断結果としての簡易ロードマップ表示をHTML/JavaScriptで実装し試作。合格条件は5秒以内の結果表示と画面崩れがないこと。失敗条件はJSエラーによる停止",
+        "distribution": "最初の顧客獲得経路は、中小企業のDX関連ブログや無料セミナー経由でのLP誘導。支払意思を測る方法は、詳細なカスタムレポートやデータエクスポート機能を追加した月額制プランの事前登録（Waitlist）コンバージョン測定。継続撤退基準は、LP訪問から診断完了率が10%未満、または事前登録率が1%未満の場合",
+        "advantage": "手作業やスプレッドシート管理（無料）と比較し、自社の現在地評価を自動化。kintone（月額1,000円〜/ユーザー※最低10ユーザーから要件あり）等の高価格帯ツール導入前に、自社に必要な機能を無料で客観的に見極められる点に優位性がある",
+        "recurring": "仮価格は月額980円（1社あたり）、変動費（サーバー・AI API利用費等）は月1社あたり約100円、限界利益約880円。顧客獲得単価（CAC）の上限は5,000円とし、6ヶ月以内の回収を目指す",
+        "selection": "prototype",
+        "research": "IPA DX動向調査（https://www.ipa.go.jp/digital/chousa/dx-trend/）では日本企業のDX取組の課題やAI導入の動向が報告されている。kintone料金（https://kintone.cybozu.co.jp/price/）はライトコース月額1,000円/1ユーザー（最低10ユーザーから、年間契約の場合は12,000円/ユーザー、初期費用無料）、スタンダードコース月額1,800円/ユーザー。無料代替としてGoogle スプレッドシート（https://workspace.google.com/intl/ja/products/sheets/）やWeb用Microsoft 365（https://www.microsoft.com/ja-jp/microsoft-365/free-office-online-for-the-web）が存在するが、DX戦略の策定や自社分析ロジックの自動化機能はない。法務・個人情報・権限に関しては、メールアドレス等の個人情報を取得する場合のプライバシーポリシー策定やSSL/TLS暗号化が必要。申込から解約までの確認項目として、Stripe等の決済代行を用いた即時課金とオンラインでのワンクリック解約フローの検証が必須。なお、価格・需要・採算の正確な数値は未確認の仮説であり、実機、顧客反応、販売、継続率は実測済みではない",
         "verdict": "prototype",
         "sources": [
           "https://www.ipa.go.jp/digital/chousa/dx-trend/",
