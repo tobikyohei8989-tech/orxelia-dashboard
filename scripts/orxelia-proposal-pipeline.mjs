@@ -1,3 +1,4 @@
+import {setTimeout as delay} from 'node:timers/promises';
 import {createHash} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import {qualityBrief,checkPrototypeQuality} from './prototype-quality.mjs';
@@ -9,7 +10,21 @@ const headers={apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'appl
 async function api(path,options={}){const r=await fetch(base+'/rest/v1/'+path,{...options,headers:{...headers,...options.headers}});if(!r.ok)throw Error('DB HTTP '+r.status+' '+(await r.text()).slice(0,240));const body=await r.text();return body?JSON.parse(body):null}
 const idFilter=id=>'orxelia_proposals?id=eq.'+encodeURIComponent(id);
 async function update(id,fields,expected){const rows=await api(idFilter(id)+'&status=eq.'+encodeURIComponent(expected),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({...fields,updated_at:new Date().toISOString()})});if(rows.length!==1)throw Error('Stage changed concurrently');return rows[0]}
-async function model(prompt,max=5500){if(!gemini)throw Error('Gemini key missing');const names=['gemini-3.5-flash-lite','gemini-flash-lite-latest','gemini-3.8-flash'];let failures=[];for(const name of names){for(let attempt=0;attempt<2;attempt++){try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+name+':generateContent',{method:'POST',headers:{'x-goog-api-key':gemini,'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.25,maxOutputTokens:max}}),signal:AbortSignal.timeout(45000)});const j=await r.json();if(!r.ok){failures.push(name+' HTTP '+r.status);if([429,500,503].includes(r.status)&&attempt===0)continue;break}if(j.candidates?.[0]?.finishReason==='MAX_TOKENS')throw Error('truncated');const text=j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('');if(text?.trim())return text;throw Error('empty model response')}catch(e){failures.push(name+' '+String(e).slice(0,90))}}}throw Error('Gemini unavailable: '+failures.join('; '))}
+async function model(prompt,max=5500){if(!gemini)throw Error('Gemini key missing');const names=['gemini-3.5-flash-lite','gemini-flash-lite-latest','gemini-3.8-flash'];let failures=[];for(const name of names){for(let attempt=0;attempt<2;attempt++){try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+name+':generateContent',{method:'POST',headers:{'x-goog-api-key':gemini,'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.25,maxOutputTokens:max}}),signal:AbortSignal.timeout(45000)});if(!r.ok){
+   failures.push(name+' HTTP '+r.status);
+   await r.body?.cancel().catch(()=>{});
+   if(![429,500,502,503,504].includes(r.status))break;
+   const retryAfter=r.headers.get('retry-after');
+   const retryMs=retryAfter===null?0:/^\d+$/.test(retryAfter)?Number(retryAfter)*1000:Date.parse(retryAfter)-Date.now();
+   if(retryMs>30000)throw Error('Gemini retry deferred: HTTP '+r.status);
+   if(attempt===0 || name!==names.at(-1)){
+    const backoff=Math.min(16000,2000*2**(failures.length-1));
+    await delay(Math.max(retryMs||0,backoff+Math.floor(Math.random()*1000)));
+   }
+   if(attempt===0)continue;
+   break;
+  }
+  const j=await r.json();if(j.candidates?.[0]?.finishReason==='MAX_TOKENS')throw Error('truncated');const text=j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('');if(text?.trim())return text;throw Error('empty model response')}catch(e){if(e.message.startsWith('Gemini retry deferred:'))throw e;failures.push(name+' '+String(e).slice(0,90))}}}throw Error('Gemini unavailable: '+failures.join('; '))}
 const htmlFrom=(t,allowScripts=false)=>{const m=t.match(/<!doctype html[\s\S]*?<\/html>/i)||t.match(/<html[\s\S]*?<\/html>/i);if(!m)throw Error('AI did not return complete HTML');const h=m[0];if(h.length>120000)throw Error('HTML too large');if(new RegExp(allowScripts?'(<iframe\\b|<object\\b|<embed\\b|<form[^>]*action\\s*=|https?:\\/\\/)':'(<script\\b|<iframe\\b|<object\\b|<embed\\b|<form[^>]*action\\s*=|https?:\\/\\/)','i').test(h))throw Error(allowScripts?'Prototype must be offline: external URLs, embedded documents and form actions are forbidden':'Design preview must be static and offline: scripts, external URLs, embedded documents and form actions are forbidden');return h};
 let latestQuality=null;
 let failedCheck=null;
@@ -199,7 +214,7 @@ try{
  const pending=retryStage[state];
  if (pending === proposal.status
      && ![revisionRetryPrefix,stageRetryPrefix].some(prefix=>proposal.error_message?.startsWith(prefix))
-     && (/^Error: Gemini unavailable:/.test(message) || message.includes('Visual review unavailable'))
+     && (/^Error: Gemini (?:unavailable|retry deferred):/.test(message) || message.includes('Visual review unavailable'))
      && /HTTP (?:429|50[0234])|timeout/i.test(message)) {
   await update(proposal.id,{
    status:pending,
