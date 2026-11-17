@@ -58,13 +58,17 @@ async function buildProductPage(proposal, prototype) {
  const instructions = [
   'Create a complete standalone Japanese product landing page draft for internal review.',
   'Use Partner Link as the structural model: hero with target and value, three-step workflow, features, pricing and comparison, prototype guidance, FAQ and support/legal notes.',
-  'Adapt the section order and copy to this product. Mark unverified pricing, competitor claims, legal terms and missing features as pending.',
+  'Adapt the section order and copy to this product. Omit unsupported claims. Explain unresolved pricing and legal decisions in complete Japanese sentences. Never use [PENDING], TODO, blank sections or placeholder headings. Use normal vertical page scrolling without fixed-height containers or clipped sections. End with a visible footer and closing body and html tags.',
   'Show a non-interactive product walkthrough; the real private demo is available separately in the dashboard.',
   'Do not include checkout, live inquiry forms, external URLs or scripts. Clearly label 販売審査前の商品ページ案.',
   'Business: '+brief(proposal),
   'Private prototype excerpt: '+prototype.slice(0,18000)
  ].join('\n');
- return generateHtml(instructions, 10000);
+ try {
+  return await generateHtml(instructions, 12000);
+ } catch (error) {
+  throw Error('Product page draft: '+error.message, {cause:error});
+ }
 }
 
 async function buildPreapprovalTrial(proposal, design, designRevision) {
@@ -214,7 +218,7 @@ try{
  const pending=retryStage[state];
  if (pending === proposal.status
      && ![revisionRetryPrefix,stageRetryPrefix].some(prefix=>proposal.error_message?.startsWith(prefix))
-     && (/^Error: Gemini (?:unavailable|retry deferred):/.test(message) || message.includes('Visual review unavailable'))
+     && (/^Error: (?:Product page draft: )?Gemini (?:unavailable|retry deferred):/.test(message) || message.includes('Visual review unavailable'))
      && /HTTP (?:429|50[0234])|timeout/i.test(message)) {
   await update(proposal.id,{
    status:pending,
