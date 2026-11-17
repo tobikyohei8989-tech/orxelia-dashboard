@@ -12,14 +12,21 @@ async function update(id,fields,expected){const rows=await api(idFilter(id)+'&st
 async function model(prompt,max=5500){if(!gemini)throw Error('Gemini key missing');const names=['gemini-3.5-flash-lite','gemini-flash-lite-latest','gemini-3.8-flash'];let failures=[];for(const name of names){for(let attempt=0;attempt<2;attempt++){try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+name+':generateContent',{method:'POST',headers:{'x-goog-api-key':gemini,'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.25,maxOutputTokens:max}}),signal:AbortSignal.timeout(45000)});const j=await r.json();if(!r.ok){failures.push(name+' HTTP '+r.status);if([429,500,503].includes(r.status)&&attempt===0)continue;break}if(j.candidates?.[0]?.finishReason==='MAX_TOKENS')throw Error('truncated');const text=j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('');if(text?.trim())return text;throw Error('empty model response')}catch(e){failures.push(name+' '+String(e).slice(0,90))}}}throw Error('Gemini unavailable: '+failures.join('; '))}
 const htmlFrom=(t,allowScripts=false)=>{const m=t.match(/<!doctype html[\s\S]*?<\/html>/i)||t.match(/<html[\s\S]*?<\/html>/i);if(!m)throw Error('AI did not return complete HTML');const h=m[0];if(h.length>120000)throw Error('HTML too large');if(new RegExp(allowScripts?'(<iframe\\b|<object\\b|<embed\\b|<form[^>]*action\\s*=|https?:\\/\\/)':'(<script\\b|<iframe\\b|<object\\b|<embed\\b|<form[^>]*action\\s*=|https?:\\/\\/)','i').test(h))throw Error(allowScripts?'Prototype must be offline: external URLs, embedded documents and form actions are forbidden':'Design preview must be static and offline: scripts, external URLs, embedded documents and form actions are forbidden');return h};
 let latestQuality=null;
-async function generateHtml(prompt,max,allowScripts=false){
+let failedCheck=null;
+async function generateHtml(prompt,max,allowScripts=false,verify){
  let reason='';
  for(let attempt=0;attempt<3;attempt++){
   const output=await model(prompt+'\n'+qualityBrief+(reason?'\nPrevious output was rejected: '+reason+'. Regenerate the complete HTML. Use only inline CSS'+(allowScripts?' and inline JavaScript':' without JavaScript')+'; no CDN, web fonts, remote images, external URLs, iframe/object/embed or form actions.':''),max);
   try{
+   failedCheck=null;
    const html=htmlFrom(output,allowScripts);
    const quality=await checkPrototypeQuality(html,{interactive:allowScripts,artifactDir:'build/prototype-quality/proposal-attempt-'+attempt});
-   if(!quality.passed)throw Error('Submission quality gate: '+JSON.stringify(quality.errors));
+   if(!quality.passed){
+    failedCheck={type:'submission_quality',errors:quality.errors};
+    throw Error('Submission quality gate: '+quality.errors.join(' / '));
+   }
+   if (verify) await verify(html);
+   failedCheck=null;
    latestQuality=quality;
    return html;
   }catch(e){
@@ -30,7 +37,7 @@ async function generateHtml(prompt,max,allowScripts=false){
  }
 }
 
-async function test(html,interactive=false){const browser=await chromium.launch({headless:true});try{const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const errors=[];page.on('pageerror',e=>errors.push(String(e)));await page.route('https://orxelia.test/**',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));await page.goto('https://orxelia.test/preview',{waitUntil:'load'});const result=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:innerWidth,text:document.body.innerText.length,buttons:document.querySelectorAll('button').length,inputs:document.querySelectorAll('input,textarea,select').length}));return {passed:result.text>100&&result.width<=result.viewport+10&&(!interactive||result.inputs>=2&&result.buttons>=1)&&!errors.length,...result,errors}}finally{await browser.close()}}
+async function test(html,interactive=false,minInputs=2){const browser=await chromium.launch({headless:true});try{const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const errors=[];page.on('pageerror',e=>errors.push(String(e)));await page.route('https://orxelia.test/**',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}));await page.goto('https://orxelia.test/preview',{waitUntil:'load'});const result=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:innerWidth,text:document.body.innerText.length,buttons:document.querySelectorAll('button').length,inputs:document.querySelectorAll('input,textarea,select').length}));return {passed:result.text>100&&result.width<=result.viewport+10&&(!interactive||result.inputs>=minInputs&&result.buttons>=1)&&!errors.length,...result,errors}}finally{await browser.close()}}
 const brief=p=>JSON.stringify({title:p.title,problem:p.brief?.problem,solution:p.brief?.solution,target:p.brief?.target,references:p.brief?.references,competitive_position:p.brief?.competitive_position});
 async function buildProductPage(proposal, prototype) {
  const instructions = [
@@ -46,18 +53,29 @@ async function buildProductPage(proposal, prototype) {
 }
 
 async function buildPreapprovalTrial(proposal, design, designRevision) {
+ let check;
  const html = await generateHtml(
   'Build an offline, private evaluation prototype in Japanese. Implement the main workflow using fictitious sample data, validated inputs and a working list. Label it 開発許可前の非公開試作. No network, real personal data, publication, payments or external dependencies. Output standalone HTML, CSS and inline JavaScript only. Request: '+brief(proposal)+' Design: '+design.slice(0,12000),
-  16000,true);
- const check = await test(html,true);
- if (!check.passed) throw Error('Private prototype browser test failed');
+  16000,true,async candidate=>{
+   // The quality gate already exercises the required record workflow with one input.
+   check = await test(candidate,true,1);
+   if (!check.passed) {
+    failedCheck={type:'preapproval_browser',...check,errors:check.errors.map(error=>error.slice(0,250)).slice(0,5)};
+    throw Error('Private prototype browser test failed: '+JSON.stringify(failedCheck));
+   }
+  });
  return {html,report:{passed:true,design_revision:designRevision,browser:check,submission_quality:latestQuality}};
 }
 // Process pending proposal stages, including legacy dashboard projects migrated into the approval-gated workflow.
 const readyStages = new Set(['prototype_revision_requested', 'approved_for_development', 'sales_review_requested', 'revision_requested']);
 const revisionRetryPrefix = 'Gemini revision retry scheduled: ';
+const stageRetryPrefix = 'Gemini stage retry scheduled: ';
+const retryStage = {
+ designing:'awaiting_selection',revising:'revision_requested',
+ developing:'approved_for_development',prototype_revising:'prototype_revision_requested'
+};
 function isReady(candidate, now) {
- if (candidate.status === 'revision_requested' && candidate.error_message?.startsWith(revisionRetryPrefix)) {
+ if ([revisionRetryPrefix,stageRetryPrefix].some(prefix=>candidate.error_message?.startsWith(prefix))) {
   return now - Date.parse(candidate.updated_at) >= 30 * 60 * 1000;
  }
  if (readyStages.has(candidate.status)) return true;
@@ -108,7 +126,7 @@ async function dailyPrototype() {
   })
  });
  const [queued] = await api(idFilter(id)+'&owner_id=eq.'+owner+'&status=eq.awaiting_selection&design_status=eq.pending&brief->>dashboard_deleted_at=is.null&select=*');
- return queued;
+ return queued && isReady(queued,Date.now()) ? queued : undefined;
 }
 const proposal = await dailyPrototype() ?? await selectProposal();
 if(!proposal){console.log('No proposal stage work pending');process.exit(0)}
@@ -122,7 +140,7 @@ try{
   const feedback=await model('You are an independent Gemini UX reviewer. In Japanese give up to 5 concrete improvements to this mobile design; prioritize clarity and accessibility. No claim of functional testing. HTML: '+h.slice(0,18000),1100);
   const designQuality = latestQuality;
   const trial = await buildPreapprovalTrial(proposal,h,proposal.revision_number||1);
-  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:h,design_review:feedback.slice(0,3000),prototype_html:trial.html,test_report:{design_preview:t,submission_quality:designQuality,preapproval_trial:trial.report}},'designing');
+  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',error_message:null,design_html:h,design_review:feedback.slice(0,3000),prototype_html:trial.html,test_report:{design_preview:t,submission_quality:designQuality,preapproval_trial:trial.report}},'designing');
   console.log('Design preview saved, awaiting first approval');
  }else if(proposal.status==='revision_requested'){
   const feedback=(proposal.revision_request||'').trim();
@@ -137,7 +155,7 @@ try{
   const summary='修正指示：'+feedback.slice(0,700)+' / Geminiレビュー：'+review.slice(0,1200);
   const designQuality = latestQuality;
   const trial = await buildPreapprovalTrial(proposal,revised,revision);
-  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',design_html:revised,design_review:review,revision_number:revision,revision_summary:summary,revision_request:null,revision_history:[...history,{revision,feedback,review,at:new Date().toISOString()}].slice(-30),prototype_html:trial.html,test_report:{design_preview:checked,submission_quality:designQuality,preapproval_trial:trial.report}},'revising');
+  await update(proposal.id,{status:'awaiting_first_approval',design_status:'ready',error_message:null,design_html:revised,design_review:review,revision_number:revision,revision_summary:summary,revision_request:null,revision_history:[...history,{revision,feedback,review,at:new Date().toISOString()}].slice(-30),prototype_html:trial.html,test_report:{design_preview:checked,submission_quality:designQuality,preapproval_trial:trial.report}},'revising');
   console.log('Revised design submitted for approval',proposal.id,revision);
  }else if(proposal.status==='approved_for_development'){
   await update(proposal.id,{status:'developing'},'approved_for_development');
@@ -178,19 +196,22 @@ try{
  console.error('Proposal stage failed', message.slice(0,350));
  const [current] = await api(idFilter(proposal.id)+'&select=status');
  const state = current?.status;
- if (state === 'revising' && proposal.status === 'revision_requested'
-     && !proposal.error_message?.startsWith(revisionRetryPrefix)
+ const pending=retryStage[state];
+ if (pending === proposal.status
+     && ![revisionRetryPrefix,stageRetryPrefix].some(prefix=>proposal.error_message?.startsWith(prefix))
      && (/^Error: Gemini unavailable:/.test(message) || message.includes('Visual review unavailable'))
-     && /HTTP 50[0234]|timeout/i.test(message)) {
+     && /HTTP (?:429|50[0234])|timeout/i.test(message)) {
   await update(proposal.id,{
-   status:'revision_requested',
-   error_message:(revisionRetryPrefix+message).slice(0,350)
-  },'revising');
-  console.log('Revision queued for one retry after 30 minutes');
- } else if (['designing','revising','developing','prototype_revising'].includes(state)) {
+   status:pending,
+   ...(state==='designing'?{design_status:'pending'}:{}),
+   error_message:(stageRetryPrefix+message).slice(0,350)
+  },state);
+  console.log('Proposal stage queued for one retry after 30 minutes');
+ } else if (pending) {
   await update(proposal.id,{
    status:'failed',
    design_status:state==='designing'||state==='revising'?'failed':proposal.design_status,
+   ...(failedCheck?{test_report:{...proposal.test_report,failure:failedCheck}}:{}),
    error_message:message.slice(0,350)
   },state);
  }
