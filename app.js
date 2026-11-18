@@ -85,6 +85,10 @@ function implementedProductsPanel(){
   return orxeliaTrialProposals.filter(isPartnerLinkImplemented).map(partnerLinkProductPanel).join('');
 }
 
+function isGenbaArcProposal(proposal) {
+  return normalizedName(proposal?.title) === "genbaarc";
+}
+
 function genbaArcProductPanel() {
   return `<article class="partner-product business-progress" aria-label="GENBA ARC 現場進捗">
     <div class="partner-product-top"><span class="partner-product-label">開発したシステム</span><span class="partner-product-status">非公開プレビュー</span></div>
@@ -112,10 +116,11 @@ function orxeliaTrialProposalPanel(){
  if(!orxeliaTrialProposals.length)return "";
  const names={awaiting_selection:"Geminiデザイン作成待ち",designing:"Geminiデザイン作成中",awaiting_first_approval:"第1承認待ち",revision_requested:"修正指示受付済み",revising:"Gemini再デザイン中",approved_for_development:"開発待ち",developing:"開発・テスト中",development_ready:"動作試作品完成・操作確認待ち",prototype_revision_requested:"試作品の修正指示受付済み",prototype_revising:"AIが試作品を修正中",sales_review_requested:"販売審査中",awaiting_final_approval:"販売審査：根拠確認中",final_approved:"販売方針承認済み（公開・決済未実行）",on_hold:"保留",failed:"処理失敗"};
  const sorted=[...orxeliaTrialProposals].sort((a,b)=>(Number(a.brief?.priority_rank)||99)-(Number(b.brief?.priority_rank)||99)||proposalPriority(a.status)-proposalPriority(b.status));
- const chosen=sorted.find(p=>Number(p.brief?.priority_rank)===1);
- const priorityPicker=`<div class="proposal-priority-picker" style="padding:14px;border:1px solid #d3dce6;border-radius:12px;margin:12px 0"><label for="orxelia-priority-select"><b>最優先で開発する案件（経営者が選択）</b></label><select id="orxelia-priority-select" style="width:100%;padding:10px;margin:8px 0"><option value="">選択してください</option>${sorted.map(p=>`<option value="${esc(p.id)}" ${chosen?.id===p.id?"selected":""}>${esc(p.title)}</option>`).join("")}</select><small>AI推奨とは別に開発順を指定します。公開・販売の承認にはなりません。</small></div>`;
- const count=sorted.filter(p=>!isPartnerLinkImplemented(p)).filter(p=>p.status==="awaiting_first_approval"||p.status==="development_ready"||(p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready_for_approval")).length;
- return `<section class="proposal-workspace"><div class="proposal-intro"><h3>AI事業の承認・販売判断</h3><p>操作が必要な案件と、販売根拠不足で保留中の案件を分けて確認できます。販売根拠不足は承認依頼ではありません。</p><div class="proposal-summary"><span>あなたの操作待ち <b>${count}件</b></span><span>全案件 <b>${sorted.length}件</b></span></div>${priorityPicker}</div>${sorted.map(p=>isPartnerLinkImplemented(p)?partnerLinkProductPanel(p):`<details class="proposal-item" ${(p.status==="awaiting_first_approval"||p.status==="development_ready"||(p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready_for_approval"))?'open':''}><summary><span class="proposal-item-title">${esc(p.title)}</span><span class="proposal-item-status">${esc(names[p.status]||p.status)}</span></summary><div class="proposal-item-body"><p class="proposal-next"><b>今の段階：</b>${esc(proposalNext(p.status))}</p><details class="proposal-meta"><summary>事業内容・差別化・IDを見る</summary><small>事業ID：${esc(p.id)}</small><p>${esc(p.brief?.problem||"")}</p><p><b>提案：</b>${esc(p.brief?.solution||"")}</p><p><b>差別化仮説：</b>${esc(p.brief?.competitive_position||"")}</p></details><p class="proposal-version">デザイン第${Number(p.revision_number)||1}版 ／ 試作品第${Number(p.prototype_revision_number)||1}版</p>
+ const aiProposals=sorted.filter(p=>!isGenbaArcProposal(p));
+ const chosen=aiProposals.find(p=>Number(p.brief?.priority_rank)===1);
+ const priorityPicker=`<div class="proposal-priority-picker" style="padding:14px;border:1px solid #d3dce6;border-radius:12px;margin:12px 0"><label for="orxelia-priority-select"><b>最優先で開発する案件（経営者が選択）</b></label><select id="orxelia-priority-select" style="width:100%;padding:10px;margin:8px 0"><option value="">選択してください</option>${aiProposals.map(p=>`<option value="${esc(p.id)}" ${chosen?.id===p.id?"selected":""}>${esc(p.title)}</option>`).join("")}</select><small>AI推奨とは別に開発順を指定します。公開・販売の承認にはなりません。</small></div>`;
+ const count=aiProposals.filter(p=>!isPartnerLinkImplemented(p)).filter(p=>p.status==="awaiting_first_approval"||p.status==="development_ready"||(p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready_for_approval")).length;
+ return `<section class="proposal-workspace"><div class="proposal-intro"><h3>AI事業の承認・販売判断</h3><p>操作が必要な案件と、販売根拠不足で保留中の案件を分けて確認できます。販売根拠不足は承認依頼ではありません。</p><div class="proposal-summary"><span>あなたの操作待ち <b>${count}件</b></span><span>全案件 <b>${sorted.length}件</b></span></div>${priorityPicker}</div>${sorted.map(p=>isGenbaArcProposal(p)?genbaArcProductPanel():isPartnerLinkImplemented(p)?partnerLinkProductPanel(p):`<details class="proposal-item" ${(p.status==="awaiting_first_approval"||p.status==="development_ready"||(p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready_for_approval"))?'open':''}><summary><span class="proposal-item-title">${esc(p.title)}</span><span class="proposal-item-status">${esc(names[p.status]||p.status)}</span></summary><div class="proposal-item-body"><p class="proposal-next"><b>今の段階：</b>${esc(proposalNext(p.status))}</p><details class="proposal-meta"><summary>事業内容・差別化・IDを見る</summary><small>事業ID：${esc(p.id)}</small><p>${esc(p.brief?.problem||"")}</p><p><b>提案：</b>${esc(p.brief?.solution||"")}</p><p><b>差別化仮説：</b>${esc(p.brief?.competitive_position||"")}</p></details><p class="proposal-version">デザイン第${Number(p.revision_number)||1}版 ／ 試作品第${Number(p.prototype_revision_number)||1}版</p>
  ${p.design_html?`<details class="design-preview"><summary>Geminiのデザイン案を見る（操作不可）</summary><iframe title="Geminiデザインプレビュー" sandbox="" referrerpolicy="no-referrer" loading="lazy" style="width:100%;height:480px;border:1px solid #556579;border-radius:14px;background:white" srcdoc="${esc(p.design_html)}"></iframe><details><summary>Geminiのデザインレビュー</summary><p>${esc(p.design_review||"")}</p></details></details>`:"<p>デザインはまだ生成されていません。自動処理の完了をお待ちください。</p>"}
  ${p.status==="awaiting_first_approval"&&p.design_status==="ready"?`<label for="revision-${esc(p.id)}">修正したい内容・機能・画面への指示</label><textarea id="revision-${esc(p.id)}" data-revision-input="${esc(p.id)}" maxlength="3000" rows="4" style="display:block;width:100%;margin:8px 0" placeholder="例：返品期限を最上部に表示。材料名は選択式にして、入力を簡単にしてください。">${esc(orxeliaRevisionDrafts[p.id]||"")}</textarea><button type="button" data-proposal-action="request_revision" data-proposal-id="${esc(p.id)}">Geminiへ修正依頼・再提出</button> ${canApproveDevelopment(p)?`<button type="button" data-proposal-action="approve_development" data-proposal-id="${esc(p.id)}">第1承認：本格開発へ</button>`:"<p>第1承認には、現在のデザイン版の非公開試作と検査合格が必要です。</p>"} <button type="button" data-proposal-action="hold" data-proposal-id="${esc(p.id)}">保留</button>`:""}
  ${p.prototype_html?`<details data-prototype-preview><summary>非公開の動作試作品を確認</summary><template><iframe title="開発試作品（隔離プレビュー）" sandbox="allow-scripts allow-modals" referrerpolicy="no-referrer" loading="lazy" class="prototype-live-frame" scrolling="auto" srcdoc="${esc(prototypeAutoHeightDocument(p.prototype_html))}"></iframe></template></details><p>自動テスト：${p.test_report?.passed===true?"基本スモークテスト合格":"未合格／未確認"}（実機・機能網羅は未検証）</p>`:""}
@@ -347,17 +352,14 @@ function portfolio(activities) {
   const statuses={awaiting_selection:"デザイン生成待ち",designing:"Geminiデザイン生成中",awaiting_first_approval:"デザイン確認・第1承認待ち",revision_requested:"デザイン修正依頼済み",revising:"デザイン修正中",approved_for_development:"試作品開発待ち",developing:"AI試作品開発中",development_ready:"動作試作品の確認・修正待ち",prototype_revision_requested:"試作品修正受付済み",prototype_revising:"試作品修正・テスト中",sales_review_requested:"販売審査中",awaiting_final_approval:"販売判断待ち",final_approved:"販売方針承認済み",failed:"AI処理エラー",on_hold:"保留"};
   const rows=selected.map(project=>{
     const cloud=cloudByLegacy.get(project.id)||cloudByName.get(project.name);
+    if(isGenbaArcProposal(cloud))return genbaArcProductPanel();
     if(isPartnerLinkImplemented(cloud))return partnerLinkProductPanel(cloud);
     if(!cloud)return portfolioProgress(project,evidence,displayedBusinessStage(project,activities));
     return '<article class="business-progress portfolio-tile"><span class="portfolio-status">'+esc(statuses[cloud.status]||cloud.status)+'</span><h3>'+esc(project.name)+'</h3><p class="portfolio-next">'+esc(proposalNext(cloud.status))+'</p><button type="button" data-tab="verification">承認・詳細を見る</button>'+businessRemovalButton(project,cloud) + details("過去の記録・編集",card(project))+'</article>';
   });
   const linked = new Set(selected.map(p=>(cloudByLegacy.get(p.id)||cloudByName.get(p.name))?.id).filter(Boolean));
-  const extra = filter==="すべて"?orxeliaTrialProposals.filter(p=>!linked.has(p.id)).map(p=>isPartnerLinkImplemented(p)?partnerLinkProductPanel(p):'<article class="business-progress portfolio-tile"><span class="portfolio-status">'+esc(statuses[p.status]||p.status)+'</span><h3>'+esc(p.title)+'</h3><p class="portfolio-next">'+esc(proposalNext(p.status))+'</p><button type="button" data-tab="verification">承認・詳細を見る</button>'+businessRemovalButton(null,p)+'</article>'):[];
+  const extra = filter==="すべて"?orxeliaTrialProposals.filter(p=>!linked.has(p.id)).map(p=>isGenbaArcProposal(p)?genbaArcProductPanel():isPartnerLinkImplemented(p)?partnerLinkProductPanel(p):'<article class="business-progress portfolio-tile"><span class="portfolio-status">'+esc(statuses[p.status]||p.status)+'</span><h3>'+esc(p.title)+'</h3><p class="portfolio-next">'+esc(proposalNext(p.status))+'</p><button type="button" data-tab="verification">承認・詳細を見る</button>'+businessRemovalButton(null,p)+'</article>'):[];
   const systemCards = [...rows,...extra];
-  if (filter === "すべて") {
-    const partnerIndex = systemCards.findIndex(markup => markup.includes('aria-label="Partner Link 手配ボード"'));
-    systemCards.splice(partnerIndex < 0 ? 0 : partnerIndex + 1, 0, genbaArcProductPanel());
-  }
   return heading("システム一覧",action("＋ システムを登録","project","",true))+
     '<p class="portfolio-guide">システムごとの現在地と、次に必要な行動をまとめました。承認・修正は「承認・販売」で操作できます。</p>'+
     '<label>表示するシステム<select id="filter">'+filters+'</select></label>'+
@@ -1134,10 +1136,10 @@ document.addEventListener("click",event=>{
   document.querySelector('[data-overview="'+id+'"]')?.focus({preventScroll:true});
 });
 function home() {
-  const requiresAction=p=>!isPartnerLinkImplemented(p)&&(p.status==="awaiting_first_approval"||p.status==="development_ready"||(p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready_for_approval"));
+  const requiresAction=p=>!isGenbaArcProposal(p)&&!isPartnerLinkImplemented(p)&&(p.status==="awaiting_first_approval"||p.status==="development_ready"||(p.status==="awaiting_final_approval"&&p.sales_review?.recommendation==="ready_for_approval"));
   const owner=orxeliaTrialProposals.filter(requiresAction);
-  const research=orxeliaTrialProposals.filter(p=>!isPartnerLinkImplemented(p)&&p.status==="awaiting_final_approval"&&!requiresAction(p));
-  const running=orxeliaTrialProposals.filter(p=>!isPartnerLinkImplemented(p)&&["awaiting_selection","designing","revision_requested","revising","approved_for_development","developing","prototype_revision_requested","prototype_revising","sales_review_requested"].includes(p.status));
+  const research=orxeliaTrialProposals.filter(p=>!isGenbaArcProposal(p)&&!isPartnerLinkImplemented(p)&&p.status==="awaiting_final_approval"&&!requiresAction(p));
+  const running=orxeliaTrialProposals.filter(p=>!isGenbaArcProposal(p)&&!isPartnerLinkImplemented(p)&&["awaiting_selection","designing","revision_requested","revising","approved_for_development","developing","prototype_revision_requested","prototype_revising","sales_review_requested"].includes(p.status));
   const cleanTitle=p=>esc(p.title.replace(/（自動開発動作検証）/g,"").replace(/^【第2件・本番検証】/,""));
   const ownerRows=owner.map(p=>{
     const design=p.status==="awaiting_first_approval",prototype=p.status==="development_ready";
@@ -1150,7 +1152,7 @@ function home() {
     .sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"));
   const taskRows=openTasks.map(task=>'<article class="business-progress priority-card"><h3>'+esc(task.title)+'</h3><p>'+esc(data.projects.find(p=>p.id===task.project)?.name||"共通")+' ／ '+esc(task.state)+(task.due?' ／ 期限 '+esc(task.due):'')+'</p><button type="button" data-tab="verification" data-open-tasks>実行タスクを開く</button></article>').join("");
   const proposals=orxeliaTrialProposals.map(p=>({
-    name:p.title, status:isPartnerLinkImplemented(p)?"社内運用中・販売準備中":p.status, proposal:p
+    name:p.title, status:isGenbaArcProposal(p)?"非公開プレビュー":isPartnerLinkImplemented(p)?"社内運用中・販売準備中":p.status, proposal:p
   }));
   const projects=activeProjects();
   const matched=new Set();
