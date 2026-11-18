@@ -425,3 +425,17 @@ body:not(.is-home) main > nav { margin-top:14px }
  .overview-card.metric span { font-size:10px }
  .overview-card::after { right:7px;top:9px;width:5px;height:5px }
 }
+.partner-product .genba-arc-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  line-height: 1.15;
+}
+.genba-arc-brand svg { flex: none; }
+.partner-product .genba-arc-brand small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+}
+.genba-arc-brand img { width: 31px; height: auto; }

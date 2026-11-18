@@ -85,6 +85,23 @@ function implementedProductsPanel(){
   return orxeliaTrialProposals.filter(isPartnerLinkImplemented).map(partnerLinkProductPanel).join('');
 }
 
+function genbaArcProductPanel() {
+  return `<article class="partner-product business-progress" aria-label="GENBA ARC 現場進捗">
+    <div class="partner-product-top"><span class="partner-product-label">開発したシステム</span><span class="partner-product-status">非公開プレビュー</span></div>
+    <h3 class="genba-arc-brand">
+      <svg viewBox="0 0 48 48" width="38" height="38" aria-hidden="true" focusable="false">
+        <path d="M8 39 23 10q1-2 3 0l14 29M15 29h19" fill="none" stroke="#1b94be" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M8 39c7-12 16-16 27-14" fill="none" stroke="#36c8b8" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+      <span>GENBA ARC <small>by <img src="assets/brand/orxelia-c-navy.png" width="550" height="395" alt="ORXELIA"></small></span>
+    </h3>
+    <p>現場ごとの見積・工事・請求の進捗を一覧で管理。担当者や取引先、対応期限を自社の運用に合わせて設定できます。</p>
+    <div class="partner-product-links">
+      <a class="partner-open" href="https://genba-link-orxelia-261112.tobi19890814.chatgpt.site/" target="_blank" rel="noopener noreferrer">GENBA ARCを開く <span aria-hidden="true">↗</span></a>
+    </div>
+  </article>`;
+}
+
 function canApproveDevelopment(proposal){
   const trial=proposal.test_report?.preapproval_trial;
   return Boolean(proposal.prototype_html?.trim() && trial?.passed===true &&
@@ -336,10 +353,15 @@ function portfolio(activities) {
   });
   const linked = new Set(selected.map(p=>(cloudByLegacy.get(p.id)||cloudByName.get(p.name))?.id).filter(Boolean));
   const extra = filter==="すべて"?orxeliaTrialProposals.filter(p=>!linked.has(p.id)).map(p=>isPartnerLinkImplemented(p)?partnerLinkProductPanel(p):'<article class="business-progress portfolio-tile"><span class="portfolio-status">'+esc(statuses[p.status]||p.status)+'</span><h3>'+esc(p.title)+'</h3><p class="portfolio-next">'+esc(proposalNext(p.status))+'</p><button type="button" data-tab="verification">承認・詳細を見る</button>'+businessRemovalButton(null,p)+'</article>'):[];
+  const systemCards = [...rows,...extra];
+  if (filter === "すべて") {
+    const partnerIndex = systemCards.findIndex(markup => markup.includes('aria-label="Partner Link 手配ボード"'));
+    systemCards.splice(partnerIndex < 0 ? 0 : partnerIndex + 1, 0, genbaArcProductPanel());
+  }
   return heading("システム一覧",action("＋ システムを登録","project","",true))+
     '<p class="portfolio-guide">システムごとの現在地と、次に必要な行動をまとめました。承認・修正は「承認・販売」で操作できます。</p>'+
     '<label>表示するシステム<select id="filter">'+filters+'</select></label>'+
-    (rows.length||extra.length?grid([...rows,...extra]):panel('<p>この区分の登録は0件です。</p>')) + removedBusinessesPanel();
+    (systemCards.length?grid(systemCards):panel('<p>この区分の登録は0件です。</p>')) + removedBusinessesPanel();
 }
 
 function activeQueue() {
