@@ -1,6 +1,6 @@
 {
   "format": "orxelia-auto-feed-v1",
-  "generatedAt": "2026-11-20T23:10:59.865458+00:00",
+  "generatedAt": "2026-11-21T23:04:07.140459+00:00",
   "reports": [
     {
       "format": "orxelia-research-v1",
@@ -763,6 +763,61 @@
         "recurring": "仮価格は月額1,000円/社、変動費はほぼ0円（個人運営のため）、限界利益率は約100%、顧客獲得単価の上限は5,000円、獲得単価の回収期間は5ヶ月以内",
         "selection": "prototype",
         "research": "確認事実: IPAの「DX動向」公開資料（https://www.ipa.go.jp/digital/chousa/dx-trend/）では日本企業のDX推進状況や課題が調査されているが、具体的な個社別の進捗管理ツール価格や需要は記載されていない。kintoneの公式価格はライトコース月額1,000円/1ユーザー、スタンダードコース1,800円/1ユーザーで最低10ユーザーから（出典: https://kintone.cybozu.co.jp/price/）。無料代替としてGoogleスプレッドシート（https://workspace.google.com/intl/ja/products/sheets/）やMicrosoft 365 Online（https://www.microsoft.com/ja-jp/microsoft-365/free-office-online-for-the-web）が存在する。推測の限界: 需要や採算、法務・個人情報（顧客の社内DXデータを扱う場合の規約）や申込から解約までのフローは未確認であり仮説に基づく。実機、顧客反応、販売、継続率は検証前である。検証コスト（5万円以内、1人）に見合うためprototypeとする。",
+        "verdict": "prototype",
+        "sources": [
+          "https://www.ipa.go.jp/digital/chousa/dx-trend/",
+          "https://kintone.cybozu.co.jp/price/",
+          "https://workspace.google.com/intl/ja/products/sheets/",
+          "https://www.microsoft.com/ja-jp/microsoft-365/free-office-online-for-the-web"
+        ]
+      }
+    },
+    {
+      "format": "orxelia-research-v1",
+      "project": "見積もり催促・追客管理",
+      "researchedAt": "2026-11-22",
+      "findings": [
+        {
+          "type": "公開市場データ",
+          "summary": "提出済みの見積から対応日が来た案件を抽出する小規模事業者向けの追客台帳に関する公的な網羅的統計データは、本分析時点において未確認であるため、市場規模や事業者数の正確な算出は控える。",
+          "source": "",
+          "status": "仮説"
+        },
+        {
+          "type": "競合実績・価格",
+          "summary": "小規模事業者向けの顧客管理や見積追客に特化したツールの既存価格帯や販売実績はインターネット上で網羅的に把握できておらず、月額1,480円という価格が市場に受け入れられるかは未検証の仮説段階にある。",
+          "source": "",
+          "status": "仮説"
+        },
+        {
+          "type": "収益試算",
+          "summary": "【仮定と計算式】月額料金1,480円 × 契約数（未確認） ＝ 月商。販売実績がゼロ件であるため、売上予測や利益算定は一切行わず、実績値として計上できる数値は存在しない。",
+          "source": "",
+          "status": "仮説"
+        },
+        {
+          "type": "低コスト・一人運営",
+          "summary": "開発および運営を原則1人で行う場合、外部委託費や広告宣伝費をかけずに社内での試作・動作確認のみで構築することで、初期投資およびランニングコストを最小限に抑える方針とする。",
+          "source": "",
+          "status": "仮説"
+        },
+        {
+          "type": "法務・技術リスク",
+          "summary": "小規模事業者が入力する顧客情報の取り扱いにおけるプライバシーポリシーの整備や、サービス停止時におけるデータ保全に関する技術的・法務的リスクへの対策は、公開前に社内で検証する必要がある。",
+          "source": "",
+          "status": "仮説"
+        }
+      ],
+      "idea": {
+        "name": "DX人材育成・進捗可視化ダッシュボード試作",
+        "customer": "中小企業のDX推進担当者・経営者",
+        "offer": "IPAのDX動向調査の傾向（DX白書等）や自社のDX進捗度を整理できる、無料表計算ソフト（GoogleスプレッドシートやMicrosoft 365 Online）をベースにした進捗可視化・課題整理テンプレート",
+        "next": "iPhoneの実機ブラウザを使い、スプレッドシート上の進捗チェック項目（例：戦略・技術・人材の3視点評価）を1タップで更新し、レーダーチャートが即時連動して書き換わるかを検証する。成功条件は3秒以内の操作完了、失敗条件はスマホ表示でのレイアウト崩れや数式エラーの発生。",
+        "distribution": "SNSや個人ブログを通じた無料テンプレート配布による初期認知獲得。支払意思は高度な分析機能やAI活用アドオンを月額数百円で提供する有料プランへのアップグレード率で測定。月間ダウンロード数が100件未満、または有料化の打診に対して反対が過半数の場合は撤退基準とする。",
+        "advantage": "公式競合であるkintone（スタンダードコース月額1,800円/1ユーザー、最小10ユーザー〜）や、無料代替であるMicrosoft 365 Online/Googleスプレッドシートと比較する。kintoneは初期設定やアカウント管理の手間・コストがかかるが、提案のテンプレートは1ユーザー・初期費用0円かつブラウザで即座に動作する。成果指標は導入までのセットアップ時間（kintone：数時間〜数日、本提案：5分以内）。",
+        "recurring": "仮価格は高度分析アドオン月額980円。変動費はほぼ0円（クラウドストレージ利用）。限界利益は売上の約90%。顧客獲得単価（CAC）の上限は5,000円とし、回収期間は有料プラン加入後6ヶ月以内を目指す（未確認・仮説）。",
+        "selection": "prototype",
+        "research": "確認事実として、IPAのDX動向調査（https://www.ipa.go.jp/digital/chousa/dx-trend/）では日本企業のDX推進状況や課題分析が公開されている。競合のkintone料金（https://kintone.cybozu.co.jp/price/）はスタンダードコースが月額1,800円/1ユーザー（税抜、年額の場合は21,600円）で最小利用人数は10ユーザーから。無料代替としてGoogleスプレッドシート（https://workspace.google.com/intl/ja/products/sheets/）やWeb用Microsoft 365（https://www.microsoft.com/ja-jp/microsoft-365/free-office-online-for-the-web）が無料で利用可能である。推測の限界として、中小企業が本当にこのテンプレートにお金を払うか（支払意思）、具体的な継続利用率は未検証である。法務・個人情報・権限に関しては、ユーザーが入力する自社データをクラウド上で安全に扱うためのプライバシーポリシーの提示が必要であり、申込から解約までのフローはGoogle FormsやStripe等の決済連携で実証前。根拠の不足として実際の法人顧客のニーズや競合に対する優位性の実測データが不足しているため、検証コストに見合うプロトタイプ作成によるテストを行う。",
         "verdict": "prototype",
         "sources": [
           "https://www.ipa.go.jp/digital/chousa/dx-trend/",
