@@ -1,6 +1,6 @@
 {
   "format": "orxelia-auto-feed-v1",
-  "generatedAt": "2026-11-26T23:21:59.699481+00:00",
+  "generatedAt": "2026-11-27T23:18:30.634817+00:00",
   "reports": [
     {
       "format": "orxelia-research-v1",
@@ -1039,6 +1039,61 @@
         "recurring": "仮価格は一回限りの構築支援費として5万円（税込）、変動費（クラウド利用料等）は実質0円（無料代替ツールを活用）。限界利益は売上のほぼ100%。顧客獲得単価の上限は5万円。回収期間は一括前払いのため即座に回収可能。",
         "selection": "prototype",
         "research": "確認事実: IPAの「DX動向」資料（https://www.ipa.go.jp/digital/chousa/dx-trend/）では企業のDX推進状況やAI導入の広がりが示されている。kintone公式価格（https://kintone.cybozu.co.jp/price/）はライトコースが月額1,000円/1ユーザー（年額12,000円）、スタンダードコースが月額1,800円/1ユーザー（年額21,600円）であり、最低利用人数が10ユーザーからに設定されている。Googleスプレッドシート（https://workspace.google.com/intl/ja/products/sheets/）およびMicrosoft 365 Online（https://www.microsoft.com/ja-jp/microsoft-365/free-office-online-for-the-web）は基本機能が無料で利用可能。推測の限界: 中小企業がどの程度AIテンプレート構築に5万円を支払うかの需要や正確な採算は、まだ実測されていないため未確認の仮説である。法的・個人情報・権限管理については、顧客のGoogle/Microsoftアカウント上の権限設定に依存するため、サービス提供時の利用規約およびデータ取扱いの同意書が必要となる。申込から解約までの確認項目として、単発の構築支援のため原則解約の概念はないが、保守契約を結ぶ場合の規定が必要。推測と確認した不便の区別: kintone等の専用ツールは多機能である一方、小規模事業者にとっては最低10ユーザーの縛りと毎月の固定費が不便・過剰である点を仮説として設定。根拠URLはIPA DX動向、サイボウズkintone料金、Googleスプレッドシート、Microsoft 365 Onlineの各公式ページ。",
+        "verdict": "prototype",
+        "sources": [
+          "https://www.ipa.go.jp/digital/chousa/dx-trend/",
+          "https://kintone.cybozu.co.jp/price/",
+          "https://workspace.google.com/intl/ja/products/sheets/",
+          "https://www.microsoft.com/ja-jp/microsoft-365/free-office-online-for-the-web"
+        ]
+      }
+    },
+    {
+      "format": "orxelia-research-v1",
+      "project": "見積もり催促・追客管理",
+      "researchedAt": "2026-11-28",
+      "findings": [
+        {
+          "type": "公開市場データ",
+          "summary": "日本の小規模事業者数や建設・サービス業におけるITツール導入率、および手作業による事務処理負担に関する政府統計や業界団体の公開データを一次資料として確認する必要がある。ただし現時点では未検証の仮説とする。",
+          "source": "",
+          "status": "仮説"
+        },
+        {
+          "type": "競合実績・価格",
+          "summary": "見積もり追客や顧客管理を目的としたSaaSの月額料金帯や、小規模事業者向けの安価な業務効率化ツールの価格設定を調査する必要がある。本事業の1,480円という価格が市場受容性に合致しているかは未検証。",
+          "source": "",
+          "status": "仮説"
+        },
+        {
+          "type": "収益試算",
+          "summary": "月額1,480円とし、仮に契約数が10社の場合は月商14,800円、100社の場合は148,000円となる。サーバー代等の運用コストを月額数千円以内に抑えた場合の損益分岐点は低いと推測されるが、販売実績やコンバージョン率は未確認のため予測に過ぎない。",
+          "source": "",
+          "status": "仮説"
+        },
+        {
+          "type": "低コスト・一人運営",
+          "summary": "初期投資5万円以内、サーバーレス構成や既存のノーコード・ローコードツールを活用することで、開発から保守までを原則1人で完結させる体制をとる。外部への業務委託や広告宣伝費をかけず、実購入件数・売上の検証を行う。",
+          "source": "",
+          "status": "仮説"
+        },
+        {
+          "type": "法務・技術リスク",
+          "summary": "顧客の顧客情報（見積もりデータや連絡先）をクラウド上で取り扱うため、利用規約やプライバシーポリシーの整備、セキュリティ対策が必要となる。また、決済周りの法律やデータ消失時の免責事項について専門的な確認が求められるが、現時点では未実施。",
+          "source": "",
+          "status": "仮説"
+        }
+      ],
+      "idea": {
+        "name": "DX人材育成・内製化支援プラットフォーム",
+        "customer": "中小企業の経営企画・DX推進部門の担当者",
+        "offer": "IPAの公開動向データやDX白書の分析フレームワークを基にした、中小企業向けDX推進ロードマップ・内製化チェックリスト作成ツール",
+        "next": "iPhoneの実機ブラウザを使い、ユーザーが自社のDX推進度を5段階で入力して即座に課題と次のアクションが出力されるか、フォーム送信からPDFダウンロードまでの動線を検証する。成功条件は3タップ以内で結果画面に遷移すること、失敗条件はレイアウト崩れやエラー発生時とする。",
+        "distribution": "SNSやIPA関連の公開資料を引用したnote記事経由で集客し、初期は無料モニターとして利用を促す。支払意思は高度な分析レポート出力機能の有料化（月額980円）で測り、30日以内に継続利用の申し込みがない場合は撤退する。",
+        "advantage": "kintone（スタンダード月額1,800円/1ユーザー、最低10ユーザーから）やMicrosoft 365（有料版）、Google Workspaceの複雑な初期設定や高額なライセンス費用がかからず、Webブラウザのみで即座に自社のDX課題の棚卸しと優先順位付けができる。比較指標として「導入までの所要時間」「初期費用」「設定ステップ数」を用いる。",
+        "recurring": "仮価格は月額980円（税抜）、変動費は決済手数料等で売上の約5%、限界利益は930円/件。顧客獲得単価（CAC）の上限は3,000円とし、3ヶ月の継続利用で回収する。",
+        "selection": "prototype",
+        "research": "確認事実: IPAのDX動向調査（https://www.ipa.go.jp/digital/chousa/dx-trend/）では中小企業のDX推進や人材不足が課題とされている。kintoneの料金はライト月額1,000円、スタンダード月額1,800円（いずれも10ユーザーから、https://kintone.cybozu.co.jp/price/）。無料代替としてGoogleスプレッドシート（https://workspace.google.com/intl/ja/products/sheets/）やMicrosoft 365 Online（https://www.microsoft.com/ja-jp/microsoft-365/free-office-online-for-the-web）が存在するが、DX戦略の策定手法に特化したガイド機能はない。推測の限界: 中小企業が個別課題に対していくら支払うかの正確な需要や採算は未確認であり仮説に基づく。法務・個人情報・権限管理については入力データの取り扱いや利用規約の明示が必要であり、申込から解約までのフローは簡易的なWeb決済を想定するが実検証前である。次の販売根拠として、無料ユーザーから有料プランへの転換率のデータが不足している。",
         "verdict": "prototype",
         "sources": [
           "https://www.ipa.go.jp/digital/chousa/dx-trend/",
